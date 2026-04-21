@@ -21,6 +21,8 @@ yarn-debug.log*
 .env
 .env.*
 *.env
+# Allow .env.example templates to be tracked (no secrets, just documented var names).
+!**/.env.example
 # --- Secrets & certificates (specific file types, not broad name matches) ---
 **/*.pem
 **/*.crt
@@ -160,7 +162,8 @@ followup.txt
 reports/
 prod-backup/
 front-end/server/
-server/scripts/
+# server/scripts/ is tracked — contains build tooling required for fresh clones.
+# Local backups under server/scripts/backups/ are still ignored (see earlier rule).
 .snapshots/
 .branch-notes.json
 
@@ -168,8 +171,10 @@ server/scripts/
 orthodoxmetrics.com
 inner-orthodoxmetrics.com
 
-# Scripts live in /var/omai-ops/scripts/orthodoxmetrics/ (outside repo)
-scripts/
+# Root-level scripts/ currently lives outside the repo (in /var/omai-ops/scripts/orthodoxmetrics/).
+# Anchored with a leading slash so this only ignores the root dir and does NOT
+# match server/scripts/ (which is tracked for build tooling).
+/scripts/
 
 # Docs live in /var/omai-ops/docs/orthodoxmetrics/ (outside repo)
 docs/
