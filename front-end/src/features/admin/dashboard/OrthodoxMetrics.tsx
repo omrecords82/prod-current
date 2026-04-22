@@ -510,15 +510,9 @@ const OMAIStudioContent = () => {
     const navigate = useNavigate();
 
     const omaiTools = [
-        { title: '🧪 AI Lab', description: 'Experiment with AI models and algorithms', icon: <IconBrain size={24} />, href: '/sandbox/ai-lab' },
-        { title: '🔧 Project Generator', description: 'Generate new projects and components', icon: <IconCode size={24} />, href: '/sandbox/project-generator' },
         { title: '📝 OMB Editor', description: 'Orthodox Metrics Big Book editor', icon: <IconEdit size={24} />, href: '/omb/editor' },
         { title: '📚 OM Big Book', description: 'Knowledge base and documentation', icon: <IconNotebook size={24} />, href: '/admin/bigbook' },
         { title: '🧠 OMLearn', description: 'Machine learning and training systems', icon: <IconBrain size={24} />, href: '/bigbook/omlearn' },
-        { title: 'Site Editor Demo', description: 'Demonstration of site editing capabilities', icon: <IconEdit size={24} />, href: '/demos/site-editor' },
-        { title: 'Auto-Fix Demo', description: 'Automatic code fixing demonstration', icon: <IconTool size={24} />, href: '/demos/auto-fix' },
-        { title: 'GitOps Demo', description: 'Git operations and deployment demo', icon: <IconCode size={24} />, href: '/demos/gitops' },
-        { title: '🐞 VRT Demo', description: 'Visual regression testing tools', icon: <IconBug size={24} />, href: '/demos/vrt' }
     ];
 
     const ToolCard = ({ tool }: { tool: any }) => (

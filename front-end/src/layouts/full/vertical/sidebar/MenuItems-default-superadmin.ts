@@ -375,24 +375,6 @@ export const SuperAdminMenuTemplate: MenuTemplateItem[] = [
         icon: IconGitBranch,
         href: '/devel-tools/build-info',
       },
-      {
-        id: 'devel.component-library',
-        title: 'Component Library',
-        icon: IconBorderAll,
-        href: '/sandbox/component-library',
-      },
-      {
-        id: 'devel.core-components',
-        title: 'Core Components',
-        icon: IconComponents,
-        href: '/sandbox/component-preview/core',
-      },
-      {
-        id: 'devel.orthodoxmetrics-components',
-        title: 'Orthodox Metrics Components',
-        icon: IconLayoutDashboard,
-        href: '/sandbox/component-preview/modernize',
-      },
     ],
   },
   {
@@ -401,18 +383,6 @@ export const SuperAdminMenuTemplate: MenuTemplateItem[] = [
     icon: IconRocket,
     href: '#',
     children: [
-      {
-        id: 'devel.omai-lab',
-        title: 'OMAI Lab',
-        icon: IconRocket,
-        href: '/sandbox/ai-lab',
-      },
-      {
-        id: 'devel.project-generator',
-        title: 'Project Generator',
-        icon: IconEdit,
-        href: '/sandbox/project-generator',
-      },
       {
         id: 'devel.ai-admin',
         title: 'AI Admin Panel',
