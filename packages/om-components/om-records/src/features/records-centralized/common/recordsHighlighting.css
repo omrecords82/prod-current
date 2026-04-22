@@ -1,0 +1,86 @@
+/**
+ * Records Row Highlighting Styles
+ *
+ * CSS classes for highlighting selected, new, and updated records
+ * Uses grayscale palette to match Lent theme
+ */
+
+/* Last selected record - dark gray highlight */
+.row-last-selected {
+  background-color: rgba(0, 0, 0, 0.08) !important;
+  font-weight: 500 !important;
+  border-left: 3px solid #1a1a1a !important;
+}
+
+/* New record within 24 hours - medium gray highlight */
+.row-new-24h {
+  background-color: rgba(0, 0, 0, 0.05) !important;
+  border-left: 3px solid #616161 !important;
+}
+
+/* Updated record within 24 hours - light gray highlight */
+.row-updated-24h {
+  background-color: rgba(0, 0, 0, 0.04) !important;
+  border-left: 3px solid #9e9e9e !important;
+}
+
+/* Both selected AND new - selected wins with medium gray accent */
+.row-last-selected.row-new-24h {
+  background-color: rgba(0, 0, 0, 0.08) !important;
+  font-weight: 500 !important;
+  border-left: 4px solid #616161 !important;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.1);
+}
+
+/* Both selected AND updated - selected wins with light gray accent */
+.row-last-selected.row-updated-24h {
+  background-color: rgba(0, 0, 0, 0.08) !important;
+  font-weight: 500 !important;
+  border-left: 4px solid #9e9e9e !important;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.08);
+}
+
+/* Dark mode adjustments */
+.ag-theme-quartz-dark .row-last-selected {
+  background-color: rgba(255, 255, 255, 0.1) !important;
+  border-left-color: #e0e0e0 !important;
+}
+
+.ag-theme-quartz-dark .row-new-24h {
+  background-color: rgba(255, 255, 255, 0.06) !important;
+  border-left-color: #9e9e9e !important;
+}
+
+.ag-theme-quartz-dark .row-updated-24h {
+  background-color: rgba(255, 255, 255, 0.04) !important;
+  border-left-color: #757575 !important;
+}
+
+.ag-theme-quartz-dark .row-last-selected.row-new-24h {
+  background-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+.ag-theme-quartz-dark .row-last-selected.row-updated-24h {
+  background-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+/* Hover states */
+.row-last-selected:hover {
+  background-color: rgba(0, 0, 0, 0.12) !important;
+}
+
+.row-new-24h:hover {
+  background-color: rgba(0, 0, 0, 0.08) !important;
+}
+
+.row-updated-24h:hover {
+  background-color: rgba(0, 0, 0, 0.06) !important;
+}
+
+.row-last-selected.row-new-24h:hover {
+  background-color: rgba(0, 0, 0, 0.12) !important;
+}
+
+.row-last-selected.row-updated-24h:hover {
+  background-color: rgba(0, 0, 0, 0.12) !important;
+}

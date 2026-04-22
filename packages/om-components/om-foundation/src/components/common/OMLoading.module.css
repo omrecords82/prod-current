@@ -1,0 +1,124 @@
+/* OMLoading Component Styles */
+
+.container {
+  padding: 2rem;
+  min-height: 200px;
+}
+
+/* Size variants */
+.sizeSm {
+  min-height: 120px;
+  padding: 1rem;
+}
+
+.sizeSm .priestImage {
+  width: 80px;
+  height: 80px;
+}
+
+.sizeMd {
+  min-height: 200px;
+  padding: 2rem;
+}
+
+.sizeMd .priestImage {
+  width: 120px;
+  height: 120px;
+}
+
+.sizeLg {
+  min-height: 300px;
+  padding: 3rem;
+}
+
+.sizeLg .priestImage {
+  width: 180px;
+  height: 180px;
+}
+
+/* Image wrapper */
+.imageWrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Priest image with animation */
+.priestImage {
+  object-fit: contain;
+  user-select: none;
+  -webkit-user-drag: none;
+  display: block;
+}
+
+/* Animation: gentle float/bob + subtle tilt */
+@keyframes priestFloat {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  25% {
+    transform: translateY(-8px) rotate(1deg);
+  }
+  50% {
+    transform: translateY(-12px) rotate(0deg);
+  }
+  75% {
+    transform: translateY(-8px) rotate(-1deg);
+  }
+}
+
+/* Apply animation only if motion is not reduced */
+@media (prefers-reduced-motion: no-preference) {
+  .priestImage:not(.noAnimation) {
+    animation: priestFloat 3s ease-in-out infinite;
+  }
+}
+
+/* Disable animation for reduced motion */
+.noAnimation {
+  animation: none !important;
+}
+
+/* Label text */
+.label {
+  text-align: center;
+  font-weight: 500;
+}
+
+/* Dots animation */
+.dots {
+  display: inline-block;
+  min-width: 1.5em;
+  text-align: left;
+}
+
+/* Smooth transition for dots */
+@media (prefers-reduced-motion: no-preference) {
+  .dots {
+    transition: opacity 0.2s ease;
+  }
+}
+
+/* Mobile responsiveness */
+@media (max-width: 600px) {
+  .container {
+    padding: 1.5rem;
+    min-height: 150px;
+  }
+
+  .sizeSm .priestImage {
+    width: 60px;
+    height: 60px;
+  }
+
+  .sizeMd .priestImage {
+    width: 100px;
+    height: 100px;
+  }
+
+  .sizeLg .priestImage {
+    width: 140px;
+    height: 140px;
+  }
+}

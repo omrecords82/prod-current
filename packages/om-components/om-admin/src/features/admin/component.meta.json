@@ -1,0 +1,22 @@
+{
+  "name": "Admin Panel Components",
+  "description": "Collection of administrative interface components for system management",
+  "version": "2.4.1",
+  "category": "administration",
+  "enabled": true,
+  "health": "healthy",
+  "dependencies": [
+    "react",
+    "@mui/material",
+    "react-router-dom"
+  ],
+  "ports": [3000],
+  "maintainer": "Orthodox Metrics Team",
+  "configPath": "/front-end/src/config/admin.config.js",
+  "features": [
+    "User Management",
+    "System Settings",
+    "Component Management",
+    "Service Monitoring"
+  ]
+}
