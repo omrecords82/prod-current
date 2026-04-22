@@ -248,7 +248,6 @@ const ADMIN_MAP: SiteNode[] = [
   // Berry Components section removed — prototypes retired
   {
     label: 'Reference & Documentation', icon: <BookIcon />, roles: ['admin', 'super_admin'], children: [
-      { label: 'OM Library / Spec', path: '/church/om-spec', icon: <BookIcon /> },
       { label: 'OMAI Logger', path: '/church/omai-logger', icon: <AIIcon /> },
       { label: 'OMLearn', path: '/bigbook/omlearn', icon: <LearnIcon /> },
       { label: 'User Guide', path: '/help/user-guide', icon: <HelpIcon /> },

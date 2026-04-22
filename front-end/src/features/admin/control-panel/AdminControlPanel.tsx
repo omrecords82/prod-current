@@ -135,7 +135,6 @@ const CATEGORIES: Category[] = [
     href: '/admin/control-panel/om-app-suite',
     quickLinks: [
       { label: 'OM Charts', href: '/apps/om-charts' },
-      { label: 'OM Library', href: '/church/om-spec' },
     ],
   },
   {

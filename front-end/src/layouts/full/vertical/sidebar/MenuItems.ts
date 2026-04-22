@@ -124,13 +124,6 @@ const Menuitems: MenuitemsType[] = [
       },
     ],
   },
-  {
-    id: uniqueId(),
-    title: 'OM-Spec',
-    icon: IconFileDescription,
-    href: '/church/om-spec',
-  },
-
   // ========================================================================
   // RECORDS & OCR (matches Control Panel category 2)
   // ========================================================================

@@ -375,7 +375,6 @@ const recordCreationWizardRouter = require('./routes/admin/recordCreationWizard'
 const aiAdminRouter = require('./routes/admin/ai-admin');
 // Import Big Book system router
 const bigBookRouter = require('./routes/bigbook');
-const libraryRouter = require('./routes/library');
 const menuRouter = require('./routes/menu');
 
 // Import OM-AI system router
@@ -800,9 +799,6 @@ app.use('/api/errors', githubIssuesRouter);
 
 // Big Book system routes
 app.use('/api/bigbook', bigBookRouter);
-// OM-Library routes (documentation library indexed by om-librarian)
-app.use('/api/library', libraryRouter);
-console.log('✅ [Server] Mounted /api/library routes (OM-Library documentation)');
 // Menu API routes for super_admin editable navigation
 app.use('/api', menuRouter);
 console.log('✅ [Server] Mounted /api/ui/menu and /api/admin/menus routes (Editable Menu System)');

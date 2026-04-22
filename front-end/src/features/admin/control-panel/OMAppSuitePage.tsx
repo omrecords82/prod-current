@@ -24,7 +24,6 @@ const sections: CategorySection[] = [
   {
     sectionTitle: 'Knowledge & Documentation',
     tools: [
-      { title: 'OM Library', description: 'Auto-indexing documentation system with search, file management, and relationship mapping', href: '/church/om-spec', icon: <LibraryIcon /> },
       { title: 'OMLearn', description: 'Learning hub with tutorials, guides, and FAQs for platform users', href: '/bigbook/omlearn', icon: <LearnIcon />, chip: 'In Progress', chipColor: 'warning' as const },
     ],
   },

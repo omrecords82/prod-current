@@ -14,7 +14,6 @@ export const PAGE_TITLES: Record<string, string> = {
   '/dashboard': 'Dashboard',
   
   // Church
-  '/church/om-spec': 'OM-Library',
   '/church/records': 'Church Records',
   '/church/baptism': 'Baptism Records',
   '/church/marriage': 'Marriage Records',

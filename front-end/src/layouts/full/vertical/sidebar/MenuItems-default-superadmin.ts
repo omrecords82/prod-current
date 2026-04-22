@@ -253,12 +253,6 @@ export const SuperAdminMenuTemplate: MenuTemplateItem[] = [
     href: '/apps/gallery',
   },
   {
-    id: 'church.om-spec',
-    title: 'OM-Spec',
-    icon: IconFileDescription,
-    href: '/church/om-spec',
-  },
-  {
     id: 'church.omai-logger',
     title: 'OMAI Ultimate Logger',
     icon: IconBug,
@@ -272,12 +266,6 @@ export const SuperAdminMenuTemplate: MenuTemplateItem[] = [
     id: 'section.devel-tools',
     navlabel: true,
     subheader: '🛠️ Developer Tools',
-  },
-  {
-    id: 'devel.om-spec',
-    title: 'OM Spec / Tasks',
-    icon: IconFileDescription,
-    href: '/church/om-spec',
   },
   {
     id: 'devel.console',

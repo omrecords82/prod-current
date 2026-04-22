@@ -84,7 +84,6 @@ const RecipientSubmissionPage = Loadable(lazy(() => import('../features/records-
 const PublicCollaborationPage = Loadable(lazy(() => import('../features/records-centralized/components/collaborationLinks/PublicCollaborationPage')));
 
 const OMChartsPage = Loadable(lazy(() => import('../features/church/apps/om-charts/OMChartsPage')));
-const OMLibrary = Loadable(lazy(() => import('../features/devel-tools/system-documentation/om-library/OMLibrary')));
 const OMAIUltimateLogger = Loadable(lazy(() => import('../features/devel-tools/om-ultimatelogger/LoggerDashboard')));
 const SiteMapPage = Loadable(lazy(() => import('../features/admin/SiteMapPage')));
 const OmaiBridge = Loadable(lazy(() => import('../features/admin/OmaiBridge')));
@@ -435,16 +434,6 @@ const Router = [
       {
         path: '/apps/church-management/:id/field-mapper',
         element: <Navigate to="/account/parish-management/database-mapping" replace />,
-      },
-      {
-        path: '/church/om-spec',
-        element: (
-          <ProtectedRoute requiredRole={['admin', 'super_admin']}>
-            <AdminErrorBoundary>
-              <OMLibrary />
-            </AdminErrorBoundary>
-          </ProtectedRoute>
-        )
       },
       {
         path: '/church/omai-logger',
