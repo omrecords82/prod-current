@@ -1,0 +1,35 @@
+{
+  "AdvancedCard": {
+    "id": "AdvancedCard",
+    "name": "AdvancedCard",
+    "path": "src/components/custom/AdvancedCard.tsx",
+    "isDefaultExport": true,
+    "hasJSX": true,
+    "hasHooks": true,
+    "dependencies": [
+      "react",
+      "date-fns",
+      "@mui/material/styles"
+    ],
+    "installedAt": "2025-07-27T18:11:49.342Z",
+    "autoInstalled": true
+  },
+  "ParishMap": {
+    "id": "ParishMap",
+    "name": "ParishMap",
+    "path": "src/components/custom/ParishMap.tsx",
+    "isDefaultExport": true,
+    "hasJSX": true,
+    "hasHooks": true,
+    "dependencies": [
+      "react",
+      "react-leaflet",
+      "react-leaflet-markercluster",
+      "leaflet",
+      "@headlessui/react",
+      "@heroicons/react/24/outline"
+    ],
+    "installedAt": "2025-07-27T19:18:26.580Z",
+    "autoInstalled": true
+  }
+}

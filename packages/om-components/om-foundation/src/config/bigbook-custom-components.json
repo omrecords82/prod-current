@@ -1,0 +1,63 @@
+{
+  "components": {
+    "parish-map": {
+      "id": "parish-map",
+      "name": "ParishMap",
+      "path": "src/components/bigbook/custom/ParishMap.tsx",
+      "route": "/bigbook/parish-map",
+      "displayName": "Parish Map",
+      "description": "Interactive Orthodox parish map with Leaflet, clustering, and filtering capabilities",
+      "installedAt": "2025-07-28T00:27:04.021Z",
+      "autoInstalled": true,
+      "isDefaultExport": true,
+      "hasJSX": true,
+      "hasHooks": true,
+      "dependencies": [
+        "react-leaflet",
+        "leaflet",
+        "react-leaflet-markercluster",
+        "@headlessui/react",
+        "@heroicons/react"
+      ]
+    },
+    "ApiRoutesViewer": {
+      "id": "ApiRoutesViewer",
+      "name": "ApiRoutesViewer",
+      "path": "src/components/bigbook/custom/api-routes-viewer.tsx",
+      "route": "/bigbook/component/api-routes-viewer",
+      "displayName": "Api Routes Viewer",
+      "description": "Custom Big Book component: Api Routes Viewer",
+      "installedAt": "2025-07-28T07:12:17.892Z",
+      "autoInstalled": true,
+      "isDefaultExport": true,
+      "hasJSX": true,
+      "hasHooks": true,
+      "dependencies": [
+        "react",
+        "lucide-react"
+      ]
+    }
+  },
+  "routes": {
+    "parish-map": "/bigbook/parish-map",
+    "/bigbook/component/api-routes-viewer": "ApiRoutesViewer"
+  },
+  "menu": [
+    {
+      "id": "ApiRoutesViewer",
+      "name": "ApiRoutesViewer",
+      "displayName": "Api Routes Viewer",
+      "route": "/bigbook/component/api-routes-viewer",
+      "icon": "Extension"
+    },
+    {
+      "id": "parish-map",
+      "name": "ParishMap",
+      "displayName": "Parish Map",
+      "route": "/bigbook/parish-map",
+      "icon": "🗺️"
+    }
+  ],
+  "lastUpdated": "2025-07-28T07:12:17.893Z",
+  "version": "1.0.0"
+}

@@ -1,0 +1,70 @@
+/* Liturgical Calendar — Day cell color indicators */
+
+/* Left border stripe indicating liturgical color */
+.liturgical-day--white .fc-daygrid-day-frame { border-left: 3px solid #E8E8E3; }
+.liturgical-day--gold .fc-daygrid-day-frame { border-left: 3px solid #C9A227; }
+.liturgical-day--blue .fc-daygrid-day-frame { border-left: 3px solid #1E6B8C; }
+.liturgical-day--red .fc-daygrid-day-frame { border-left: 3px solid #B22234; }
+.liturgical-day--purple .fc-daygrid-day-frame { border-left: 3px solid #6B2D75; }
+.liturgical-day--green .fc-daygrid-day-frame { border-left: 3px solid #4CAF50; }
+
+/* Feast rank indicators */
+.liturgical-feast-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  margin-left: 3px;
+  vertical-align: middle;
+}
+
+.liturgical-feast-dot--great { background-color: #C9A227; }
+.liturgical-feast-dot--major { background-color: #666; }
+
+/* Fasting indicator */
+.liturgical-fasting-dot {
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  margin-left: 2px;
+  vertical-align: middle;
+  background-color: #9E9E9E;
+}
+
+.liturgical-fasting-dot--strict { background-color: #424242; }
+.liturgical-fasting-dot--wine_oil { background-color: #8D6E63; }
+.liturgical-fasting-dot--fish { background-color: #42A5F5; }
+.liturgical-fasting-dot--dairy { background-color: #FFE082; }
+
+/* Today highlight in liturgical calendar */
+.fc .fc-day-today.liturgical-day--white { background-color: rgba(245, 245, 240, 0.15) !important; }
+.fc .fc-day-today.liturgical-day--gold { background-color: rgba(201, 162, 39, 0.08) !important; }
+.fc .fc-day-today.liturgical-day--blue { background-color: rgba(30, 107, 140, 0.08) !important; }
+.fc .fc-day-today.liturgical-day--red { background-color: rgba(178, 34, 52, 0.08) !important; }
+.fc .fc-day-today.liturgical-day--purple { background-color: rgba(107, 45, 117, 0.08) !important; }
+.fc .fc-day-today.liturgical-day--green { background-color: rgba(76, 175, 80, 0.08) !important; }
+
+/* Feast name event styling */
+.fc-event.liturgical-feast-event {
+  font-size: 0.7rem;
+  padding: 1px 4px;
+  border-radius: 2px;
+  border: none;
+  opacity: 0.9;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Season badge in toolbar */
+.liturgical-season-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 12px;
+  border-radius: 16px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
