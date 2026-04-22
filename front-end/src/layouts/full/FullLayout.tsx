@@ -18,7 +18,6 @@ import ChurchContext from '@/context/ChurchContext';
 // Temporarily-disabled overlays preserved here for future re-enable.
 // SuperadminSourcePathOverlay, VersionSwitcher (path: features/overlays — currently missing)
 // LoadingBar (path: ./LoadingBar)
-// SiteEditorOverlay (path: @/components/SiteEditorOverlay)
 // ErrorNotificationToast (path: @/components/global/ErrorNotificationToast)
 // TutorialViewer — migrated to OMAI
 
@@ -97,9 +96,7 @@ const FullLayout: FC = () => {
 
             <Box sx={{ minHeight: 'calc(100vh - 170px)' }}>
               <ScrollToTop>
-                {/* <SiteEditorOverlay> */}
-                  <Outlet />
-                {/* </SiteEditorOverlay> */}
+                <Outlet />
               </ScrollToTop>
             </Box>
 
