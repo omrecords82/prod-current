@@ -1,27 +1,52 @@
 # AI Agent Development Workflow
 
-> **Last Updated:** 2026-04-01
+> **Last Updated:** 2026-04-30
 > **Applies to:** All AI agents (Claude CLI, Cursor, Windsurf)
+> **Status:** Authoritative for OrthodoxMetrics (`prod-current`). For cross-repo process, see `/var/www/shared/AGENT-WORKFLOW.md`.
+
+---
+
+## PR Discipline Restored (2026-04-30)
+
+PR-based development is **mandatory** for all AI-agent code changes in OrthodoxMetrics. PRs were temporarily skipped during a previous fast-iteration window; that window is closed.
+
+Every AI-agent change must follow the full lifecycle below:
+
+1. authenticate
+2. check assigned plans
+3. create or use an OMAI Daily item
+4. start work through the workflow system (`POST /start-work`)
+5. use the generated branch
+6. code
+7. test
+8. commit
+9. push
+10. signal complete (`POST /agent-complete`)
+11. open a PR
+12. **stop**
+
+Agents may not skip PRs, push directly to `main`, or self-merge. Admin review is required for every change. The only deviation is an Emergency Exception explicitly authorized by the human admin in the prompt — see the "Emergency Exception" section below.
 
 ---
 
 ## 0. Enter Your Workspace
 
-Before doing anything, navigate to your assigned worktree:
+Before doing anything, navigate to your assigned OM worktree:
 
 ```bash
 # Claude CLI
-cd /var/www/omai-workspaces/agent-claude
+cd /var/www/om-workspaces/agent-claude
 
 # Cursor
-cd /var/www/omai-workspaces/agent-cursor
+cd /var/www/om-workspaces/agent-cursor
 
 # Windsurf
-cd /var/www/omai-workspaces/agent-windsurf
+cd /var/www/om-workspaces/agent-windsurf
 ```
 
-**Never work from `/var/www/omai/` directly — it is deploy-only.**
-Pre-commit hooks will block you if you try.
+**Direct edits to `/var/www/orthodoxmetrics/prod` are forbidden** unless that path is confirmed to be the intended workspace and not the deploy/integration target. The OM worktrees above (`/var/www/om-workspaces/agent-*`) are linked git worktrees of `prod-current` — work there.
+
+For OMAI (`/var/www/omai/`) work, see `/var/www/shared/AGENT-WORKFLOW.md` and the `omai` repo. Never work from `/var/www/omai/` directly — it is deploy-only and blocked by pre-commit hooks.
 
 ---
 
@@ -208,6 +233,17 @@ cancelled (from any status)
 
 ## Workspace Rules
 
+OrthodoxMetrics (`prod-current`) worktrees:
+
+| Directory | Purpose | Who writes |
+|---|---|---|
+| `/var/www/orthodoxmetrics/prod/` | Primary checkout, deploy/integration target | Admin / deploy script |
+| `/var/www/om-workspaces/agent-claude/` | Claude CLI worktree | Claude |
+| `/var/www/om-workspaces/agent-cursor/` | Cursor worktree | Cursor |
+| `/var/www/om-workspaces/agent-windsurf/` | Windsurf worktree | Windsurf |
+
+OMAI (`omai`) worktrees:
+
 | Directory | Purpose | Who writes |
 |---|---|---|
 | `/var/www/omai/` | Production deploy target | Deploy script only |
@@ -215,10 +251,39 @@ cancelled (from any status)
 | `/var/www/omai-workspaces/agent-cursor/` | Cursor worktree | Cursor |
 | `/var/www/omai-workspaces/agent-windsurf/` | Windsurf worktree | Windsurf |
 
-- Agents **must not** `cd` into `/var/www/omai/` to make changes
+- Agents **must not** make changes directly in `/var/www/orthodoxmetrics/prod/` or `/var/www/omai/` (deploy targets)
 - Agents **must not** check out `main` in their worktree
 - Agents **must not** commit to another agent's branch
-- All three rules are enforced by git hooks (see `omai-workspace-guard.sh`)
+- These rules are enforced by git hooks (see `omai-workspace-guard.sh`)
+
+---
+
+## Agent Stop Conditions
+
+An agent must stop and report — without forcing through — in any of these cases:
+
+- **After PR creation.** Once `gh pr create` succeeds, the agent's job is done. Do not deploy, do not merge, do not start follow-up work without a new prompt.
+- **Auth fails.** If `/api/auth/login` returns no token or a non-2xx response, stop and report. Do not retry indefinitely.
+- **OMAI Daily item cannot be created or located.** If `POST /api/omai-daily/items` fails or the assigned item ID cannot be confirmed, stop. Working without a tracked item is not allowed.
+- **Branch creation fails.** If `POST /start-work` returns an error or the resulting branch is not present locally, stop. Do not manually create a branch as a substitute.
+- **Working tree is dirty with unrelated changes.** If the workspace has modifications that don't belong to this task and aren't stashed/committed, stop. Do not bundle unrelated changes into this PR.
+- **Push fails.** If `git push` rejects, fails authentication, or hits a hook block, stop and report — do not force-push around it.
+- **PR creation fails.** If `gh pr create` fails (auth, label not found, missing remote, etc.), stop and report. Do not improvise an alternate review channel.
+
+In every case: leave the workspace in a recoverable state, write a short status summary to the OMAI Daily item, and surface the error to the user.
+
+---
+
+## Emergency Exception
+
+PR-skipping or direct-to-main work is forbidden by default. The **only** valid override is:
+
+1. **Human admin** explicitly authorizes the exception **in the prompt that the agent is acting on**. (Memory, prior conversations, or implicit trust do not count.)
+2. The agent **records the exception in the OMAI Daily item description** with the exact authorization text.
+3. The agent **records the exception in the final report** at `_report/<change-set>-<date>.md`.
+4. The work still ends with a commit. Even an emergency direct-to-main change must produce a commit and a written deployment/change report. No silent edits.
+
+Agents must **never** invoke this exception on their own initiative. If unsure whether a request qualifies, default to the standard PR workflow and ask.
 
 ---
 
@@ -229,6 +294,8 @@ cancelled (from any status)
 - `blocked` and `cancelled` — any actor
 - Agents pass `actor_type: "agent"` in status calls
 - One branch per item, one PR per branch
+- **Never self-merge** — admin review is required for every PR
+- **Never deploy** unless the human admin explicitly requests it in the prompt; deploy via `/var/omai-ops/scripts/orthodoxmetrics/om-deploy.sh` (run as `next`, not `sudo`)
 - `complete-work` uses `git merge --ff-only` — rebase if main has diverged
 - Clean working tree required before complete-work
 - If abandoned, set status `"cancelled"` with reason

@@ -151,7 +151,7 @@ To register a new feature, add it to `FEATURE_REGISTRY` in `featureRegistry.ts` 
 
 **Every change you make MUST be tracked as an OMAI Daily item with branch lifecycle management.** This is mandatory, not optional.
 
-**Full workflow documentation:** [docs/ai-agent-workflow.md](docs/ai-agent-workflow.md)
+**Full workflow documentation:** [ai-agent-workflow.md](ai-agent-workflow.md) (repo root — authoritative for OM)
 
 ### Workspace Rule
 
@@ -176,8 +176,8 @@ To register a new feature, add it to `FEATURE_REGISTRY` in `featureRegistry.ts` 
 ### Quick Reference — Branch Lifecycle
 
 ```bash
-# 0. Enter your workspace
-cd /var/www/omai-workspaces/agent-claude
+# 0. Enter your OM workspace
+cd /var/www/om-workspaces/agent-claude
 
 # 1. Create item (BEFORE starting work) — status MUST be "backlog"
 curl -X POST http://127.0.0.1:7060/api/omai-daily/items \
@@ -212,7 +212,7 @@ gh pr create --base main --head "$(git branch --show-current)" \
 
 ### Workflow
 
-0. **Enter workspace** → `cd /var/www/omai-workspaces/agent-claude`
+0. **Enter workspace** → `cd /var/www/om-workspaces/agent-claude` (OM worktree, **not** the OMAI worktree)
 1. **Create item** → `POST /api/omai-daily/items` with `status: "backlog"`, `source: "agent"`, `agent_tool: "claude_cli"`
 2. **Start work** → `POST /api/omai-daily/items/:id/start-work` with `branch_type` — creates and checks out a branch from `main`
 3. **During work** → Commit changes to the branch. Push regularly with `git push -u origin HEAD`. Update `progress` (0-100) if the task is large
@@ -300,7 +300,7 @@ Check for assigned plans at conversation start:
 ```bash
 curl -H "Authorization: Bearer $TOKEN" http://127.0.0.1:3001/api/prompt-plans/agent/claude_cli
 ```
-If an active plan is returned, read the `next_step.prompt_text` and execute that stage. Work items are auto-linked to the plan's Change Set. See [docs/ai-agent-workflow.md](docs/ai-agent-workflow.md) for full details.
+If an active plan is returned, read the `next_step.prompt_text` and execute that stage. Work items are auto-linked to the plan's Change Set. See [ai-agent-workflow.md](ai-agent-workflow.md) for full details.
 
 ## Documentation
 
@@ -312,5 +312,5 @@ Detailed docs in `docs/`:
 - [database.md](docs/database.md) — Schema & access patterns
 - [frontend.md](docs/frontend.md) — Frontend architecture
 - [sdlc.md](docs/sdlc.md) — Feature lifecycle stages
-- [ai-agent-workflow.md](docs/ai-agent-workflow.md) — AI agent work tracking workflow
+- [ai-agent-workflow.md](ai-agent-workflow.md) — AI agent work tracking workflow (repo root, authoritative for OM)
 - [omai.md](docs/omai.md) — OMAI platform, auth bridge SSO, Berry frontend
