@@ -375,7 +375,7 @@ const ENGLISH_DEFAULTS = {
   'pricing.badge_popular': 'Most Popular',
   'pricing.btn_get_started': 'Get Started',
   'pricing.btn_contact_sales': 'Contact Sales',
-  'pricing.btn_start_trial': 'Start Free Trial',
+  'pricing.btn_start_trial': 'Talk to Us',
   // Small Parish features
   'pricing.plan_small_feat1': 'Up to 2,000 records',
   'pricing.plan_small_feat2': '2 user accounts',
@@ -434,18 +434,18 @@ const ENGLISH_DEFAULTS = {
   // FAQ
   'pricing.faq_title': 'Frequently Asked Questions',
   'pricing.faq1_q': 'Can I switch plans later?',
-  'pricing.faq1_a': 'Yes, you can upgrade or downgrade your plan at any time. Changes take effect at the start of your next billing cycle.',
+  'pricing.faq1_a': 'Yes. During the assisted-onboarding phase, your account manager handles plan changes — just let us know what you need.',
   'pricing.faq2_q': 'What happens if I exceed my record limit?',
-  'pricing.faq2_a': 'We\'ll notify you when you\'re approaching your limit. You can either upgrade your plan or archive older records.',
+  'pricing.faq2_a': 'We\'ll notify you when you\'re approaching your limit. You can either move to a larger plan or archive older records.',
   'pricing.faq3_q': 'Is there a setup fee?',
-  'pricing.faq3_a': 'No setup fees. We also offer free onboarding assistance to help you get started with digitizing your records.',
-  'pricing.faq4_q': 'Do you offer discounts for annual billing?',
-  'pricing.faq4_a': 'Yes! Save 15–20% by paying annually instead of monthly.',
+  'pricing.faq3_a': 'No setup fees. We include free onboarding assistance to help you get started with digitizing your records.',
+  'pricing.faq4_q': 'Do you offer annual billing?',
+  'pricing.faq4_a': 'Yes — annual billing options are available. We\'ll discuss the right cadence for your parish during onboarding.',
   'pricing.faq5_q': 'What payment methods do you accept?',
-  'pricing.faq5_a': 'We accept all major credit cards, ACH transfers, and can invoice for annual plans.',
+  'pricing.faq5_a': 'We arrange billing with you during onboarding — credit card, ACH, or invoice for annual plans.',
   // CTA
   'pricing.cta_title': 'Ready to Get Started?',
-  'pricing.cta_subtitle': 'Start your free trial today. No credit card required.',
+  'pricing.cta_subtitle': 'Schedule a 30-minute demo. We\'ll help you set up your parish.',
 
   // ─── samples.* ──────────────────────────────────────────────────────
   // Hero
