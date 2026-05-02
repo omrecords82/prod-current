@@ -1,10 +1,23 @@
 const { getAppPool } = require('../config/db-compat');
+const { getChurchPool } = require('../db/pool');
 const express = require('express');
 const router = express.Router();
 const fs = require('fs');
 const path = require('path');
 const { createCanvas, loadImage } = require('canvas');
 const { promisePool } = require('../config/db-compat'); // Use promisePool instead of db
+
+// Records live in the church-scoped DB (om_church_<id>), not the platform DB.
+// Resolve the right pool from the authenticated user's church_id.
+function getRecordsPoolForRequest(req) {
+  const churchId = req.user && (req.user.church_id || req.user.churchId);
+  if (!churchId) {
+    const err = new Error('No church context on request');
+    err.code = 'NO_CHURCH_CONTEXT';
+    throw err;
+  }
+  return getChurchPool(churchId);
+}
 
 // Certificate output path
 const OUTPUT_DIR = path.join(__dirname, '../certificates');
@@ -143,7 +156,7 @@ router.get('/:id', async (req, res) => {
 
   try {
     // Query the marriage record
-    const [rows] = await getAppPool().query('SELECT * FROM marriage_records WHERE id = ?', [id]);
+    const [rows] = await getRecordsPoolForRequest(req).query('SELECT * FROM marriage_records WHERE id = ?', [id]);
     if (rows.length === 0) return res.status(404).send('Record not found');
 
     const record = rows[0];
@@ -183,7 +196,7 @@ router.post('/:id/preview', async (req, res) => {
 
   try {
     // Query the marriage record
-    const [rows] = await getAppPool().query('SELECT * FROM marriage_records WHERE id = ?', [id]);
+    const [rows] = await getRecordsPoolForRequest(req).query('SELECT * FROM marriage_records WHERE id = ?', [id]);
     if (rows.length === 0) return res.status(404).send('Record not found');
 
     const record = rows[0];
@@ -220,7 +233,7 @@ router.get('/:id/download', async (req, res) => {
 
   try {
     // Query the marriage record
-    const [rows] = await getAppPool().query('SELECT * FROM marriage_records WHERE id = ?', [id]);
+    const [rows] = await getRecordsPoolForRequest(req).query('SELECT * FROM marriage_records WHERE id = ?', [id]);
     if (rows.length === 0) return res.status(404).send('Record not found');
 
     const record = rows[0];
