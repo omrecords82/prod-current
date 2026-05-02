@@ -2549,9 +2549,9 @@ async function processJob(job: JobRow): Promise<void> {
     console.log(`  No feeder pages for job ${jobId} — processing job image directly via processOcrJobAsync`);
 
     // Delegate to processOcrJobAsync — pass PLATFORM pool so it writes to orthodoxmetrics_db.ocr_jobs
-    const ocrRoutes = require('../routes/ocr');
-    if (typeof ocrRoutes.processOcrJobAsync === 'function') {
-      await ocrRoutes.processOcrJobAsync(platformPool, jobId, filePath, {
+    const { processOcrJobAsync } = require('../ocr/processOcrJobAsync');
+    if (typeof processOcrJobAsync === 'function') {
+      await processOcrJobAsync(platformPool, jobId, filePath, {
         churchId,
         engine: 'google-vision',
         language: language || 'en',
@@ -2626,7 +2626,7 @@ async function processJob(job: JobRow): Promise<void> {
         console.log(`OCR_JOB_ERROR ${JSON.stringify({ jobId, code: 'PROCESS_RESULT', message: `Job ended with status=${final?.status}` })}`);
       }
     } else {
-      throw new Error('processOcrJobAsync not available from routes/ocr');
+      throw new Error('processOcrJobAsync not available from server/src/ocr/processOcrJobAsync');
     }
     return;
   }
