@@ -85,7 +85,18 @@ const MobileSidebar = ({ isPortal = false }: MobileSidebarProps) => {
                   {t(navlink.tKey)}
                 </Button>
               ))}
-              <Button color="primary" variant="contained" href="/auth/login">
+              <Button
+                variant="contained"
+                href="/auth/register"
+                sx={{
+                  backgroundColor: '#d4af37',
+                  color: '#2d1b4e',
+                  '&:hover': { backgroundColor: '#c29d2f' },
+                }}
+              >
+                {t('common.get_started')}
+              </Button>
+              <Button color="primary" variant="outlined" href="/auth/login">
                 {t('common.church_login')}
               </Button>
             </>

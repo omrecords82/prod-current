@@ -72,7 +72,7 @@ const Login2 = () => {
                           {t('auth.new_to_om')}
                         </span>
                         <Link
-                          to="/auth/register"
+                          to="/get-started"
                           className="font-['Inter'] text-[15px] font-medium text-[#2d1b4e] dark:text-[#d4af37] no-underline hover:underline"
                         >
                           {t('auth.create_account')}

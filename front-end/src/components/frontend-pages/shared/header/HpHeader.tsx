@@ -159,12 +159,20 @@ const HpHeader = () => {
               authenticated ? (
                 <Profile />
               ) : (
-                <a
-                  href="/auth/login"
-                  className="px-6 py-2.5 bg-[#2d1b4e] dark:bg-[#d4af37] text-white dark:text-[#2d1b4e] rounded-lg font-['Inter'] text-[15px] font-medium hover:bg-[#1f1236] dark:hover:bg-[#c29d2f] transition-colors no-underline"
-                >
-                  {t('common.sign_in')}
-                </a>
+                <>
+                  <a
+                    href="/auth/login"
+                    className="font-['Inter'] text-[15px] text-[#2d1b4e] dark:text-white hover:text-[#1f1236] dark:hover:text-[#d4af37] transition-colors no-underline"
+                  >
+                    {t('common.sign_in')}
+                  </a>
+                  <a
+                    href="/auth/register"
+                    className="px-5 py-2.5 bg-[#d4af37] text-[#2d1b4e] rounded-lg font-['Inter'] text-[15px] font-medium hover:bg-[#c29d2f] transition-colors no-underline"
+                  >
+                    {t('common.get_started')}
+                  </a>
+                </>
               )
             )}
           </div>

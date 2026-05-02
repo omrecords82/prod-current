@@ -902,6 +902,9 @@ const Router = [
       },
       // Root login redirect
       { path: 'login', element: <Navigate to="/auth/login2" replace /> },
+      // Public "Get Started" entry — same Register inquiry wizard.
+      // /auth/register stays as an alias for admin-issued registration-token links.
+      { path: '/get-started', element: <Register /> },
       { path: '/landingpage', element: <Navigate to="/admin/control-panel" replace /> },
       { path: '/pages/pricing', element: <Navigate to="/admin/control-panel" replace /> },
       { path: '/pages/faq', element: <Faq /> },

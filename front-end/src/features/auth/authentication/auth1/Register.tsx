@@ -13,11 +13,11 @@ const Register = () => {
   const { t } = useLanguage();
 
   return (
-    <PageContainer title="Get Started — Orthodox Metrics" description="Church inquiry and registration">
+    <PageContainer title="Get Started — Orthodox Metrics" description="Tell us about your parish — we'll set up a demo and walk you through onboarding.">
       <div className="om-page-container">
         <HpHeader />
 
-        {/* Hero Register Section — mirrors Login2 */}
+        {/* Hero Get Started Section — mirrors Login2 */}
         <section className="om-hero-gradient py-12 md:py-20">
           <div className="max-w-7xl mx-auto px-6">
             <div className="grid md:grid-cols-2 gap-12 items-start">
@@ -28,12 +28,12 @@ const Register = () => {
                 </div>
 
                 <h1 className="font-['Georgia'] text-3xl sm:text-4xl md:text-5xl text-white leading-tight mb-4">
-                  Get Started with{' '}
+                  Talk to{' '}
                   <span className="text-[#d4af37]">Orthodox Metrics</span>
                 </h1>
 
                 <p className="font-['Inter'] text-base md:text-lg text-[rgba(255,255,255,0.7)] leading-relaxed mb-8 max-w-lg">
-                  Tell us about your parish and we'll help you preserve your sacred records with modern, secure technology.
+                  Tell us about your parish. We'll schedule a 30-minute demo and walk you through onboarding — no account creation needed yet.
                 </p>
 
                 {/* Feature bullets */}
@@ -62,7 +62,7 @@ const Register = () => {
                     title="Get Started"
                     subtext={
                       <p className="font-['Inter'] text-[14px] text-[#4a5565] dark:text-gray-400 mb-3">
-                        Tell us about your parish and we'll help you get set up
+                        Send us a quick inquiry — we'll reach out within one business day to schedule your demo.
                       </p>
                     }
                     subtitle={
