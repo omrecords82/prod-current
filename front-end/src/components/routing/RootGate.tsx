@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
+import { EditModeProvider } from '@/context/EditModeContext';
 import HpHeader from '@/components/frontend-pages/shared/header/HpHeader';
 import SiteFooter from '@/components/frontend-pages/shared/footer/SiteFooter';
 
@@ -44,9 +45,11 @@ const RootGate = () => {
   return (
     <div className="om-page-container">
       <HpHeader />
-      <Suspense fallback={null}>
-        <Homepage />
-      </Suspense>
+      <EditModeProvider>
+        <Suspense fallback={null}>
+          <Homepage />
+        </Suspense>
+      </EditModeProvider>
       <SiteFooter />
     </div>
   );
