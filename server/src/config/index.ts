@@ -95,7 +95,6 @@ function mapEnvironmentToConfig() {
     notifications: env.FEATURE_NOTIFICATIONS,
     ocr: env.FEATURE_OCR,
     certificates: env.FEATURE_CERTIFICATES,
-    invoices: env.FEATURE_INVOICES,
   };
 
   return {

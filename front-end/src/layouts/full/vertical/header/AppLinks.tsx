@@ -21,7 +21,6 @@ const AppLinks = () => {
     '/apps/email': 'app-email',
     '/apps/kanban': 'app-kanban',
     '/apps/ocr-upload': 'app-ocr-upload',
-    '/apps/invoice/list': 'app-invoice',
   };
 
   // (Optional) If you want to further filter by visibleMenus, you can do so here, but only if needed.

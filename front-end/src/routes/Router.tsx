@@ -37,10 +37,6 @@ const Contacts = Loadable(lazy(() => import('../features/apps/contacts/Contacts'
 const Notes = Loadable(lazy(() => import('../features/apps/notes/Notes')));
 const Tickets = Loadable(lazy(() => import('../features/apps/tickets/Tickets')));
 const Kanban = Loadable(lazy(() => import('../features/apps/kanban/Kanban')));
-const InvoiceList = Loadable(lazy(() => import('../features/apps/invoice/List')));
-const InvoiceCreate = Loadable(lazy(() => import('../features/apps/invoice/Create')));
-const InvoiceDetail = Loadable(lazy(() => import('../features/apps/invoice/Detail')));
-const InvoiceEdit = Loadable(lazy(() => import('../features/apps/invoice/Edit')));
 const DynamicRecordsPage = Loadable(lazy(() => import('../features/records-centralized/components/dynamic/DynamicRecordsPage')));
 const AnalyticsDashboard = Loadable(lazy(() => import('../features/admin/AnalyticsDashboard')));
 const Followers = Loadable(lazy(() => import('../features/apps/user-profile/Followers')));
@@ -166,8 +162,6 @@ const AcceptInvite = Loadable(lazy(() => import('../features/auth/AcceptInvite')
 const ForgotPassword = Loadable(lazy(() => import('../features/auth/authentication/auth1/ForgotPassword')));
 const ForgotPassword2 = Loadable(lazy(() => import('../features/auth/authentication/auth2/ForgotPassword2')));
 const VerifyEmailPage = Loadable(lazy(() => import('../features/auth/VerifyEmailPage')));
-const TwoSteps = Loadable(lazy(() => import('../features/auth/authentication/auth1/TwoSteps')));
-const TwoSteps2 = Loadable(lazy(() => import('../features/auth/authentication/auth2/TwoSteps2')));
 const Unauthorized = Loadable(lazy(() => import('../features/auth/authentication/Unauthorized')));
 const Maintenance = Loadable(lazy(() => import('../features/auth/authentication/Maintenance')));
 
@@ -351,38 +345,6 @@ const Router = [
         element: (
           <ProtectedRoute>
             <Kanban />
-          </ProtectedRoute>
-        )
-      },
-      {
-        path: '/apps/invoice/list',
-        element: (
-          <ProtectedRoute requiredPermission="view_invoices">
-            <InvoiceList />
-          </ProtectedRoute>
-        )
-      },
-      {
-        path: '/apps/invoice/create',
-        element: (
-          <ProtectedRoute requiredPermission="manage_invoices">
-            <InvoiceCreate />
-          </ProtectedRoute>
-        )
-      },
-      {
-        path: '/apps/invoice/detail/:id',
-        element: (
-          <ProtectedRoute requiredPermission="view_invoices">
-            <InvoiceDetail />
-          </ProtectedRoute>
-        )
-      },
-      {
-        path: '/apps/invoice/edit/:id',
-        element: (
-          <ProtectedRoute requiredPermission="manage_invoices">
-            <InvoiceEdit />
           </ProtectedRoute>
         )
       },
@@ -899,8 +861,6 @@ const Router = [
           { path: 'register2', element: <Register2 /> },
           { path: 'forgot-password', element: <ForgotPassword /> },
           { path: 'forgot-password2', element: <ForgotPassword2 /> },
-          { path: 'two-steps', element: <TwoSteps /> },
-          { path: 'two-steps2', element: <TwoSteps2 /> },
           { path: 'maintenance', element: <Maintenance /> },
           { path: 'accept-invite/:token', element: <AcceptInvite /> },
           { path: 'verify-email', element: <VerifyEmailPage /> },

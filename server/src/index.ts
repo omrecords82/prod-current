@@ -72,7 +72,6 @@ try {
         notifications: process.env.FEATURE_NOTIFICATIONS !== 'false',
         ocr: process.env.FEATURE_OCR !== 'false',
         certificates: process.env.FEATURE_CERTIFICATES !== 'false',
-        invoices: process.env.FEATURE_INVOICES !== 'false',
       },
     };
   }
@@ -192,10 +191,6 @@ try {
 }
 const calendarRouter = require('./routes/calendar');
 const dashboardRouter = require('./routes/dashboard');
-const invoicesRouter = require('./routes/invoices');
-const invoicesMultilingualRouter = require('./routes/invoicesMultilingual');
-const enhancedInvoicesRouter = require('./routes/enhancedInvoices');
-const billingRouter = require('./routes/billing');
 const churchesRouter = require('./routes/churches');
 const provisionRouter = require('./routes/provision');
 // Load certificates router with error handling for native module issues
@@ -556,34 +551,6 @@ app.get('/api/system/health', async (req, res) => {
       status: 'error', 
       message: err.message,
       timestamp: new Date().toISOString()
-    });
-  }
-});
-
-// GET /api/maintenance/status - Maintenance status check (NO AUTH)
-app.get('/api/maintenance/status', (req, res) => {
-  try {
-    const fs = require('fs');
-    const MAINTENANCE_FILE = '/var/www/orthodoxmetrics/maintenance.on';
-    const exists = fs.existsSync(MAINTENANCE_FILE);
-    let startTime = null;
-    
-    if (exists) {
-      const stats = fs.statSync(MAINTENANCE_FILE);
-      startTime = stats.mtime.toISOString();
-    }
-    
-    res.json({
-      maintenance: exists,
-      status: exists ? 'updating' : 'production',
-      startTime: startTime,
-      message: exists ? 'System is currently under maintenance' : null
-    });
-  } catch (error) {
-    res.json({
-      maintenance: false,
-      status: 'production',
-      message: null
     });
   }
 });
@@ -1009,11 +976,6 @@ app.use('/api', uploadTokenRouter);
 app.use('/api/calendar', calendarRouter);
 app.use('/api/orthodox-calendar', orthodoxCalendarRouter); // Changed to avoid conflict with /api/calendar
 app.use('/api/dashboard', dashboardRouter);
-app.use('/api/invoices', invoicesRouter);
-app.use('/api/invoices-enhanced', enhancedInvoicesRouter);
-app.use('/api/invoices-ml', invoicesMultilingualRouter);
-app.use('/api/enhanced-invoices', enhancedInvoicesRouter);
-app.use('/api/billing', billingRouter);
 app.use('/api/provision', provisionRouter);
 app.use('/api/certificates', certificatesRouter);
 app.use('/api/eCommerce', ecommerceRouter);
@@ -1144,7 +1106,6 @@ app.get('/api/config', (req, res) => {
     features: {
 
       certificates: true,
-      invoices: true,
       calendar: true
     }
   });

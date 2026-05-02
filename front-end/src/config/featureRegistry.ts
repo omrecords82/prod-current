@@ -61,7 +61,6 @@ export const FEATURE_REGISTRY: FeatureEntry[] = [
   { id: 'tickets', name: 'Tickets', stage: 5, route: '/apps/tickets' },
   { id: 'email', name: 'Email', stage: 5, route: '/apps/email' },
   { id: 'kanban', name: 'Kanban Board', stage: 5, route: '/apps/kanban' },
-  { id: 'invoice', name: 'Invoice', stage: 5, route: '/apps/invoice/list' },
   { id: 'church-management', name: 'Church Management', stage: 5, route: '/admin/churches' },
   { id: 'social-chat', name: 'Social Chat', stage: 5, route: '/social/chat' },
   { id: 'notifications', name: 'Notifications', stage: 5, route: '/notifications' },

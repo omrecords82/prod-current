@@ -29,7 +29,6 @@ import {
   Help as HelpIcon,
   Home as HomeIcon,
   Image as ImageIcon,
-  Inventory as InvoiceIcon,
   Lock as AuthIcon,
   Map as MapIcon,
   MyLocation as HereIcon,
@@ -126,12 +125,6 @@ const ADMIN_MAP: SiteNode[] = [
       { label: 'Kanban Board', path: '/apps/kanban', icon: <KanbanIcon /> },
       { label: 'Gallery', path: '/apps/gallery', icon: <ImageIcon /> },
       { label: 'Page Image Index', path: '/apps/gallery/page-index', icon: <ImageIcon /> },
-      {
-        label: 'Invoices', icon: <InvoiceIcon />, children: [
-          { label: 'Invoice List', path: '/apps/invoice/list', icon: <InvoiceIcon /> },
-          { label: 'Create Invoice', path: '/apps/invoice/create', icon: <InvoiceIcon /> },
-        ],
-      },
       { label: 'OM Charts', path: '/apps/om-charts', icon: <AnalyticsIcon />, badge: 'SDLC' },
       { label: 'Liturgical Calendar', path: '/apps/liturgical-calendar', icon: <CalendarIcon />, badge: 'Proto' },
     ],
@@ -279,7 +272,6 @@ const ADMIN_MAP: SiteNode[] = [
       { label: 'Register', path: '/auth/register', icon: <AuthIcon /> },
       { label: 'Register (v2)', path: '/auth/register2', icon: <AuthIcon /> },
       { label: 'Forgot Password', path: '/auth/forgot-password', icon: <AuthIcon /> },
-      { label: 'Two-Step Verification', path: '/auth/two-steps', icon: <SecurityIcon /> },
       { label: 'Coming Soon', path: '/auth/coming-soon', icon: <PublicIcon /> },
     ],
   },
@@ -325,12 +317,6 @@ const USER_MAP: SiteNode[] = [
       { label: 'Chat', path: '/social/chat', icon: <ChatIcon /> },
       { label: 'Friends', path: '/social/friends', icon: <PeopleIcon /> },
       { label: 'Notifications', path: '/social/notifications', icon: <NotifIcon /> },
-    ],
-  },
-  {
-    label: 'Invoices', icon: <InvoiceIcon />, children: [
-      { label: 'Invoice List', path: '/apps/invoice/list', icon: <InvoiceIcon /> },
-      { label: 'Create Invoice', path: '/apps/invoice/create', icon: <InvoiceIcon /> },
     ],
   },
   {
