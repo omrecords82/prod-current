@@ -7,6 +7,10 @@ interface ApiError {
   message: string;
   status: number;
   code?: string;
+  // Per-field validation messages keyed by form field name (e.g.
+  // { firstName: 'First name is required.' }). Set when the server
+  // returns 400 with structured fieldErrors from the records validator.
+  fieldErrors?: Record<string, string>;
 }
 
 class FieldMapperApiError extends Error {
@@ -39,6 +43,7 @@ export async function apiJson<T>(
       let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
       let errorCode: string | undefined;
 
+      let fieldErrors: Record<string, string> | undefined;
       try {
         const errorData = await response.json();
         if (errorData.message) {
@@ -46,6 +51,9 @@ export async function apiJson<T>(
         }
         if (errorData.code) {
           errorCode = errorData.code;
+        }
+        if (errorData.fieldErrors && typeof errorData.fieldErrors === 'object') {
+          fieldErrors = errorData.fieldErrors;
         }
       } catch {
         // Fallback to status text if response is not JSON
@@ -55,6 +63,7 @@ export async function apiJson<T>(
         message: errorMessage,
         status: response.status,
         code: errorCode,
+        fieldErrors,
       });
     }
 

@@ -446,12 +446,14 @@ const RecordsPage: React.FC<RecordsPageProps> = ({ defaultRecordType = 'baptism'
       notes: '',
       customPriest: false,
     });
+    setFieldErrors({}); // fresh dialog → no stale errors
     setDialogOpen(true);
   };
 
   const handleEditRecord = useCallback((record: BaptismRecord) => {
     setEditingRecord(record);
     setFormData(recordToFormData(record, selectedRecordType));
+    setFieldErrors({}); // clear any leftover errors from a prior dialog session
     setDialogOpen(true);
   }, [selectedRecordType]);
 
@@ -606,6 +608,11 @@ const RecordsPage: React.FC<RecordsPageProps> = ({ defaultRecordType = 'baptism'
     highlightSearchMatch, t,
   });
 
+  // Field-level validation errors (per-field messages) for the edit
+  // dialog. useRecordSave runs the validators, populates this on
+  // failure, and clears it before each save attempt.
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+
   const handleSaveRecord = useRecordSave({
     // Pass the effective church (resolves 0 → real church id when only
     // one parish exists) so save isn't blocked by the implicit
@@ -614,7 +621,7 @@ const RecordsPage: React.FC<RecordsPageProps> = ({ defaultRecordType = 'baptism'
     selectedRecordType, selectedChurch: effectiveChurchId, churches, editingRecord, formData,
     viewDialogOpen, viewEditMode,
     setLoading, setRecords, setDialogOpen, setViewingRecord, setViewEditMode,
-    showToast, handleRowSelect,
+    showToast, handleRowSelect, setFieldErrors,
   });
 
   // Navigate to Interactive Reports with pre-selected record type
@@ -965,6 +972,8 @@ const RecordsPage: React.FC<RecordsPageProps> = ({ defaultRecordType = 'baptism'
               loading={loading}
               onSave={handleSaveRecord}
               isDarkMode={isDarkMode}
+              fieldErrors={fieldErrors}
+              setFieldErrors={setFieldErrors}
             />
             {/* Modern Record Viewer Modal */}
             <ModernRecordViewerModal

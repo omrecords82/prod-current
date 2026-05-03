@@ -35,6 +35,11 @@ interface EditRecordDialogProps {
   loading: boolean;
   onSave: () => void;
   isDarkMode: boolean;
+  // Field-level error map keyed by form field name. Empty {} = no errors.
+  fieldErrors?: Record<string, string>;
+  // Mutator so per-field onBlur can clear an error once the user has
+  // corrected the value. Optional — falls back to a no-op.
+  setFieldErrors?: (errors: Record<string, string>) => void;
 }
 
 const EditRecordDialog: React.FC<EditRecordDialogProps> = ({
@@ -50,9 +55,25 @@ const EditRecordDialog: React.FC<EditRecordDialogProps> = ({
   loading,
   onSave,
   isDarkMode,
+  fieldErrors = {},
+  setFieldErrors = () => {},
 }) => {
   const { t } = useLanguage();
   const theme = useTheme();
+
+  // Helper props applied to TextFields below — wires the validation state
+  // to MUI's error+helperText, plus an onBlur that clears the field's
+  // error once the user has typed something different.
+  const errProps = (name: string) => ({
+    error: !!fieldErrors[name],
+    helperText: fieldErrors[name] || undefined,
+    onBlur: () => {
+      if (fieldErrors[name]) {
+        const { [name]: _drop, ...rest } = fieldErrors;
+        setFieldErrors(rest);
+      }
+    },
+  });
 
   return (
     <Dialog
@@ -114,6 +135,7 @@ const EditRecordDialog: React.FC<EditRecordDialogProps> = ({
                       onChange={(e) => setFormData((prev: any) => ({ ...prev, firstName: e.target.value }))}
                       required
                       sx={{ flex: 1, '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+                      {...errProps('firstName')}
                     />
                     <TextField
                       label={t('common.last_name')}
@@ -121,6 +143,7 @@ const EditRecordDialog: React.FC<EditRecordDialogProps> = ({
                       onChange={(e) => setFormData((prev: any) => ({ ...prev, lastName: e.target.value }))}
                       required
                       sx={{ flex: 1, '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+                      {...errProps('lastName')}
                     />
                   </Stack>
                   <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
@@ -131,12 +154,14 @@ const EditRecordDialog: React.FC<EditRecordDialogProps> = ({
                       onChange={(e) => setFormData((prev: any) => ({ ...prev, dateOfBirth: e.target.value }))}
                       InputLabelProps={{ shrink: true }}
                       sx={{ flex: 1, '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+                      {...errProps('dateOfBirth')}
                     />
                     <TextField
                       label={t('records.label_place_of_birth')}
                       value={formData.placeOfBirth || ''}
                       onChange={(e) => setFormData((prev: any) => ({ ...prev, placeOfBirth: e.target.value }))}
                       sx={{ flex: 1, '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+                      {...errProps('placeOfBirth')}
                     />
                   </Stack>
                   <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
@@ -145,12 +170,14 @@ const EditRecordDialog: React.FC<EditRecordDialogProps> = ({
                       value={formData.fatherName || ''}
                       onChange={(e) => setFormData((prev: any) => ({ ...prev, fatherName: e.target.value }))}
                       sx={{ flex: 1, '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+                      {...errProps('fatherName')}
                     />
                     <TextField
                       label={t('records.label_mother_name')}
                       value={formData.motherName || ''}
                       onChange={(e) => setFormData((prev: any) => ({ ...prev, motherName: e.target.value }))}
                       sx={{ flex: 1, '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+                      {...errProps('motherName')}
                     />
                   </Stack>
                 </Stack>
@@ -168,6 +195,7 @@ const EditRecordDialog: React.FC<EditRecordDialogProps> = ({
                       InputLabelProps={{ shrink: true }}
                       required
                       sx={{ flex: 1, '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+                      {...errProps('dateOfBaptism')}
                     />
                     <FormControl sx={{ flex: 1 }}>
                       <InputLabel>{t('records.label_received_by')}</InputLabel>
@@ -281,6 +309,7 @@ const EditRecordDialog: React.FC<EditRecordDialogProps> = ({
                       onChange={(e) => setFormData((prev: any) => ({ ...prev, groomFirstName: e.target.value }))}
                       required
                       sx={{ flex: 1, '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+                      {...errProps('groomFirstName')}
                     />
                     <TextField
                       label={t('common.last_name')}
@@ -288,6 +317,7 @@ const EditRecordDialog: React.FC<EditRecordDialogProps> = ({
                       onChange={(e) => setFormData((prev: any) => ({ ...prev, groomLastName: e.target.value }))}
                       required
                       sx={{ flex: 1, '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+                      {...errProps('groomLastName')}
                     />
                   </Stack>
                   <TextField
@@ -296,6 +326,7 @@ const EditRecordDialog: React.FC<EditRecordDialogProps> = ({
                     onChange={(e) => setFormData((prev: any) => ({ ...prev, groomParents: e.target.value }))}
                     placeholder={t('records.placeholder_groom_parents')}
                     sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+                    {...errProps('groomParents')}
                   />
                 </Stack>
               </RecordSection>
@@ -310,6 +341,7 @@ const EditRecordDialog: React.FC<EditRecordDialogProps> = ({
                       onChange={(e) => setFormData((prev: any) => ({ ...prev, brideFirstName: e.target.value }))}
                       required
                       sx={{ flex: 1, '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+                      {...errProps('brideFirstName')}
                     />
                     <TextField
                       label={t('common.last_name')}
@@ -317,6 +349,7 @@ const EditRecordDialog: React.FC<EditRecordDialogProps> = ({
                       onChange={(e) => setFormData((prev: any) => ({ ...prev, brideLastName: e.target.value }))}
                       required
                       sx={{ flex: 1, '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+                      {...errProps('brideLastName')}
                     />
                   </Stack>
                   <TextField
@@ -325,6 +358,7 @@ const EditRecordDialog: React.FC<EditRecordDialogProps> = ({
                     onChange={(e) => setFormData((prev: any) => ({ ...prev, brideParents: e.target.value }))}
                     placeholder={t('records.placeholder_bride_parents')}
                     sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+                    {...errProps('brideParents')}
                   />
                 </Stack>
               </RecordSection>
@@ -341,12 +375,14 @@ const EditRecordDialog: React.FC<EditRecordDialogProps> = ({
                       InputLabelProps={{ shrink: true }}
                       required
                       sx={{ flex: 1, '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+                      {...errProps('marriageDate')}
                     />
                     <TextField
                       label={t('records.label_marriage_location')}
                       value={formData.marriageLocation || ''}
                       onChange={(e) => setFormData((prev: any) => ({ ...prev, marriageLocation: e.target.value }))}
                       sx={{ flex: 1, '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+                      {...errProps('marriageLocation')}
                     />
                   </Stack>
                   <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
@@ -355,12 +391,14 @@ const EditRecordDialog: React.FC<EditRecordDialogProps> = ({
                       value={formData.witness1 || ''}
                       onChange={(e) => setFormData((prev: any) => ({ ...prev, witness1: e.target.value }))}
                       sx={{ flex: 1, '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+                      {...errProps('witness1')}
                     />
                     <TextField
                       label={t('records.label_witness_2')}
                       value={formData.witness2 || ''}
                       onChange={(e) => setFormData((prev: any) => ({ ...prev, witness2: e.target.value }))}
                       sx={{ flex: 1, '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+                      {...errProps('witness2')}
                     />
                   </Stack>
                 </Stack>
@@ -415,6 +453,7 @@ const EditRecordDialog: React.FC<EditRecordDialogProps> = ({
                       onChange={(e) => setFormData((prev: any) => ({ ...prev, deceasedFirstName: e.target.value, firstName: e.target.value }))}
                       required
                       sx={{ flex: 1, '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+                      {...errProps('firstName')}
                     />
                     <TextField
                       label={t('common.last_name')}
@@ -422,6 +461,7 @@ const EditRecordDialog: React.FC<EditRecordDialogProps> = ({
                       onChange={(e) => setFormData((prev: any) => ({ ...prev, deceasedLastName: e.target.value, lastName: e.target.value }))}
                       required
                       sx={{ flex: 1, '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+                      {...errProps('lastName')}
                     />
                   </Stack>
                   <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
@@ -431,6 +471,7 @@ const EditRecordDialog: React.FC<EditRecordDialogProps> = ({
                       value={formData.age || ''}
                       onChange={(e) => setFormData((prev: any) => ({ ...prev, age: e.target.value }))}
                       sx={{ flex: 1, '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+                      {...errProps('age')}
                     />
                   </Stack>
                 </Stack>
@@ -448,6 +489,7 @@ const EditRecordDialog: React.FC<EditRecordDialogProps> = ({
                       InputLabelProps={{ shrink: true }}
                       required
                       sx={{ flex: 1, '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+                      {...errProps('dateOfDeath')}
                     />
                     <TextField
                       label={t('records.label_burial_date')}
@@ -456,6 +498,7 @@ const EditRecordDialog: React.FC<EditRecordDialogProps> = ({
                       onChange={(e) => setFormData((prev: any) => ({ ...prev, burialDate: e.target.value }))}
                       InputLabelProps={{ shrink: true }}
                       sx={{ flex: 1, '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+                      {...errProps('burialDate')}
                     />
                   </Stack>
                   <TextField
@@ -464,6 +507,7 @@ const EditRecordDialog: React.FC<EditRecordDialogProps> = ({
                     onChange={(e) => setFormData((prev: any) => ({ ...prev, burialLocation: e.target.value }))}
                     fullWidth
                     sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+                    {...errProps('burialLocation')}
                   />
                 </Stack>
               </RecordSection>

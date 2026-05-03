@@ -7,6 +7,7 @@ import { recordsEvents } from '@/events/recordsEvents';
 import { createRecordsApiService } from '@/features/records-centralized/components/records/RecordsApiService';
 import { Church } from '@/shared/lib/churchService';
 import type { BaptismRecord } from './types';
+import { validateRecord, type FieldErrors } from './validation';
 
 interface UseRecordSaveOptions {
   selectedRecordType: string;
@@ -23,41 +24,39 @@ interface UseRecordSaveOptions {
   setViewEditMode: (m: string) => void;
   showToast: (msg: string, severity: 'success' | 'error' | 'info') => void;
   handleRowSelect: (id: any) => void;
+  // Field-level validation surface — the dialog shows error+helperText
+  // per field and we publish the latest error map here whether the
+  // submit attempt was blocked or accepted.
+  setFieldErrors: (errors: FieldErrors) => void;
 }
 
 export function useRecordSave({
   selectedRecordType, selectedChurch, churches, editingRecord, formData,
   viewDialogOpen, viewEditMode,
   setLoading, setRecords, setDialogOpen, setViewingRecord, setViewEditMode,
-  showToast, handleRowSelect,
+  showToast, handleRowSelect, setFieldErrors,
 }: UseRecordSaveOptions) {
   return useCallback(async () => {
     try {
       setLoading(true);
 
-      let validationError = '';
-      if (selectedRecordType === 'marriage') {
-        if (!formData.groomFirstName || !formData.groomLastName ||
-            !formData.brideFirstName || !formData.brideLastName ||
-            !formData.marriageDate) {
-          validationError = 'Please fill in groom names, bride names, and marriage date';
-        }
-      } else if (selectedRecordType === 'funeral') {
-        if (!(formData.deceasedFirstName || formData.firstName) ||
-            !(formData.deceasedLastName || formData.lastName) ||
-            !(formData.deathDate || formData.dateOfDeath)) {
-          validationError = 'Please fill in deceased name and death date';
-        }
-      } else {
-        if (!formData.firstName || !formData.lastName || !formData.dateOfBaptism) {
-          validationError = 'Please fill in first name, last name, and baptism date';
-        }
-      }
-
-      if (validationError) {
-        showToast(validationError, 'error');
+      // Field-level validation. The dialog renders these inline; we
+      // also raise a summary toast so users who don't notice the
+      // helperText still get clear feedback.
+      const v = validateRecord(selectedRecordType, formData);
+      if (!v.ok) {
+        setFieldErrors(v.fieldErrors);
+        const count = Object.keys(v.fieldErrors).length;
+        showToast(
+          count === 1
+            ? `Please fix the highlighted field.`
+            : `Please fix the ${count} highlighted fields.`,
+          'error',
+        );
         return;
       }
+      // Cleared state — no errors going into save.
+      setFieldErrors({});
 
       const churchId = selectedChurch ? selectedChurch.toString() : '';
       const churchName = churches.find(c => c.id === selectedChurch)?.church_name || '';
@@ -106,6 +105,12 @@ export function useRecordSave({
             recordId: editingRecord.id,
           });
         } else {
+          // If the backend returned structured fieldErrors (400 from the
+          // controller's own validation pass), surface them inline.
+          const apiFieldErrors = (response as any)?.fieldErrors;
+          if (apiFieldErrors && typeof apiFieldErrors === 'object') {
+            setFieldErrors(apiFieldErrors);
+          }
           showToast(response.error || 'Failed to update record', 'error');
         }
       } else {
@@ -144,14 +149,30 @@ export function useRecordSave({
             recordId: response.data.id,
           });
         } else {
+          const apiFieldErrors = (response as any)?.fieldErrors;
+          if (apiFieldErrors && typeof apiFieldErrors === 'object') {
+            setFieldErrors(apiFieldErrors);
+          }
           showToast(response.error || 'Failed to create record', 'error');
         }
       }
-    } catch (err) {
+    } catch (err: any) {
+      // Some apiService variants throw on non-2xx instead of returning
+      // {success: false}. Pull fieldErrors out of the rejection envelope
+      // either way so inline errors stay accurate.
+      const apiFieldErrors = err?.response?.data?.fieldErrors ?? err?.fieldErrors;
+      if (apiFieldErrors && typeof apiFieldErrors === 'object') {
+        setFieldErrors(apiFieldErrors);
+      }
       console.error('Save error:', err);
-      showToast('Failed to save record', 'error');
+      showToast(
+        err?.response?.data?.error ||
+        err?.message ||
+        'Failed to save record',
+        'error',
+      );
     } finally {
       setLoading(false);
     }
-  }, [selectedRecordType, selectedChurch, churches, editingRecord, formData, viewDialogOpen, viewEditMode, setLoading, setRecords, setDialogOpen, setViewingRecord, setViewEditMode, showToast, handleRowSelect]);
+  }, [selectedRecordType, selectedChurch, churches, editingRecord, formData, viewDialogOpen, viewEditMode, setLoading, setRecords, setDialogOpen, setViewingRecord, setViewEditMode, showToast, handleRowSelect, setFieldErrors]);
 }

@@ -12,6 +12,9 @@ export interface RecordApiResponse<T> {
   data?: T;
   message?: string;
   error?: string;
+  // Per-field validation messages from the back-end records validator.
+  // Set on 400 responses; absent on 2xx and other error classes.
+  fieldErrors?: Record<string, string>;
 }
 
 export interface PaginatedResponse<T> {
@@ -451,22 +454,29 @@ class RecordsApiService {
 
   private handleError(error: any, defaultMessage: string): RecordApiResponse<any> {
     console.error('Records API Error:', error);
-    
+
     let message = defaultMessage;
     let errorCode = 'UNKNOWN_ERROR';
-    
+    let fieldErrors: Record<string, string> | undefined;
+
     if (error instanceof FieldMapperApiError) {
       message = error.apiError.message;
       errorCode = error.apiError.code || 'API_ERROR';
+      fieldErrors = error.apiError.fieldErrors;
     } else if (error instanceof Error) {
       message = error.message;
     }
-    
+
     return {
       success: false,
       error: message,
-      message: `Error: ${message}`
-    };
+      message: `Error: ${message}`,
+      // Forward the per-field error map so useRecordSave can light up
+      // the dialog's TextFields with inline error+helperText. Only set
+      // when present so callers checking response.fieldErrors don't
+      // see undefined-vs-empty noise.
+      ...(fieldErrors ? { fieldErrors } : {}),
+    } as RecordApiResponse<any>;
   }
 }
 
