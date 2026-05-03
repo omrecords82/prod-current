@@ -528,7 +528,18 @@ const CertificateGeneratorPage: React.FC = () => {
     return `${recordData.first_name || recordData.person_first || ''} ${recordData.last_name || recordData.person_last || ''}`.trim();
   };
 
-  const handleGoBack = () => navigate(-1);
+  const handleGoBack = () => {
+    // navigate(-1) silently no-ops when there's no prior history (direct
+    // page load, browser refresh, or external link). Fall back to the
+    // matching records page so the button always does *something*.
+    const fallback = `/portal/records/${recordType || 'baptism'}`;
+    const hasHistory = typeof window !== 'undefined' && window.history.length > 1;
+    if (hasHistory) {
+      navigate(-1);
+    } else {
+      navigate(fallback);
+    }
+  };
 
   const getScreenPosition = (fieldName: string) => {
     if (!imageRef.current || !imageWrapperRef.current) return null;

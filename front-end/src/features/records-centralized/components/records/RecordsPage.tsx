@@ -258,14 +258,21 @@ const RecordsPage: React.FC<RecordsPageProps> = ({ defaultRecordType = 'baptism'
   const fetchChurches = () => fetchChurchesApi({ setLoading, setChurches, setError, showToast });
   const fetchRecords = (recordType: string, churchId?: number, search?: string, serverPage?: number, serverLimit?: number, sortField?: string, sortDir?: string) =>
     fetchRecordsApi({ recordType, churchId, search, serverPage, serverLimit, sortField, sortDir }, fetchCb);
-  const fetchPriestOptions = (recordType: string) => fetchPriestOptionsApi(recordType, selectedChurch, setPriestOptions);
 
-  // Effective church ID — resolves 0 to the single real church when only 1 exists
+  // Effective church ID — resolves 0 ("All Churches") to the single real
+  // church when only 1 exists. Used by every flow that needs a CONCRETE
+  // church (priest fetch, save, edit-dialog church-name display).
   const effectiveChurchId = useMemo(() => {
     if (selectedChurch && selectedChurch !== 0) return selectedChurch;
     const realChurches = churches.filter(c => c.id !== 0);
     return realChurches.length === 1 ? realChurches[0].id : 0;
   }, [selectedChurch, churches]);
+
+  // Use the effective church for the clergy lookup so the dropdown is
+  // populated even when the user implicitly has the "All Churches"
+  // option selected and only one real church exists.
+  const fetchPriestOptions = (recordType: string) =>
+    fetchPriestOptionsApi(recordType, effectiveChurchId || null, setPriestOptions);
 
   // Effects
   useEffect(() => {
@@ -283,7 +290,9 @@ const RecordsPage: React.FC<RecordsPageProps> = ({ defaultRecordType = 'baptism'
       fetchRecords(selectedRecordType, selectedChurch, undefined, 0, rowsPerPage, dateSortKey, 'desc');
       fetchPriestOptions(selectedRecordType);
     }
-  }, [selectedRecordType, selectedChurch]);
+    // effectiveChurchId added so the priest fetch retries once the
+    // churches list resolves (selectedChurch=0 → real church id).
+  }, [selectedRecordType, selectedChurch, effectiveChurchId]);
 
   // Debounce search term: update debouncedSearch 300ms after typing stops
   useEffect(() => {
@@ -430,7 +439,10 @@ const RecordsPage: React.FC<RecordsPageProps> = ({ defaultRecordType = 'baptism'
       godparentNames: '',
       priest: '',
       registryNumber: '',
-      churchId: selectedChurch ? selectedChurch.toString() : '',
+      // effectiveChurchId resolves the implicit "All Churches" (id=0)
+      // to the real parish when only one exists, so the new record
+      // gets associated with the right church without operator click.
+      churchId: effectiveChurchId ? effectiveChurchId.toString() : '',
       notes: '',
       customPriest: false,
     });
@@ -595,7 +607,11 @@ const RecordsPage: React.FC<RecordsPageProps> = ({ defaultRecordType = 'baptism'
   });
 
   const handleSaveRecord = useRecordSave({
-    selectedRecordType, selectedChurch, churches, editingRecord, formData,
+    // Pass the effective church (resolves 0 → real church id when only
+    // one parish exists) so save isn't blocked by the implicit
+    // "All Churches" selection. selectedChurch (the literal toggle state)
+    // is preserved everywhere else for UI rendering.
+    selectedRecordType, selectedChurch: effectiveChurchId, churches, editingRecord, formData,
     viewDialogOpen, viewEditMode,
     setLoading, setRecords, setDialogOpen, setViewingRecord, setViewEditMode,
     showToast, handleRowSelect,
@@ -942,7 +958,10 @@ const RecordsPage: React.FC<RecordsPageProps> = ({ defaultRecordType = 'baptism'
               setFormData={setFormData}
               priestOptions={priestOptions}
               churches={churches}
-              selectedChurch={selectedChurch}
+              // Pass the effective church so the dialog's "Church" field
+              // displays the real parish name even when the user is on
+              // the implicit "All Churches" selection (selectedChurch=0).
+              selectedChurch={effectiveChurchId}
               loading={loading}
               onSave={handleSaveRecord}
               isDarkMode={isDarkMode}
