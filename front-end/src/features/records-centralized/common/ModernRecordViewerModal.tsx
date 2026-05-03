@@ -20,6 +20,7 @@ import {
   Button,
   IconButton,
   Avatar,
+  CircularProgress,
   Tooltip,
   Divider,
   useTheme,
@@ -436,7 +437,19 @@ const ModernRecordViewerModal: React.FC<ModernRecordViewerModalProps> = ({
           ) : (
             <>
               <Button size="small" onClick={handleCancelEdit} startIcon={<CancelIcon />} color="inherit">Cancel</Button>
-              <Button size="small" variant="contained" color="success" startIcon={<SaveIcon />}>Save</Button>
+              {/* The Save button never had an onClick — clicking did literally
+                  nothing, no toast, no network call. Wire it through to the
+                  onSave prop the parent already passes (handleSaveRecord). */}
+              <Button
+                size="small"
+                variant="contained"
+                color="success"
+                startIcon={saveLoading ? <CircularProgress size={14} color="inherit" /> : <SaveIcon />}
+                onClick={onSave}
+                disabled={!onSave || saveLoading}
+              >
+                {saveLoading ? 'Saving…' : 'Save'}
+              </Button>
             </>
           )}
         </Box>
