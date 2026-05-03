@@ -49,8 +49,11 @@ function mapFieldValues(fields, record, church = {}) {
         break;
     }
 
-    // Format dates
-    if (value && isDateField(field.field_key, field.source_path)) {
+    // Format dates — only for raw record-typed date columns. Computed
+    // values use their own format directives (e.g. birth_date|md), so
+    // applying formatDate here would mangle "12/3" back into a long
+    // "Month Day, Year" string.
+    if (value && field.source_type === 'record' && isDateField(field.field_key, field.source_path)) {
       value = formatDate(value);
     }
 
@@ -97,15 +100,36 @@ function resolveChurchValue(sourcePath, church) {
 }
 
 /**
- * Resolve computed values — typically combining multiple record fields.
+ * Resolve computed values — typically combining or formatting record fields.
  *
  * source_path conventions:
- *   'first_name+last_name' — joins with space
+ *   'first_name+last_name'  — joins with space
  *   'fname_groom+lname_groom' — joins with space
- *   'parents' — returns parents field directly (used for child baptism "child of" line)
+ *   'parents'               — returns parents field directly (used for child baptism "child of" line)
+ *
+ *   Format directives — `path|format`. The directive is applied AFTER the
+ *   field is resolved. Used by the OCA template fields where the artwork
+ *   has separate placeholder spots (e.g. "ON ____, 20___" with the year
+ *   pre-printed as "20"):
+ *
+ *     'birth_date|md'      — "12/3"   (month/day, no zero-pad)
+ *     'birth_date|yy'      — "25"     (last 2 digits of year)
+ *     'birth_date|yyyy'    — "2025"   (4-digit year)
+ *     'reception_date|md'  — same shape as |md above
+ *     'parents|first'      — "Nicholas Torrisi"  (first half of "A & B" / "A, B")
+ *     'parents|second'     — "Samantha Dominy"   (second half)
+ *     'witness|first'      — same split for marriage witnesses
+ *     'witness|second'     — ditto
  */
 function resolveComputedValue(sourcePath, record, church) {
   if (!sourcePath) return '';
+
+  // Format directive: path|format
+  if (sourcePath.includes('|')) {
+    const [rawPath, format] = sourcePath.split('|', 2).map(s => s.trim());
+    const raw = record[rawPath] != null ? record[rawPath] : (church[rawPath] != null ? church[rawPath] : '');
+    return applyComputedFormat(raw, format);
+  }
 
   // Concatenation pattern: field1+field2
   if (sourcePath.includes('+')) {
@@ -122,6 +146,74 @@ function resolveComputedValue(sourcePath, record, church) {
   if (church[sourcePath] != null) return String(church[sourcePath]);
 
   return '';
+}
+
+// Apply a |format directive to a resolved raw value. Used for OCA's
+// split-field placeholders. Returns '' on any parse failure rather than
+// surfacing the raw value, since "wrong format" on a certificate is
+// worse than "blank".
+function applyComputedFormat(raw, format) {
+  if (raw == null || raw === '') return '';
+
+  switch (format) {
+    case 'md': {
+      const d = parseDate(raw);
+      if (!d) return '';
+      return `${d.getUTCMonth() + 1}/${d.getUTCDate()}`;
+    }
+    case 'yy': {
+      const d = parseDate(raw);
+      if (!d) return '';
+      return String(d.getUTCFullYear()).slice(-2);
+    }
+    case 'yyyy': {
+      const d = parseDate(raw);
+      if (!d) return '';
+      return String(d.getUTCFullYear());
+    }
+    case 'first':
+    case 'second': {
+      const [a, b] = splitTwoParty(String(raw));
+      return format === 'first' ? a : b;
+    }
+    default:
+      // Unknown directive — return raw to avoid silently dropping.
+      return String(raw);
+  }
+}
+
+// Robust date parse — accepts Date objects, ISO strings, YYYY-MM-DD, or
+// MySQL TIMESTAMP strings. Returns a Date in UTC (so getUTCMonth/Date
+// match the date the DB stored, regardless of server timezone).
+function parseDate(raw) {
+  if (raw instanceof Date) {
+    return Number.isNaN(raw.getTime()) ? null : raw;
+  }
+  if (typeof raw === 'string') {
+    // YYYY-MM-DD — interpret as UTC midnight (no timezone shift).
+    const ymd = /^(\d{4})-(\d{2})-(\d{2})/.exec(raw);
+    if (ymd) {
+      return new Date(Date.UTC(Number(ymd[1]), Number(ymd[2]) - 1, Number(ymd[3])));
+    }
+    const d = new Date(raw);
+    return Number.isNaN(d.getTime()) ? null : d;
+  }
+  return null;
+}
+
+// Split a combined "A & B" / "A, B" / "A; B" string into [A, B].
+// Mirrors the front-end splitTwoParty helper to keep round-trip stable.
+function splitTwoParty(combined) {
+  if (!combined) return ['', ''];
+  const trimmed = String(combined).trim();
+  if (!trimmed) return ['', ''];
+  for (const sep of [' & ', '&', ';', ',']) {
+    if (trimmed.includes(sep)) {
+      const parts = trimmed.split(sep).map(s => s.trim()).filter(Boolean);
+      return [parts[0] || '', parts[1] || ''];
+    }
+  }
+  return [trimmed, ''];
 }
 
 /**
