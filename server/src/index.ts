@@ -596,6 +596,12 @@ console.log('✅ [Server] Mounted /api/admin/orthodox-schedule-guidelines route'
 app.use('/api/admin/change-sets', changeSetsRouter);
 console.log('✅ [Server] Mounted /api/admin/change-sets route (SDLC delivery container)');
 app.use('/api/churches', churchesRouter);
+// Church metadata header — used by ChurchContext on every page load.
+// Lives at /api/church-branding/* so it doesn't collide with the
+// per-church static logo serve at /church-branding (no /api prefix).
+const churchBrandingRouter = require('./routes/church-branding');
+app.use('/api/church-branding', churchBrandingRouter);
+console.log('✅ [Server] Mounted /api/church-branding route (church metadata header)');
 // Mount churches router at /api/my to handle /api/my/churches
 // UI Preferences — per-user UI settings (FAB positions, etc.) (mount BEFORE /api/my catchall)
 const uiPreferencesRouter = require('./routes/ui-preferences');

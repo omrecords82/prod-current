@@ -82,6 +82,12 @@ const ModernRecordViewerModal: React.FC<ModernRecordViewerModalProps> = ({
   accentColor,
   mode: externalMode,
   onModeChange,
+  // These were declared in the props interface but the previous patch
+  // forgot to destructure them — referencing `saveLoading` / `onSave`
+  // in the JSX threw a ReferenceError at render time, blowing up the
+  // page when a user tried to enter Edit mode.
+  onSave,
+  saveLoading = false,
 }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
