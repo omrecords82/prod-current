@@ -71,19 +71,68 @@ interface FieldDef {
   searchWeight: number;
 }
 
+// ── Per-type field defaults ──────────────────────────────────────
+// Each record type gets its own field set. maiden_name only appears on
+// marriage (the bride's). deacon was previously listed under Clergy
+// for every type — removed entirely; field is unused in the records
+// schema. Switching the record-type card resets `fields` to the
+// matching default below (see the click handler).
+
 const baptismFields: FieldDef[] = [
   { column: 'first_name', displayName: 'First Name', group: 'Personal Information', visible: true, sortable: true, searchWeight: 8 },
   { column: 'last_name', displayName: 'Last Name', group: 'Personal Information', visible: true, sortable: true, searchWeight: 10 },
   { column: 'middle_name', displayName: 'Middle Name', group: 'Personal Information', visible: false, sortable: false, searchWeight: 5 },
-  { column: 'maiden_name', displayName: 'Maiden Name', group: 'Personal Information', visible: false, sortable: false, searchWeight: 7 },
+  { column: 'date_of_birth', displayName: 'Date of Birth', group: 'Personal Information', visible: false, sortable: true, searchWeight: 3 },
+  { column: 'birthplace', displayName: 'Birthplace', group: 'Personal Information', visible: false, sortable: false, searchWeight: 4 },
+  { column: 'father_name', displayName: "Father's Name", group: 'Personal Information', visible: false, sortable: false, searchWeight: 5 },
+  { column: 'mother_name', displayName: "Mother's Name", group: 'Personal Information', visible: false, sortable: false, searchWeight: 5 },
   { column: 'date_of_baptism', displayName: 'Date of Baptism', group: 'Sacrament Details', visible: true, sortable: true, searchWeight: 3 },
   { column: 'place_of_baptism', displayName: 'Place of Baptism', group: 'Sacrament Details', visible: true, sortable: false, searchWeight: 4 },
-  { column: 'officiating_priest', displayName: 'Officiating Priest', group: 'Sacrament Details', visible: true, sortable: false, searchWeight: 6 },
+  { column: 'officiating_priest', displayName: 'Officiating Priest', group: 'Clergy', visible: true, sortable: false, searchWeight: 6 },
   { column: 'godfather_name', displayName: "Godfather's Name", group: 'Sponsors', visible: false, sortable: false, searchWeight: 5 },
   { column: 'godmother_name', displayName: "Godmother's Name", group: 'Sponsors', visible: false, sortable: false, searchWeight: 5 },
-  { column: 'deacon', displayName: 'Deacon', group: 'Clergy', visible: false, sortable: false, searchWeight: 2 },
   { column: 'notes', displayName: 'Notes', group: 'Additional', visible: false, sortable: false, searchWeight: 1 },
 ];
+
+const marriageFields: FieldDef[] = [
+  { column: 'groom_first_name', displayName: "Groom's First Name", group: 'Groom Information', visible: true, sortable: true, searchWeight: 8 },
+  { column: 'groom_last_name',  displayName: "Groom's Last Name",  group: 'Groom Information', visible: true, sortable: true, searchWeight: 10 },
+  { column: 'groom_parents',    displayName: "Groom's Parents",    group: 'Groom Information', visible: false, sortable: false, searchWeight: 4 },
+  { column: 'bride_first_name', displayName: "Bride's First Name", group: 'Bride Information', visible: true, sortable: true, searchWeight: 8 },
+  { column: 'bride_last_name',  displayName: "Bride's Last Name",  group: 'Bride Information', visible: true, sortable: true, searchWeight: 10 },
+  { column: 'maiden_name',      displayName: "Bride's Maiden Name", group: 'Bride Information', visible: false, sortable: false, searchWeight: 7 },
+  { column: 'bride_parents',    displayName: "Bride's Parents",    group: 'Bride Information', visible: false, sortable: false, searchWeight: 4 },
+  { column: 'marriage_date',    displayName: 'Marriage Date',      group: 'Sacrament Details', visible: true, sortable: true, searchWeight: 3 },
+  { column: 'marriage_location', displayName: 'Marriage Location', group: 'Sacrament Details', visible: false, sortable: false, searchWeight: 4 },
+  { column: 'officiating_priest', displayName: 'Officiating Priest', group: 'Clergy', visible: true, sortable: false, searchWeight: 6 },
+  { column: 'witness_1', displayName: 'Witness 1', group: 'Witnesses', visible: false, sortable: false, searchWeight: 5 },
+  { column: 'witness_2', displayName: 'Witness 2', group: 'Witnesses', visible: false, sortable: false, searchWeight: 5 },
+  { column: 'notes', displayName: 'Notes', group: 'Additional', visible: false, sortable: false, searchWeight: 1 },
+];
+
+const funeralFields: FieldDef[] = [
+  { column: 'first_name', displayName: "Deceased's First Name", group: 'Personal Information', visible: true, sortable: true, searchWeight: 8 },
+  { column: 'last_name',  displayName: "Deceased's Last Name",  group: 'Personal Information', visible: true, sortable: true, searchWeight: 10 },
+  { column: 'middle_name', displayName: 'Middle Name', group: 'Personal Information', visible: false, sortable: false, searchWeight: 5 },
+  { column: 'age_at_death', displayName: 'Age at Death', group: 'Personal Information', visible: false, sortable: true, searchWeight: 2 },
+  { column: 'date_of_death',   displayName: 'Date of Death',  group: 'Sacrament Details', visible: true, sortable: true, searchWeight: 4 },
+  { column: 'date_of_funeral', displayName: 'Funeral Date',   group: 'Sacrament Details', visible: true, sortable: true, searchWeight: 3 },
+  { column: 'burial_location', displayName: 'Burial Location', group: 'Sacrament Details', visible: false, sortable: false, searchWeight: 4 },
+  { column: 'officiating_priest', displayName: 'Officiating Priest', group: 'Clergy', visible: true, sortable: false, searchWeight: 6 },
+  { column: 'notes', displayName: 'Notes', group: 'Additional', visible: false, sortable: false, searchWeight: 1 },
+];
+
+const FIELDS_BY_TYPE: Record<string, FieldDef[]> = {
+  baptism: baptismFields,
+  marriage: marriageFields,
+  funeral: funeralFields,
+};
+
+function defaultFieldsFor(recordType: string): FieldDef[] {
+  // Return a fresh clone so per-card state mutations don't bleed back
+  // into the constant.
+  return (FIELDS_BY_TYPE[recordType] || baptismFields).map((f) => ({ ...f }));
+}
 
 // ── Mock preview data ───────────────────────────────────────────
 
@@ -120,18 +169,26 @@ const DatabaseMappingPage: React.FC = () => {
   }, [step]);
 
   const [selectedRecord, setSelectedRecord] = useState('baptism');
-  const [fields, setFields] = useState<FieldDef[]>(baptismFields);
+  const [fields, setFields] = useState<FieldDef[]>(() => defaultFieldsFor('baptism'));
   const [defaultSort, setDefaultSort] = useState('last_name');
   const [dirty, setDirty] = useState(false);
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({ open: false, message: '', severity: 'success' });
 
-  // Load saved config on mount
+  // Load saved config on mount. Saved settings store one snapshot
+  // (selectedRecord + fields). If the saved type doesn't match the
+  // canonical type defaults — or if no config has ever been saved —
+  // fall back to the type's defaults so a stale config can't surface
+  // baptism fields under marriage / funeral.
   useEffect(() => {
     if (settingsLoading) return;
     const cfg = savedSettings?.config;
     if (cfg) {
-      if (cfg.selectedRecord) setSelectedRecord(cfg.selectedRecord);
-      if (cfg.fields && cfg.fields.length > 0) setFields(cfg.fields);
+      const type = cfg.selectedRecord || 'baptism';
+      setSelectedRecord(type);
+      const validKeys = new Set(defaultFieldsFor(type).map((f) => f.column));
+      const savedMatchesType = Array.isArray(cfg.fields) && cfg.fields.length > 0
+        && cfg.fields.every((f) => validKeys.has(f.column));
+      setFields(savedMatchesType ? cfg.fields! : defaultFieldsFor(type));
       if (cfg.defaultSort) setDefaultSort(cfg.defaultSort);
     }
   }, [savedSettings, settingsLoading]);
@@ -142,6 +199,23 @@ const DatabaseMappingPage: React.FC = () => {
   };
 
   const markDirty = useCallback(() => setDirty(true), []);
+
+  // Switching the record type resets the field list to that type's
+  // defaults — otherwise users would see baptism fields under
+  // marriage / funeral. The dirty flag fires so saving captures the
+  // new type's state.
+  const handleSelectRecord = useCallback((newType: string) => {
+    if (newType === selectedRecord) return;
+    setSelectedRecord(newType);
+    setFields(defaultFieldsFor(newType));
+    // Also reset defaultSort to a sensible per-type column if the
+    // current one isn't valid for this type.
+    const validCols = new Set(defaultFieldsFor(newType).map((f) => f.column));
+    if (!validCols.has(defaultSort)) {
+      setDefaultSort(defaultFieldsFor(newType).find((f) => f.sortable)?.column || 'last_name');
+    }
+    markDirty();
+  }, [selectedRecord, defaultSort, markDirty]);
 
   const updateField = (column: string, key: keyof FieldDef, value: any) => {
     setFields((prev) => prev.map((f) => (f.column === column ? { ...f, [key]: value } : f)));
@@ -270,7 +344,7 @@ const DatabaseMappingPage: React.FC = () => {
             <Paper
               key={rt.id}
               variant="outlined"
-              onClick={() => { setSelectedRecord(rt.id); markDirty(); }}
+              onClick={() => handleSelectRecord(rt.id)}
               sx={{
                 p: 2.5,
                 borderRadius: 2,
