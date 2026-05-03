@@ -137,6 +137,7 @@ export {
   Coffee,
   Cross,
   Crown,
+  Droplets,
   Fish,
   Flame,
   History,

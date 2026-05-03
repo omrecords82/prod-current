@@ -385,15 +385,19 @@ const generateMarriagePreview = async (record, fieldOffsets = {}, hiddenFields =
     draw('brideName', brideName);
     draw('groomParents', record.parentsg || record.parents_groom);
     draw('brideParents', record.parentsb || record.parents_bride);
-    if (record.marriage_date) {
-      draw('marriageDate', new Date(record.marriage_date).toLocaleDateString());
-      draw('marriageDateMD', dateMD(record.marriage_date));
-      draw('marriageDateYY', dateYY(record.marriage_date));
+    // marriage_records uses `mdate` (not marriage_date) and `witness`
+    // (not witnesses). Honor both shapes so refactors don't silently
+    // empty the cert.
+    const mDateRaw = record.mdate || record.marriage_date;
+    if (mDateRaw) {
+      draw('marriageDate', new Date(mDateRaw).toLocaleDateString());
+      draw('marriageDateMD', dateMD(mDateRaw));
+      draw('marriageDateYY', dateYY(mDateRaw));
     }
     draw('marriagePlace', record.marriage_place || record.place || record.mlicense);
     draw('clergy', record.clergy);
     draw('church', record.churchName || 'Orthodox Church');
-    draw('witnesses', record.witnesses);
+    draw('witnesses', record.witness || record.witnesses);
   }
 
   // For template-less version
@@ -988,7 +992,16 @@ router.get('/baptism/:id/download', async (req, res) => {
       hiddenFields,
     });
 
-    const filename = `baptism_certificate_${record.first_name || 'unknown'}_${record.last_name || 'unknown'}_${id}.pdf`;
+    // Filename: firstname+lastname+dateofbaptism.pdf — matches what
+    // operators expect when archiving / emailing the certificate.
+    const safeFirst = String(record.first_name || 'baptism').trim().replace(/[^A-Za-z0-9]+/g, '');
+    const safeLast  = String(record.last_name  || '').trim().replace(/[^A-Za-z0-9]+/g, '');
+    const dateRaw = record.reception_date || record.baptism_date;
+    const safeDate = dateRaw
+      ? new Date(dateRaw).toISOString().slice(0, 10) // YYYY-MM-DD
+      : '';
+    const filenameParts = [safeFirst, safeLast, safeDate].filter(Boolean);
+    const filename = `${filenameParts.join('+') || 'baptism_certificate'}.pdf`;
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
     res.send(Buffer.from(pdfBytes));
@@ -1104,9 +1117,13 @@ router.get('/marriage/:id/download', async (req, res) => {
       hiddenFields,
     });
 
-    const groomName = `${record.fname_groom || 'unknown'}_${record.lname_groom || ''}`.trim();
-    const brideName = `${record.fname_bride || 'unknown'}_${record.lname_bride || ''}`.trim();
-    const filename = `marriage_certificate_${groomName}_${brideName}_${id}.pdf`;
+    // Filename: marriage-cert-groomslastname+brideslastname.pdf
+    const safeGroom = String(record.lname_groom || '').trim().replace(/[^A-Za-z0-9]+/g, '');
+    const safeBride = String(record.lname_bride || '').trim().replace(/[^A-Za-z0-9]+/g, '');
+    const lastNameParts = [safeGroom, safeBride].filter(Boolean);
+    const filename = lastNameParts.length
+      ? `marriage-cert-${lastNameParts.join('+')}.pdf`
+      : 'marriage-certificate.pdf';
     
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);

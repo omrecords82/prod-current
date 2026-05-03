@@ -1,6 +1,7 @@
 const express = require('express');
 const { getAppPool } = require('../config/db-compat');
 const { getTenantPool } = require('../config/db');
+const { requireAuth } = require('../middleware/auth');
 const router = express.Router();
 
 // ═══════════════════════════════════════════════════════════════
@@ -8,13 +9,11 @@ const router = express.Router();
 // Mounted at /api/lookup
 // ═══════════════════════════════════════════════════════════════
 
-// Auth guard — require session (applied to all routes in this router)
-router.use((req, res, next) => {
-    if (!req.session?.user) {
-        return res.status(401).json({ error: 'NO_SESSION', message: 'Authentication required' });
-    }
-    next();
-});
+// Use the canonical requireAuth middleware (session OR JWT) instead of
+// a session-only check. The previous router-level session guard 401'd
+// any caller authenticated by JWT — which was happening intermittently
+// for the records edit dialog's clergy fetch.
+router.use(requireAuth);
 
 // ───────────────────────────────────────────────────────────────
 // GET /api/lookup/clergy
@@ -33,7 +32,9 @@ const CLERGY_TABLE_MAP = {
 
 router.get('/clergy', async (req, res) => {
     try {
-        const churchId = req.query.church_id || req.session?.user?.church_id;
+        const churchId = req.query.church_id
+            || req.session?.user?.church_id
+            || req.user?.church_id;
         if (!churchId) {
             return res.status(400).json({ error: 'church_id is required (query param or session)' });
         }

@@ -865,6 +865,9 @@ app.use('/api/churches/:churchId/charts', omChartsRouter); // OM Charts
 console.log('✅ [Server] Mounted /api/churches/:churchId/charts routes (OM Charts)');
 app.use('/api/churches/:churchId/dashboard', dashboardHomeRouter); // Dashboard Home
 console.log('✅ [Server] Mounted /api/churches/:churchId/dashboard routes (Dashboard Home)');
+const clergyTenureRouter = require('./routes/clergy-tenure');
+app.use('/api/churches/:churchId/clergy-tenure', clergyTenureRouter);
+console.log('✅ [Server] Mounted /api/churches/:churchId/clergy-tenure route (rector tenure)');
 
 // Other authenticated routes
 app.use('/api/user', userRouter);

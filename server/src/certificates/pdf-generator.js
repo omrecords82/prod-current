@@ -317,13 +317,13 @@ async function generateMarriageCertificatePDF(record, options = {}) {
   const fieldData = {
     groomName: `${record.fname_groom || record.groom_first || ''} ${record.lname_groom || record.groom_last || ''}`.trim(),
     brideName: `${record.fname_bride || record.bride_first || ''} ${record.lname_bride || record.bride_last || ''}`.trim(),
-    marriageDate: record.marriage_date ? new Date(record.marriage_date).toLocaleDateString() : '',
-    marriageDateMD: dateMD(record.marriage_date),
-    marriageDateYY: dateYY(record.marriage_date),
-    marriagePlace: record.marriage_place || record.place || '',
+    marriageDate: (record.mdate || record.marriage_date) ? new Date(record.mdate || record.marriage_date).toLocaleDateString() : '',
+    marriageDateMD: dateMD(record.mdate || record.marriage_date),
+    marriageDateYY: dateYY(record.mdate || record.marriage_date),
+    marriagePlace: record.marriage_place || record.place || record.mlicense || '',
     groomParents: record.parentsg || record.parents_groom || '',
     brideParents: record.parentsb || record.parents_bride || '',
-    witnesses: record.witnesses || '',
+    witnesses: record.witness || record.witnesses || '',
     clergy: record.clergy || '',
     church: record.churchName || 'Orthodox Church',
   };

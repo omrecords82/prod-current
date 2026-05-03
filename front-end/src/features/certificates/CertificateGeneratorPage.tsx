@@ -265,12 +265,24 @@ const CertificateGeneratorPage: React.FC = () => {
     try {
       const data = await apiClient.get<any>(`/church/${churchId}/certificate/positions/${recordType}`);
       if (data.success && data.positions && !data.isDefault) {
-        setSavedPositions(data.positions);
-        setFieldPositions(data.positions);
-        setPlacedFields(new Set(Object.keys(data.positions)));
+        // Drop any keys that aren't in this record type's field labels.
+        // The certificate_positions row for some churches got corrupted
+        // by an old save bug that stored a JSON-stringified object as
+        // a character-indexed map ({ "0": "{", "1": "\"", ... }) — those
+        // numeric keys would render as "[undefined]" labels otherwise.
+        const cleaned: Record<string, { x: number; y: number }> = {};
+        for (const k of Object.keys(data.positions)) {
+          if (fieldLabels[k] && data.positions[k] && typeof data.positions[k] === 'object'
+              && typeof data.positions[k].x === 'number' && typeof data.positions[k].y === 'number') {
+            cleaned[k] = data.positions[k];
+          }
+        }
+        setSavedPositions(cleaned);
+        setFieldPositions(cleaned);
+        setPlacedFields(new Set(Object.keys(cleaned)));
         setSavedPositionsLoaded(true);
         setShowCoordinates(true); // Show coordinates by default when saved positions exist
-        return data.positions;
+        return cleaned;
       }
     } catch (err) {
       console.warn('Could not load saved positions:', err);
@@ -840,9 +852,12 @@ const CertificateGeneratorPage: React.FC = () => {
                 />
                 
                 {imageLoaded && Array.from(placedFields).map((fieldName) => {
+                  // Skip stale keys not in this record type's labels —
+                  // otherwise they render as "[undefined]" overlays.
+                  if (!fieldLabels[fieldName]) return null;
                   const screenPos = getScreenPosition(fieldName);
                   if (!screenPos) return null;
-                  
+
                   const value = getFieldValue(fieldName);
                   const displayValue = value || `[${fieldLabels[fieldName]}]`;
                   
