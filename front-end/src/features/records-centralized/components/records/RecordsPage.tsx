@@ -34,6 +34,7 @@ import { useAgGridConfig } from './RecordsPage/useAgGridConfig';
 import { useRecordSave } from './RecordsPage/useRecordSave';
 import {
     Alert,
+    Autocomplete,
     Box,
     Button,
     Chip,
@@ -43,6 +44,7 @@ import {
     Snackbar,
     Stack,
     TablePagination,
+    TextField,
     Tooltip,
     Typography
 } from '@mui/material';
@@ -275,6 +277,7 @@ const RecordsPage: React.FC<RecordsPageProps> = ({ defaultRecordType = 'baptism'
   useEffect(() => {
     if (selectedRecordType) {
       setPage(0); // Reset to first page on type/church change
+      setSelectedPriest(null); // priest options change with type/church
       const dateSortKey = DEFAULT_DATE_SORT_FIELD[selectedRecordType] || 'id';
       setSortConfig({ key: dateSortKey, direction: 'desc' });
       fetchRecords(selectedRecordType, selectedChurch, undefined, 0, rowsPerPage, dateSortKey, 'desc');
@@ -358,8 +361,13 @@ const RecordsPage: React.FC<RecordsPageProps> = ({ defaultRecordType = 'baptism'
     } catch { return []; }
   }, [selectedRecordType]);
 
+  // Priest filter — when set, restrict displayed rows to those whose
+  // clergy field exactly matches the selected priest. Pulled from the
+  // same priestOptions list the edit dialog uses.
+  const [selectedPriest, setSelectedPriest] = useState<string | null>(null);
+
   // Server-sorted records — no client-side re-sorting (server handles ORDER BY)
-  // Only apply Best Matches client-side filter when searching
+  // Only apply Best Matches + priest client-side filters
   const filteredAndSortedRecords = useMemo(() => {
     let result = [...records];
 
@@ -368,8 +376,13 @@ const RecordsPage: React.FC<RecordsPageProps> = ({ defaultRecordType = 'baptism'
       result = result.filter(r => (r._matchedFields?.length || 0) >= 2);
     }
 
+    // Priest filter: client-side exact-match against the record's clergy field.
+    if (selectedPriest) {
+      result = result.filter(r => (r.clergy || '').trim() === selectedPriest);
+    }
+
     return result;
-  }, [records, debouncedSearch, showBestMatches]);
+  }, [records, debouncedSearch, showBestMatches, selectedPriest]);
 
   // Paginated records — server returns the exact page, no client-side slicing needed
   const paginatedRecords = filteredAndSortedRecords;
@@ -702,6 +715,31 @@ const RecordsPage: React.FC<RecordsPageProps> = ({ defaultRecordType = 'baptism'
             onCollaborativeReport={handleCollaborativeReport}
             onAdvancedGrid={() => setAdvancedGridOpen(true)}
           />
+
+          {/* Priest filter — narrows the table to records whose clergy
+              column exactly matches the selected priest. priestOptions
+              comes from LookupService.getClergy (one row per distinct
+              clergy value already present in this church's records). */}
+          {priestOptions.length > 0 && (
+            <Box sx={{ mb: 2, px: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Autocomplete
+                size="small"
+                sx={{ minWidth: 280, flex: '0 0 auto' }}
+                options={priestOptions}
+                value={selectedPriest}
+                onChange={(_e, val) => setSelectedPriest(val)}
+                clearOnEscape
+                renderInput={(params) => (
+                  <TextField {...params} label="Filter by priest" placeholder="All priests" />
+                )}
+              />
+              {selectedPriest && (
+                <Typography variant="caption" color="text.secondary">
+                  {filteredAndSortedRecords.length} of {records.length} match
+                </Typography>
+              )}
+            </Box>
+          )}
                 
           {/* Status Information */}
           {selectedRecordType && !loading && totalRecords > 0 && (

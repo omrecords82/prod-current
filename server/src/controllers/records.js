@@ -300,9 +300,22 @@ const updateRecord = async (req, res) => {
 
     await promisePool.execute(`UPDATE ${table} SET ${setClause} WHERE id = ?`, values);
 
+    // Return the FULL updated row so the front-end can replace the grid
+    // entry without losing all its other fields. Previously we returned
+    // only { id, recordType, message } — RecordsPage's setRecords map
+    // would then overwrite the row with that stub and the cells would
+    // appear blank until the next refresh. Re-SELECT after UPDATE keeps
+    // the response consistent with whatever just landed (including
+    // computed columns like updated_at).
+    const [updatedRows] = await promisePool.execute(
+      `SELECT * FROM ${table} WHERE id = ?`,
+      [id],
+    );
+    const updated = updatedRows[0] || { id };
+
     res.json({
       success: true,
-      data: { id, recordType, message: `${recordType} record updated successfully` }
+      data: { ...updated, recordType, message: `${recordType} record updated successfully` },
     });
   } catch (error) {
     console.error('Error updating record:', error);

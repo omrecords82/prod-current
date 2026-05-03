@@ -81,11 +81,19 @@ export function useRecordSave({
         const response = await apiService.updateRecord(selectedRecordType, editingRecord.id, updatedRecord);
 
         if (response.success && response.data) {
-          setRecords(prev => prev.map(r => r.id === editingRecord.id ? response.data as BaptismRecord : r));
+          // Merge: prefer the server's freshly-SELECT'd row but fall
+          // back to what we just sent so the grid never shows a blank
+          // row even if a backend variant returns a stub payload.
+          const merged = {
+            ...editingRecord,
+            ...updatedRecord,
+            ...(response.data as object),
+          } as BaptismRecord;
+          setRecords(prev => prev.map(r => r.id === editingRecord.id ? merged : r));
           showToast('Record updated successfully', 'success');
 
           if (viewDialogOpen && viewEditMode === 'edit') {
-            setViewingRecord(response.data as BaptismRecord);
+            setViewingRecord(merged);
             setViewEditMode('view');
           } else {
             setDialogOpen(false);

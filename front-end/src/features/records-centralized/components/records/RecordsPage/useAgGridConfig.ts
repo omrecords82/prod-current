@@ -5,7 +5,7 @@
 import React, { useCallback, useMemo } from 'react';
 import { Box, Chip, IconButton, Tooltip, useTheme } from '@mui/material';
 import { ColDef, ICellRendererParams, themeQuartz } from 'ag-grid-community';
-import { Eye, FileText, Pencil, Trash2 } from '@/shared/ui/icons';
+import { Eye, FileText, Trash2 } from '@/shared/ui/icons';
 import { isRecordNewWithin24Hours, isRecordUpdatedWithin24Hours, getAgGridRowClassRules } from '@/features/records-centralized/common/recordsHighlighting';
 import { getCellValue, getColumnDefinitions } from './utils';
 import type { BaptismRecord } from './types';
@@ -78,13 +78,14 @@ export function useAgGridConfig({
     const iconSx = { opacity: 0.7, color: 'text.secondary', '&:hover': { opacity: 1, color: 'text.primary' } };
     const deleteSx = { opacity: 0.7, color: 'text.secondary', '&:hover': { opacity: 1, color: 'error.main' } };
 
+    // Inline Edit was removed from the row actions on purpose — operators
+    // edit only from the View dialog, which forces them to see the
+    // current values first. The View dialog has an Edit toggle that
+    // calls handleEditRecord on the underlying record.
     return React.createElement(Box, { sx: { display: 'flex', gap: 0.5, alignItems: 'center', height: '100%' } },
       React.createElement(Tooltip, { title: t('records.tooltip_view') },
         React.createElement(IconButton, { size: 'small', onClick: () => handleViewRecord(record), sx: iconSx },
           React.createElement(Eye, { size: 16, strokeWidth: 1.5 }))),
-      React.createElement(Tooltip, { title: t('records.tooltip_edit') },
-        React.createElement(IconButton, { size: 'small', onClick: () => handleEditRecord(record), sx: iconSx },
-          React.createElement(Pencil, { size: 16, strokeWidth: 1.5 }))),
       React.createElement(Tooltip, { title: t('records.tooltip_delete') },
         React.createElement(IconButton, { size: 'small', onClick: () => handleDeleteClick(record), sx: deleteSx },
           React.createElement(Trash2, { size: 16, strokeWidth: 1.5 }))),
@@ -94,7 +95,7 @@ export function useAgGridConfig({
               React.createElement(FileText, { size: 16, strokeWidth: 1.5 })))
         : null,
     );
-  }, [selectedRecordType, handleViewRecord, handleEditRecord, handleDeleteClick, handleGenerateCertificate, t]);
+  }, [selectedRecordType, handleViewRecord, handleDeleteClick, handleGenerateCertificate, t]);
 
   const agGridColumnDefs = useMemo(() => {
     const cols: ColDef[] = [];
@@ -119,7 +120,10 @@ export function useAgGridConfig({
     });
     cols.push({
       headerName: 'Actions', field: 'id',
-      minWidth: 180, width: 180, maxWidth: 180,
+      // Was 180px when the row had View / Edit / Delete / Certificate.
+      // With Edit gone this column needs less room; 140 fits the 3
+      // remaining icons with a little breathing space.
+      minWidth: 140, width: 140, maxWidth: 140,
       sortable: false, filter: false, pinned: 'right',
       cellRenderer: agGridActionsRenderer,
     });
