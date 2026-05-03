@@ -3,6 +3,7 @@ import { Calendar, User, MapPin, BookOpen } from '@/ui/icons';
 import { PUBLIC_ROUTES } from '@/config/publicRoutes';
 import { HeroSection, SectionHeader, CTASection } from '@/components/frontend-pages/shared/sections';
 import EditableText from '@/components/frontend-pages/shared/EditableText';
+import PublicSeo from '@/components/seo/PublicSeo';
 import { useLanguage } from '@/context/LanguageContext';
 import {
   getBaptismSample,
@@ -21,6 +22,11 @@ const Samples = () => {
 
   return (
     <>
+      <PublicSeo
+        title="Sample Records"
+        description="See real-shape baptism, marriage, and funeral sample records — formatted across English, Greek, Russian, Romanian, and Georgian."
+        path="/samples"
+      />
       {/* Hero */}
       <HeroSection
         badge={t('samples.hero_badge')}

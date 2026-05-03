@@ -4,6 +4,15 @@
 *.jpg
 .playwright-mcp/
 
+# Public-site image assets (favicons, OG image, app icons) are
+# legitimate tracked assets — exempt them from the broad *.png rule
+# above. Add new patterns here if you ship more public-facing PNGs.
+!front-end/public/favicon*.png
+!front-end/public/apple-touch-icon.png
+!front-end/public/icon-*.png
+!front-end/public/og/*.png
+!front-end/public/images/**/*.png
+
 node_modules/
 **/node_modules/
 dist/

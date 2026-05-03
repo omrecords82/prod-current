@@ -5,6 +5,7 @@ import EditableText from '@/components/frontend-pages/shared/EditableText';
 import HomepageHero from '@/components/frontend-pages/homepage/HomepageHero';
 import HomepageIntro from '@/components/frontend-pages/homepage/HomepageIntro';
 import HomepageRecordsTransformSection from '@/components/frontend-pages/homepage/records-transform/HomepageRecordsTransformSection';
+import PublicSeo from '@/components/seo/PublicSeo';
 import { useLanguage } from '@/context/LanguageContext';
 
 const Homepage = () => {
@@ -12,6 +13,12 @@ const Homepage = () => {
 
   return (
     <>
+      <PublicSeo
+        title="Sacramental records, modernized for every parish"
+        description="Orthodox Metrics is the records platform for Orthodox parishes — secure baptism, marriage, and funeral registers, OCR digitization of historic ledgers, and multi-tenant parish administration."
+        path="/frontend-pages/homepage"
+        bare
+      />
       <HomepageHero />
       <HomepageIntro />
 

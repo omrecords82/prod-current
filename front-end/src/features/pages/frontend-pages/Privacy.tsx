@@ -1,6 +1,7 @@
 import { HeroSection } from '@/components/frontend-pages/shared/sections';
 import EditableText from '@/components/frontend-pages/shared/EditableText';
 import PageContainer from '@/shared/ui/PageContainer';
+import PublicSeo from '@/components/seo/PublicSeo';
 import { useLanguage } from '@/context/LanguageContext';
 
 const Privacy = () => {
@@ -8,6 +9,11 @@ const Privacy = () => {
 
   return (
     <PageContainer title="Privacy Policy" description="Orthodox Metrics privacy policy">
+      <PublicSeo
+        title="Privacy Policy"
+        description="How Orthodox Metrics handles parish data, sacramental records, accounts, and analytics."
+        path="/privacy"
+      />
       <HeroSection
         badge={t('privacy.hero_badge')}
         title={t('privacy.hero_title')}

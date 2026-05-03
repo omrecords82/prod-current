@@ -4,6 +4,7 @@ import { PUBLIC_ROUTES } from '@/config/publicRoutes';
 import { CTASection } from '@/components/frontend-pages/shared/sections';
 import EditableText from '@/components/frontend-pages/shared/EditableText';
 import { TourInteractiveDemo } from '@/components/frontend-pages/tour';
+import PublicSeo from '@/components/seo/PublicSeo';
 import { useLanguage } from '@/context/LanguageContext';
 
 const Tour = () => {
@@ -11,6 +12,11 @@ const Tour = () => {
 
   return (
     <>
+      <PublicSeo
+        title="Platform Tour"
+        description="Walk through Orthodox Metrics: parish dashboards, sacramental records, OCR digitization, and church administration in one secure platform."
+        path="/tour"
+      />
       {/* Interactive Demo */}
       <TourInteractiveDemo />
 

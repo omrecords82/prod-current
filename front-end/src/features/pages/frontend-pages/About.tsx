@@ -4,6 +4,7 @@ import { PUBLIC_ROUTES } from '@/config/publicRoutes';
 import { HeroSection, SectionHeader, CTASection } from '@/components/frontend-pages/shared/sections';
 import ScrollToTop from '@/components/frontend-pages/shared/scroll-to-top';
 import PageContainer from '@/shared/ui/PageContainer';
+import PublicSeo from '@/components/seo/PublicSeo';
 import { useLanguage } from '@/context/LanguageContext';
 import leadershipBanner from '@/assets/images/frontend-pages/about/Orthodox-Leadership-banner.png';
 import EditableText from '@/components/frontend-pages/shared/EditableText';
@@ -41,6 +42,11 @@ const About = () => {
 
   return (
     <PageContainer title="About Us" description="About Orthodox Metrics">
+      <PublicSeo
+        title="About"
+        description="Why we built Orthodox Metrics: a records platform for Orthodox parishes that respects canonical custody, supports multiple jurisdictions, and modernizes the work of preserving sacramental life."
+        path="/frontend-pages/about"
+      />
       {/* Hero */}
       <HeroSection
         badge={t('about.hero_badge')}

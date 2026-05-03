@@ -3,6 +3,7 @@ import { Check, HelpCircle } from '@/ui/icons';
 import { PUBLIC_ROUTES } from '@/config/publicRoutes';
 import { HeroSection, CTASection } from '@/components/frontend-pages/shared/sections';
 import EditableText from '@/components/frontend-pages/shared/EditableText';
+import PublicSeo from '@/components/seo/PublicSeo';
 import { useLanguage } from '@/context/LanguageContext';
 
 // Pricing temporarily hidden by request (2026-05-03). The plan tier
@@ -32,6 +33,11 @@ const PagePricing = () => {
 
   return (
     <>
+      <PublicSeo
+        title="Pricing"
+        description="Plan tiers for parishes of every size — small, medium, large, and enterprise. Contact us for a quote tailored to your parish."
+        path="/frontend-pages/pricing"
+      />
       {/* Hero */}
       <HeroSection
         badge={t('pricing.hero_badge')}

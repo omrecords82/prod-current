@@ -1,6 +1,7 @@
 import { HeroSection } from '@/components/frontend-pages/shared/sections';
 import EditableText from '@/components/frontend-pages/shared/EditableText';
 import PageContainer from '@/shared/ui/PageContainer';
+import PublicSeo from '@/components/seo/PublicSeo';
 import { useLanguage } from '@/context/LanguageContext';
 
 const Security = () => {
@@ -8,6 +9,11 @@ const Security = () => {
 
   return (
     <PageContainer title="Security" description="Orthodox Metrics security and trust">
+      <PublicSeo
+        title="Security"
+        description="How Orthodox Metrics secures parish data — encrypted storage, role-based access, multi-tenant isolation, and operational practices."
+        path="/security"
+      />
       <HeroSection
         badge={t('security.hero_badge')}
         title={t('security.hero_title')}

@@ -1,0 +1,40 @@
+# orthodoxmetrics.com — crawler policy
+#
+# Allow public marketing pages (homepage, tour, pricing, about, contact,
+# blog, faq, samples, privacy, terms, security). Disallow everything
+# behind auth, admin tooling, the API surface, and dashboard / portal /
+# studio routes that are not meant to be indexed.
+#
+# Sitemap is published at /sitemap.xml — referenced below.
+
+User-agent: *
+Allow: /
+
+# ── Authenticated app surfaces ──
+Disallow: /admin/
+Disallow: /api/
+Disallow: /auth/
+Disallow: /portal/
+Disallow: /account/
+Disallow: /dashboards/
+Disallow: /apps/
+Disallow: /social/
+Disallow: /chats/
+Disallow: /uploads/
+Disallow: /devel-tools/
+Disallow: /developer-tools/
+Disallow: /super-admin/
+Disallow: /users/
+Disallow: /omai/
+Disallow: /omai-realm/
+Disallow: /omstudio/
+
+# ── Build / metadata endpoints (not user-facing content) ──
+Disallow: /build-info.json
+Disallow: /build.meta.json
+
+# ── Sample / preview pages with thin content ──
+Disallow: /samples/explorer
+
+# ── Sitemap ──
+Sitemap: https://orthodoxmetrics.com/sitemap.xml

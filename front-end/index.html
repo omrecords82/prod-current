@@ -3,12 +3,82 @@
 
 <head>
   <meta charset="UTF-8" />
-  <link rel="icon" type="image/svg+xml" href="/logoIcon.svg" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Orthodox Metrics</title>
-  
 
-  
+  <!-- Default title; per-page <Helmet> overrides this on public marketing routes. -->
+  <title>Orthodox Metrics — Sacramental records, modernized for every parish</title>
+  <meta
+    name="description"
+    content="Orthodox Metrics is the records platform for Orthodox parishes — secure baptism, marriage, and funeral registers, OCR digitization of historic ledgers, and multi-tenant parish administration trusted to canonical custody."
+  />
+  <link rel="canonical" href="https://orthodoxmetrics.com/" />
+
+  <!-- Color & PWA hints -->
+  <meta name="theme-color" content="#2d1b4e" />
+  <meta name="color-scheme" content="light dark" />
+  <meta name="application-name" content="Orthodox Metrics" />
+  <meta name="apple-mobile-web-app-title" content="Orthodox Metrics" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+
+  <!-- Crawler directives — pages that should NOT be indexed (admin/auth/dashboard) -->
+  <!-- emit their own <meta name="robots" content="noindex"> via per-page Helmet. -->
+  <meta name="robots" content="index,follow,max-image-preview:large" />
+
+  <!-- Favicon set -->
+  <link rel="icon" href="/favicon.ico" sizes="any" />
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+  <link rel="manifest" href="/site.webmanifest" />
+
+  <!-- Open Graph (Facebook, LinkedIn, Slack, …) -->
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Orthodox Metrics" />
+  <meta property="og:title" content="Orthodox Metrics — Sacramental records, modernized for every parish" />
+  <meta
+    property="og:description"
+    content="Secure baptism, marriage, and funeral registers, OCR digitization of historic ledgers, and multi-tenant parish administration."
+  />
+  <meta property="og:url" content="https://orthodoxmetrics.com/" />
+  <meta property="og:image" content="https://orthodoxmetrics.com/og/orthodoxmetrics-og-cover.png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:image:alt" content="Orthodox Metrics — sacramental records platform for Orthodox parishes" />
+  <meta property="og:locale" content="en_US" />
+
+  <!-- Twitter / X card -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Orthodox Metrics — Sacramental records, modernized for every parish" />
+  <meta
+    name="twitter:description"
+    content="Secure baptism, marriage, and funeral registers, OCR digitization of historic ledgers, and multi-tenant parish administration."
+  />
+  <meta name="twitter:image" content="https://orthodoxmetrics.com/og/orthodoxmetrics-og-cover.png" />
+  <meta name="twitter:image:alt" content="Orthodox Metrics — sacramental records platform for Orthodox parishes" />
+
+  <!-- Structured data: Organization + WebSite. Keeps it factual; no fabricated awards/reviews. -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    "name": "Orthodox Metrics",
+    "url": "https://orthodoxmetrics.com/",
+    "logo": "https://orthodoxmetrics.com/images/logos/om-logo.png",
+    "description": "Records platform for Orthodox parishes — sacramental registers, OCR digitization of historic ledgers, and multi-tenant parish administration."
+  }
+  </script>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "name": "Orthodox Metrics",
+    "url": "https://orthodoxmetrics.com/",
+    "inLanguage": ["en", "el", "ru", "ro", "ka"],
+    "publisher": { "@type": "Organization", "name": "Orthodox Metrics" }
+  }
+  </script>
+
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;600&display=swap" rel="stylesheet" />
   <link href="https://fonts.googleapis.com/css2?family=Noto+Serif:wght@400;600&display=swap" rel="stylesheet" />

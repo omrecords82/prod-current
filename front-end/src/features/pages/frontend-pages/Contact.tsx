@@ -4,6 +4,7 @@ import { PUBLIC_ROUTES } from '@/config/publicRoutes';
 import { HeroSection, CTASection } from '@/components/frontend-pages/shared/sections';
 import ScrollToTop from '@/components/frontend-pages/shared/scroll-to-top';
 import PageContainer from '@/shared/ui/PageContainer';
+import PublicSeo from '@/components/seo/PublicSeo';
 import { useLanguage } from '@/context/LanguageContext';
 import axios from 'axios';
 import React, { useState } from 'react';
@@ -67,6 +68,11 @@ const Contact = () => {
 
   return (
     <PageContainer title="Contact" description="Contact Orthodox Metrics">
+      <PublicSeo
+        title="Contact"
+        description="Reach Orthodox Metrics for parish onboarding, records-related questions, technical help, or partnership inquiries."
+        path="/frontend-pages/contact"
+      />
       {/* Hero */}
       <HeroSection
         badge={t('contact.hero_badge')}

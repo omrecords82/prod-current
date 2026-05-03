@@ -3,8 +3,8 @@
 import { useAuth } from '@/context/AuthContext';
 import AppErrorBoundary from '@/shared/ui/AppErrorBoundary';
 import { RecordsRouteErrorBoundary } from '@/shared/ui/RecordsRouteErrorBoundary';
-import { lazy } from 'react';
-import { createBrowserRouter, Navigate } from 'react-router-dom';
+import { lazy, Suspense } from 'react';
+import { createBrowserRouter, Navigate, Outlet } from 'react-router-dom';
 import ProtectedRoute from '../components/auth/ProtectedRoute';
 import AdminErrorBoundary from '../components/ErrorBoundary/AdminErrorBoundary';
 import SmartRedirect from '../components/routing/SmartRedirect';
@@ -39,6 +39,7 @@ const Tickets = Loadable(lazy(() => import('../features/apps/tickets/Tickets')))
 const Kanban = Loadable(lazy(() => import('../features/apps/kanban/Kanban')));
 const DynamicRecordsPage = Loadable(lazy(() => import('../features/records-centralized/components/dynamic/DynamicRecordsPage')));
 const AnalyticsDashboard = Loadable(lazy(() => import('../features/admin/AnalyticsDashboard')));
+const WebsiteStatsPage = Loadable(lazy(() => import('../features/admin/website-stats/WebsiteStatsPage')));
 const Followers = Loadable(lazy(() => import('../features/apps/user-profile/Followers')));
 const Friends = Loadable(lazy(() => import('../features/apps/user-profile/Friends')));
 const UserProfileGallery = Loadable(lazy(() => import('../features/apps/user-profile/Gallery')));
@@ -551,6 +552,17 @@ const Router = [
         )
       },
       {
+        // Public-website traffic stats — admin/super_admin only.
+        // Reads from the configured analytics provider via /api/admin/website-stats;
+        // shows a "configuration needed" empty state when no provider is set.
+        path: '/admin/website-stats',
+        element: (
+          <ProtectedRoute requiredRole={['super_admin', 'admin']}>
+            <WebsiteStatsPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
         // Deprecated: old /apps/logs page was silently broken (missing imports).
         // Real logs page is /admin/logs (ActivityLogs). Redirect preserves old bookmarks.
         path: '/apps/logs',
@@ -919,6 +931,28 @@ const Router = [
     ],
   },
 ];
-const router = createBrowserRouter(Router);
+
+// Wrap every route under a tiny layout so AnalyticsRouterListener
+// sits inside the router context and can call useLocation. The
+// listener is a render-null component that fires pageviews on
+// route change — and no-ops if no analytics provider is configured.
+const AnalyticsRouterListener = lazy(
+  () => import('@/components/analytics/AnalyticsRouterListener'),
+);
+const RouterRootLayout = () => (
+  <>
+    <Suspense fallback={null}>
+      <AnalyticsRouterListener />
+    </Suspense>
+    <Outlet />
+  </>
+);
+
+const router = createBrowserRouter([
+  {
+    element: <RouterRootLayout />,
+    children: Router,
+  },
+]);
 
 export default router;

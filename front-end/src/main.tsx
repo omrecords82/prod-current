@@ -4,6 +4,7 @@ import React, { Suspense } from 'react';
 import { CustomizerContextProvider } from './context/CustomizerContext';
 import ReactDOM from 'react-dom/client';
 import { ThemeProvider, CssBaseline } from '@mui/material';
+import { HelmetProvider } from 'react-helmet-async';
 import { omTheme } from './theme/omTheme';
 import App from './App';
 import Spinner from './shared/ui/Spinner';
@@ -53,13 +54,15 @@ async function deferRender() {
 
 deferRender().then(() => {
   ReactDOM.createRoot(document.getElementById('root')!).render(
-    <ThemeProvider theme={omTheme}>
-      <CssBaseline />
-      <CustomizerContextProvider>
-        <Suspense fallback={<Spinner />}>
-          <App />
-        </Suspense>
-      </CustomizerContextProvider>
-    </ThemeProvider>,
+    <HelmetProvider>
+      <ThemeProvider theme={omTheme}>
+        <CssBaseline />
+        <CustomizerContextProvider>
+          <Suspense fallback={<Spinner />}>
+            <App />
+          </Suspense>
+        </CustomizerContextProvider>
+      </ThemeProvider>
+    </HelmetProvider>,
   )
 })

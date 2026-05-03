@@ -3,6 +3,7 @@ import { ArrowRight, BookOpen, Church, ScrollText, Users } from '@/ui/icons';
 import { PUBLIC_ROUTES } from '@/config/publicRoutes';
 import { HeroSection, CTASection } from '@/components/frontend-pages/shared/sections';
 import EditableText from '@/components/frontend-pages/shared/EditableText';
+import PublicSeo from '@/components/seo/PublicSeo';
 import { useLanguage } from '@/context/LanguageContext';
 
 /** Map English category labels → i18n keys for badge translation */
@@ -21,6 +22,11 @@ const BlogPage = () => {
 
   return (
     <>
+      <PublicSeo
+        title="Blog"
+        description="Guides, case studies, and notes on parish records, OCR digitization, and modernizing Orthodox church administration."
+        path="/frontend-pages/blog"
+      />
       {/* Hero */}
       <HeroSection
         badge={t('blog.hero_badge')}

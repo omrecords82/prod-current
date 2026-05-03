@@ -234,6 +234,7 @@ const certificateTemplatesRouter = require('./routes/certificate-templates');
 const demoChurchesRouter = require('./routes/admin/demo-churches');
 const churchDecomRouter = require('./routes/admin/church-decom');
 const analyticsRouter = require('./routes/analytics'); // US Church Map analytics
+const websiteStatsRouter = require('./routes/website-stats'); // public site traffic stats (admin-only)
 const omChartsRouter = require('./api/om-charts'); // OM Charts: graphical charts from church records
 const dashboardHomeRouter = require('./api/dashboard-home'); // Dashboard Home: summary data for church dashboard
 const systemRoutesRouter = require('./api/systemRoutes'); // Route introspection (kept for OMAI dual-target proxy)
@@ -644,6 +645,7 @@ console.log('✅ [Server] Mounted /api/internal/build-events route');
 app.use('/api/admin/church', churchAdminRouter);
 
 app.use('/api/admin/system', adminSystemRouter);
+app.use('/api/admin', websiteStatsRouter); // mounts GET /api/admin/website-stats
 // Admin churches routes - mount compatibility router first to catch legacy paths
 const churchesCompatRouter = require('./routes/admin/churches-compat');
 // Mount compatibility router for both /churches (plural) and /church (singular) paths
