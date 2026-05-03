@@ -58,14 +58,22 @@ const BAPTISM_TEMPLATE_PATH = path.join(__dirname, '../../certificates/2026/adul
 const BAPTISM_CHILD_TEMPLATE_PATH = path.join(__dirname, '../../certificates/2026/adult-baptism.png');
 const MARRIAGE_TEMPLATE_PATH = path.join(__dirname, '../../certificates/2026/marriage.png');
 
-// Default field positions for baptism certificate
+// Default field positions for baptism certificate.
+// The MD / YY split tiles match the OCA artwork's "ON ___, 20___"
+// layout — the long blank takes month/day, and YY fills the trailing
+// two underscores after the pre-printed "20". Operators can drag to
+// fine-tune; these are starter positions only.
 const BAPTISM_POSITIONS = {
   fullName: { x: 383, y: 574 },
   birthplace: { x: 400, y: 600 },
   birthDate: { x: 444, y: 626 },
+  birthDateMD: { x: 350, y: 626 },
+  birthDateYY: { x: 560, y: 626 },
   clergyBy: { x: 410, y: 698 },       // BY field (clergy who performed baptism)
   church: { x: 514, y: 724 },
   baptismDate: { x: 424, y: 754 },
+  baptismDateMD: { x: 350, y: 754 },
+  baptismDateYY: { x: 560, y: 754 },
   sponsors: { x: 400, y: 784 },
   clergyRector: { x: 500, y: 850 }    // Rector field (signing clergy)
 };
@@ -77,11 +85,38 @@ const MARRIAGE_POSITIONS = {
   brideName: { x: 383, y: 626 },
   brideParents: { x: 400, y: 652 },
   marriageDate: { x: 444, y: 678 },
+  marriageDateMD: { x: 350, y: 678 },
+  marriageDateYY: { x: 560, y: 678 },
   marriagePlace: { x: 410, y: 704 },
   clergy: { x: 410, y: 730 },
   church: { x: 514, y: 756 },
   witnesses: { x: 400, y: 782 }
 };
+
+// Date format helpers. Match the front-end formatDateMD / formatDateYY
+// behavior in certificateTypes.ts so the drag-tile preview value and
+// the rendered cert always agree.
+function _parseUtcDate(raw) {
+  if (raw == null || raw === '') return null;
+  if (raw instanceof Date) return Number.isNaN(raw.getTime()) ? null : raw;
+  if (typeof raw === 'string') {
+    const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(raw);
+    if (m) return new Date(Date.UTC(+m[1], +m[2] - 1, +m[3]));
+    const d = new Date(raw);
+    return Number.isNaN(d.getTime()) ? null : d;
+  }
+  return null;
+}
+function dateMD(raw) {
+  const d = _parseUtcDate(raw);
+  if (!d) return '';
+  return `${d.getUTCMonth() + 1}/${d.getUTCDate()}`;
+}
+function dateYY(raw) {
+  const d = _parseUtcDate(raw);
+  if (!d) return '';
+  return String(d.getUTCFullYear()).slice(-2);
+}
 
 /**
  * Generate baptism certificate preview using canvas (PNG)
@@ -226,6 +261,14 @@ const generateBaptismPreview = async (record, fieldOffsets = {}, hiddenFields = 
       const birthDate = new Date(record.birth_date).toLocaleDateString();
       ctx.fillText(birthDate, positions.birthDate.x, positions.birthDate.y);
     }
+    if (record.birth_date && !hiddenFields.includes('birthDateMD') && positions.birthDateMD) {
+      const md = dateMD(record.birth_date);
+      if (md) ctx.fillText(md, positions.birthDateMD.x, positions.birthDateMD.y);
+    }
+    if (record.birth_date && !hiddenFields.includes('birthDateYY') && positions.birthDateYY) {
+      const yy = dateYY(record.birth_date);
+      if (yy) ctx.fillText(yy, positions.birthDateYY.x, positions.birthDateYY.y);
+    }
     
     // Clergy BY field (who performed the baptism)
     if (record.clergy && !hiddenFields.includes('clergyBy')) {
@@ -244,6 +287,14 @@ const generateBaptismPreview = async (record, fieldOffsets = {}, hiddenFields = 
     if (record.reception_date && !hiddenFields.includes('baptismDate')) {
       const baptismDate = new Date(record.reception_date).toLocaleDateString();
       ctx.fillText(baptismDate, positions.baptismDate.x, positions.baptismDate.y);
+    }
+    if (record.reception_date && !hiddenFields.includes('baptismDateMD') && positions.baptismDateMD) {
+      const md = dateMD(record.reception_date);
+      if (md) ctx.fillText(md, positions.baptismDateMD.x, positions.baptismDateMD.y);
+    }
+    if (record.reception_date && !hiddenFields.includes('baptismDateYY') && positions.baptismDateYY) {
+      const yy = dateYY(record.reception_date);
+      if (yy) ctx.fillText(yy, positions.baptismDateYY.x, positions.baptismDateYY.y);
     }
     
     if (record.sponsors && !hiddenFields.includes('sponsors')) {
@@ -440,12 +491,16 @@ const generateBaptismPDF = async (record, fieldPositions = null, hiddenFields = 
     
     if (record.birth_date) {
       drawField('birthDate', new Date(record.birth_date).toLocaleDateString());
+      drawField('birthDateMD', dateMD(record.birth_date));
+      drawField('birthDateYY', dateYY(record.birth_date));
     }
-    
+
     drawField('birthplace', record.birthplace);
-    
+
     if (record.reception_date) {
       drawField('baptismDate', new Date(record.reception_date).toLocaleDateString());
+      drawField('baptismDateMD', dateMD(record.reception_date));
+      drawField('baptismDateYY', dateYY(record.reception_date));
     }
     
     drawField('sponsors', record.sponsors);

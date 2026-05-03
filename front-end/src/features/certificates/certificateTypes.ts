@@ -13,8 +13,12 @@ export const BAPTISM_DEFAULT_POSITIONS: Record<string, { x: number; y: number }>
   motherName: { x: 500, y: 375 },
   parents: { x: 400, y: 375 },
   birthDate: { x: 530, y: 405 },
+  birthDateMD: { x: 350, y: 405 },
+  birthDateYY: { x: 560, y: 405 },
   birthplace: { x: 400, y: 405 },
   baptismDate: { x: 300, y: 510 },
+  baptismDateMD: { x: 350, y: 510 },
+  baptismDateYY: { x: 560, y: 510 },
   sponsors: { x: 400, y: 545 },
   clergyBy: { x: 400, y: 475 },
   clergyRector: { x: 600, y: 620 },
@@ -26,6 +30,8 @@ export const MARRIAGE_DEFAULT_POSITIONS: Record<string, { x: number; y: number }
   groomName: { x: 383, y: 574 },
   brideName: { x: 383, y: 626 },
   marriageDate: { x: 444, y: 678 },
+  marriageDateMD: { x: 350, y: 678 },
+  marriageDateYY: { x: 560, y: 678 },
   witnesses: { x: 400, y: 782 },
   clergy: { x: 410, y: 730 },
   church: { x: 514, y: 756 },
@@ -37,9 +43,13 @@ export const BAPTISM_FIELD_LABELS: Record<string, string> = {
   fatherName: "Father's Name",
   motherName: "Mother's Name",
   parents: 'Parents (combined)',
-  birthDate: 'Birth Date',
+  birthDate: 'Birth Date (full)',
+  birthDateMD: 'Birth Date — M/D',
+  birthDateYY: 'Birth Date — YY',
   birthplace: 'Birthplace',
-  baptismDate: 'Baptism Date',
+  baptismDate: 'Baptism Date (full)',
+  baptismDateMD: 'Baptism Date — M/D',
+  baptismDateYY: 'Baptism Date — YY',
   sponsors: 'Sponsors/Godparents',
   clergyBy: 'Clergy (BY)',
   clergyRector: 'Rector',
@@ -49,7 +59,9 @@ export const BAPTISM_FIELD_LABELS: Record<string, string> = {
 export const MARRIAGE_FIELD_LABELS: Record<string, string> = {
   groomName: 'Groom Name',
   brideName: 'Bride Name',
-  marriageDate: 'Marriage Date',
+  marriageDate: 'Marriage Date (full)',
+  marriageDateMD: 'Marriage Date — M/D',
+  marriageDateYY: 'Marriage Date — YY',
   witnesses: 'Witnesses',
   clergy: 'Clergy',
   church: 'Church Name',
@@ -101,6 +113,36 @@ export interface RecordData {
   churchName?: string;
   birthplace?: string;
   parents?: string;
+}
+
+// Coerce date-ish input (Date, ISO string, YYYY-MM-DD, MySQL TIMESTAMP)
+// to a UTC Date so getUTCMonth/Date/FullYear match what the DB stored
+// regardless of browser timezone.
+function parseDateUtc(raw: any): Date | null {
+  if (raw == null || raw === '') return null;
+  if (raw instanceof Date) return Number.isNaN(raw.getTime()) ? null : raw;
+  if (typeof raw === 'string') {
+    const ymd = /^(\d{4})-(\d{2})-(\d{2})/.exec(raw);
+    if (ymd) return new Date(Date.UTC(+ymd[1], +ymd[2] - 1, +ymd[3]));
+    const d = new Date(raw);
+    return Number.isNaN(d.getTime()) ? null : d;
+  }
+  return null;
+}
+
+// "12/3" — month/day, no zero padding (matches the OCA cert artwork).
+export function formatDateMD(raw: any): string {
+  const d = parseDateUtc(raw);
+  if (!d) return '';
+  return `${d.getUTCMonth() + 1}/${d.getUTCDate()}`;
+}
+
+// "25" — last two digits of the year. Pairs with the OCA "20___"
+// pre-printed prefix.
+export function formatDateYY(raw: any): string {
+  const d = parseDateUtc(raw);
+  if (!d) return '';
+  return String(d.getUTCFullYear()).slice(-2);
 }
 
 // Split a combined "A & B" / "A, B" / "A; B" string into [first, second].

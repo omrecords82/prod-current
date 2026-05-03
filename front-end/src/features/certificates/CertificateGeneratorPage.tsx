@@ -61,6 +61,8 @@ import {
   BAPTISM_FIELD_LABELS,
   MARRIAGE_FIELD_LABELS,
   formatDate,
+  formatDateMD,
+  formatDateYY,
   getRecordDisplayName,
   splitParents,
 } from './certificateTypes';
@@ -175,10 +177,18 @@ const CertificateGeneratorPage: React.FC = () => {
       }
       case 'birthDate':
         return formatDate(recordData.birth_date);
+      case 'birthDateMD':
+        return formatDateMD(recordData.birth_date);
+      case 'birthDateYY':
+        return formatDateYY(recordData.birth_date);
       case 'birthplace':
         return recordData.birthplace || '';
       case 'baptismDate':
         return formatDate(recordData.baptism_date || recordData.reception_date);
+      case 'baptismDateMD':
+        return formatDateMD(recordData.baptism_date || recordData.reception_date);
+      case 'baptismDateYY':
+        return formatDateYY(recordData.baptism_date || recordData.reception_date);
       case 'sponsors':
         return recordData.sponsors || recordData.godparents || '';
       case 'fatherName':
@@ -205,6 +215,10 @@ const CertificateGeneratorPage: React.FC = () => {
       }
       case 'marriageDate':
         return formatDate(recordData.marriage_date);
+      case 'marriageDateMD':
+        return formatDateMD(recordData.marriage_date);
+      case 'marriageDateYY':
+        return formatDateYY(recordData.marriage_date);
       case 'witnesses':
         return recordData.witnesses || '';
       default:
