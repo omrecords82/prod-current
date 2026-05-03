@@ -543,4 +543,125 @@ router.get('/resource-usage/certificates', async (req, res) => {
   }
 });
 
+// ── /work-sessions/active ───────────────────────────────────────
+//
+// Service-to-service lookup for OMStudio's "do I have an active OM
+// work session right now?" badge. OMStudio MUST NOT forward its
+// user JWT to OM — JWT secrets and claim shapes differ. This
+// endpoint takes the user's email via X-On-Behalf-Of-Email,
+// resolves it against orthodoxmetrics_db.users, and returns the
+// active session for that user (or active:false).
+//
+// Read-only — never mutates work_sessions or any other table.
+
+const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+
+router.get('/work-sessions/active', async (req, res) => {
+  try {
+    const rawEmail = req.serviceCaller && typeof req.serviceCaller.email === 'string'
+      ? req.serviceCaller.email.trim()
+      : '';
+    if (!rawEmail) {
+      return res.status(400).json({
+        ok: false,
+        error: 'missing_on_behalf_of_email',
+        message: 'X-On-Behalf-Of-Email header is required for this endpoint.',
+      });
+    }
+    if (!EMAIL_RE.test(rawEmail)) {
+      return res.status(400).json({
+        ok: false,
+        error: 'invalid_email',
+        message: 'X-On-Behalf-Of-Email is not a valid email format.',
+      });
+    }
+    const email = rawEmail.toLowerCase();
+
+    // Resolve user. Email column is UNIQUE, so LIMIT 1 is belt-and-suspenders.
+    const [userRows] = await queryPlatform(
+      `SELECT id FROM users WHERE email = ? LIMIT 1`,
+      [email],
+    );
+    if (!userRows || userRows.length === 0) {
+      return res.json({
+        ok: true,
+        sourceSystem: 'om',
+        email,
+        active: false,
+        reason: 'user_not_found',
+      });
+    }
+    const userId = userRows[0].id;
+
+    const [rows] = await queryPlatform(
+      `SELECT id, user_id, source_system, started_at, status, start_context
+         FROM work_sessions
+        WHERE user_id = ? AND status = 'active'
+        ORDER BY started_at DESC
+        LIMIT 1`,
+      [userId],
+    );
+    if (!rows || rows.length === 0) {
+      return res.json({
+        ok: true,
+        sourceSystem: 'om',
+        email,
+        active: false,
+      });
+    }
+
+    const session = rows[0];
+    let startContext = {};
+    if (session.start_context) {
+      try {
+        const parsed = typeof session.start_context === 'string'
+          ? JSON.parse(session.start_context)
+          : session.start_context;
+        if (parsed && typeof parsed === 'object') startContext = parsed;
+      } catch {
+        startContext = {};
+      }
+    }
+
+    // Use DB NOW() for elapsed so app-server clock drift can't lie.
+    let elapsedSeconds = null;
+    try {
+      const [nowRows] = await queryPlatform('SELECT NOW() AS db_now');
+      const dbNow = nowRows && nowRows[0] && nowRows[0].db_now
+        ? new Date(nowRows[0].db_now)
+        : new Date();
+      const startedAt = new Date(session.started_at);
+      elapsedSeconds = Math.max(0, Math.floor((dbNow.getTime() - startedAt.getTime()) / 1000));
+    } catch {
+      // Non-fatal — still return the session, just without elapsed.
+    }
+
+    return res.json({
+      ok: true,
+      sourceSystem: 'om',
+      email,
+      active: true,
+      session: {
+        id: String(session.id),
+        userId: String(session.user_id),
+        sourceSystem: session.source_system,
+        status: session.status,
+        startedAt: session.started_at ? new Date(session.started_at).toISOString() : null,
+        elapsedSeconds,
+        // summary_note and end_context are intentionally excluded — they can
+        // contain free-form user notes. start_context is exposed in metadata
+        // because it's structured app context (page path, source_system).
+        metadata: { startContext },
+      },
+    });
+  } catch (err) {
+    // Log server-side; don't leak DB error text to the caller.
+    console.error('[platform] work-sessions/active failed:', err && err.message ? err.message : err);
+    return res.status(500).json({
+      ok: false,
+      error: 'work_sessions_active_failed',
+    });
+  }
+});
+
 module.exports = router;
