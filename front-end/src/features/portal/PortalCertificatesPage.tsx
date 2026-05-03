@@ -45,6 +45,8 @@ import {
   Favorite as MarriageIcon,
   Church as ReceptionIcon,
   History as HistoryIcon,
+  CloudUpload as UploadIcon,
+  Visibility as PreviewIcon,
 } from '@mui/icons-material';
 import Breadcrumb from '@/layouts/full/shared/breadcrumb/Breadcrumb';
 import PageContainer from '@/shared/ui/PageContainer';
@@ -81,6 +83,19 @@ interface GeneratedCert {
   version_label: string;
   template_name: string;
   jurisdiction_code: string;
+}
+
+interface TemplateInfo {
+  templateId: number;
+  templateType: string;
+  groupName: string | null;
+  jurisdictionCode: string | null;
+  versionLabel: string | null;
+  resolution: string;
+  isChurchOverride: boolean;
+  fieldCount: number;
+  previewUrl: string;
+  cacheBust: number;
 }
 
 // ─── Constants ───────────────────────────────────────────────
@@ -145,6 +160,15 @@ const PortalCertificatesPage: React.FC = () => {
   const [historyLoading, setHistoryLoading] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
 
+  // Per-type template (shown above the record list)
+  const [templateInfo, setTemplateInfo] = useState<TemplateInfo | null>(null);
+  const [templateLoading, setTemplateLoading] = useState(false);
+  const [templateError, setTemplateError] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [uploadSuccess, setUploadSuccess] = useState<string | null>(null);
+  const fileInputRef = React.useRef<HTMLInputElement | null>(null);
+
   // ─── Load records ──────────────────────────────────────────
 
   const loadRecords = useCallback(async (type: string) => {
@@ -178,6 +202,75 @@ const PortalCertificatesPage: React.FC = () => {
     }
   }, []);
 
+  const loadTemplateInfo = useCallback(async (type: string) => {
+    setTemplateLoading(true);
+    setTemplateError(null);
+    setTemplateInfo(null);
+    try {
+      const res = await apiClient.get(`/certificate-templates/by-type/${encodeURIComponent(type)}`);
+      if (res?.success && res.template) {
+        setTemplateInfo({
+          templateId: res.template.id,
+          templateType: res.template.templateType,
+          groupName: res.template.groupName,
+          jurisdictionCode: res.template.jurisdictionCode,
+          versionLabel: res.template.versionLabel,
+          resolution: res.resolution || 'system_default',
+          isChurchOverride: !!res.template.churchId,
+          fieldCount: res.fieldCount || 0,
+          previewUrl: res.previewUrl,
+          cacheBust: Date.now(),
+        });
+      } else {
+        setTemplateError(res?.error || 'No template registered for this type');
+      }
+    } catch (err: any) {
+      setTemplateError(err?.response?.data?.error || err?.message || 'Failed to load template');
+    } finally {
+      setTemplateLoading(false);
+    }
+  }, []);
+
+  const handleUploadChoose = () => {
+    setUploadError(null);
+    setUploadSuccess(null);
+    fileInputRef.current?.click();
+  };
+
+  const handleUploadFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !selectedType) return;
+    if (file.type && file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
+      setUploadError('Please choose a PDF file.');
+      e.target.value = '';
+      return;
+    }
+    setUploading(true);
+    setUploadError(null);
+    setUploadSuccess(null);
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+      const res = await apiClient.post(
+        `/certificate-templates/by-type/${encodeURIComponent(selectedType)}/upload`,
+        fd,
+        { headers: { 'Content-Type': 'multipart/form-data' } },
+      );
+      if (res?.success) {
+        setUploadSuccess(res.action === 'created' ? 'Custom template uploaded' : 'Custom template replaced');
+        // Reload template info so the preview swaps to the new file.
+        await loadTemplateInfo(selectedType);
+      } else {
+        setUploadError(res?.error || 'Upload failed');
+      }
+    } catch (err: any) {
+      setUploadError(err?.response?.data?.error || err?.message || 'Upload failed');
+    } finally {
+      setUploading(false);
+      e.target.value = '';
+    }
+  };
+
   // ─── Select type ───────────────────────────────────────────
 
   const handleSelectType = (type: string) => {
@@ -185,8 +278,11 @@ const PortalCertificatesPage: React.FC = () => {
     setSelectedRecord(null);
     setGenResult(null);
     setGenError(null);
+    setUploadError(null);
+    setUploadSuccess(null);
     setStep('record');
     loadRecords(type);
+    loadTemplateInfo(type);
   };
 
   const handleSelectRecord = (record: RecordRow) => {
@@ -256,6 +352,121 @@ const PortalCertificatesPage: React.FC = () => {
 
   // ─── Render: Record Selection ──────────────────────────────
 
+  const renderTemplateSection = () => {
+    const typeLabel = RECORD_TYPES.find(rt => rt.key === selectedType)?.label || selectedType || '';
+    return (
+      <Card variant="outlined" sx={{ mb: 3, borderColor: alpha(theme.palette.primary.main, 0.25) }}>
+        <CardContent>
+          <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} alignItems="stretch">
+            {/* Left: metadata + actions */}
+            <Box sx={{ flex: 1, minWidth: 0 }}>
+              <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1 }}>
+                <PreviewIcon fontSize="small" color="primary" />
+                <Typography variant="subtitle1" fontWeight={600}>
+                  Current {typeLabel} Certificate Template
+                </Typography>
+              </Stack>
+
+              {templateLoading ? (
+                <Box sx={{ py: 3, textAlign: 'center' }}><CircularProgress size={24} /></Box>
+              ) : templateError ? (
+                <Alert severity="warning" sx={{ mb: 1 }}>{templateError}</Alert>
+              ) : templateInfo ? (
+                <>
+                  <Stack spacing={0.5} sx={{ mb: 2 }}>
+                    <Typography variant="body2" color="text.secondary">
+                      <strong>Template:</strong> {templateInfo.groupName || '—'}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      <strong>Jurisdiction:</strong> {templateInfo.jurisdictionCode || '—'}
+                      {templateInfo.versionLabel ? ` · v${templateInfo.versionLabel}` : ''}
+                    </Typography>
+                    <Stack direction="row" spacing={1} sx={{ mt: 0.5 }}>
+                      <Chip
+                        size="small"
+                        label={templateInfo.isChurchOverride ? 'Custom (this parish)' : 'System default'}
+                        color={templateInfo.isChurchOverride ? 'primary' : 'default'}
+                      />
+                      <Chip size="small" label={`${templateInfo.fieldCount} fields`} variant="outlined" />
+                    </Stack>
+                  </Stack>
+                </>
+              ) : null}
+
+              {uploadError && <Alert severity="error" sx={{ mb: 1 }}>{uploadError}</Alert>}
+              {uploadSuccess && <Alert severity="success" sx={{ mb: 1 }}>{uploadSuccess}</Alert>}
+
+              <Stack direction="row" spacing={1}>
+                <Button
+                  variant="outlined"
+                  size="small"
+                  startIcon={uploading ? <CircularProgress size={16} color="inherit" /> : <UploadIcon />}
+                  onClick={handleUploadChoose}
+                  disabled={uploading || !selectedType}
+                >
+                  {uploading ? 'Uploading…' : (templateInfo?.isChurchOverride ? 'Replace Custom Template' : 'Upload Custom Template')}
+                </Button>
+                {templateInfo && (
+                  <Button
+                    variant="text"
+                    size="small"
+                    startIcon={<DownloadIcon />}
+                    href={templateInfo.previewUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    Open in new tab
+                  </Button>
+                )}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="application/pdf,.pdf"
+                  hidden
+                  onChange={handleUploadFile}
+                />
+              </Stack>
+            </Box>
+
+            {/* Right: PDF preview */}
+            <Box sx={{ flex: 1, minWidth: 0, minHeight: 320 }}>
+              {templateInfo ? (
+                <Box
+                  component="iframe"
+                  // cacheBust forces re-fetch after upload
+                  src={`${templateInfo.previewUrl}?v=${templateInfo.cacheBust}`}
+                  title={`${typeLabel} certificate template preview`}
+                  sx={{
+                    width: '100%',
+                    height: 360,
+                    border: `1px solid ${alpha(theme.palette.divider, 0.6)}`,
+                    borderRadius: 1,
+                    backgroundColor: theme.palette.background.default,
+                  }}
+                />
+              ) : (
+                <Box
+                  sx={{
+                    width: '100%',
+                    height: 360,
+                    border: `1px dashed ${alpha(theme.palette.divider, 0.8)}`,
+                    borderRadius: 1,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: 'text.secondary',
+                  }}
+                >
+                  {templateLoading ? <CircularProgress size={20} /> : 'No preview available'}
+                </Box>
+              )}
+            </Box>
+          </Stack>
+        </CardContent>
+      </Card>
+    );
+  };
+
   const renderRecordSelection = () => (
     <Box>
       <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }}>
@@ -265,6 +476,8 @@ const PortalCertificatesPage: React.FC = () => {
         </Typography>
         <Chip label={t('portal.certs_records_count').replace('{count}', String(records.length))} size="small" />
       </Stack>
+
+      {renderTemplateSection()}
 
       {recordsLoading ? (
         <Box sx={{ py: 6, textAlign: 'center' }}><CircularProgress /></Box>
