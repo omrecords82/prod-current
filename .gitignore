@@ -188,3 +188,9 @@ berry/
 # Deploy artifact (auto-generated)
 .last-deploy.json
 front-end/node_modules
+
+# Operator scratch dir at the repo root — used to drop files (logos,
+# samples, exports) into the prod working copy without committing them.
+# Anchored with leading slash so server/tmp / front-end/public/tmp etc.
+# stay tracked if they ever appear.
+/tmp/
