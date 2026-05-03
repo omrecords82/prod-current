@@ -16,6 +16,35 @@ const fs = require('fs');
 const path = require('path');
 const { getCoordinateMap, mergeCustomPositions } = require('./coordinate-maps');
 
+// Date format helpers — UTC-anchored so the rendered date matches the
+// DB's stored value regardless of server timezone. Mirrors the
+// front-end formatDateMD / formatDateYY in
+// front-end/src/features/certificates/certificateTypes.ts.
+function _parseUtcDate(raw) {
+  if (raw == null || raw === '') return null;
+  if (raw instanceof Date) return Number.isNaN(raw.getTime()) ? null : raw;
+  if (typeof raw === 'string') {
+    const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(raw);
+    if (m) return new Date(Date.UTC(+m[1], +m[2] - 1, +m[3]));
+    const d = new Date(raw);
+    return Number.isNaN(d.getTime()) ? null : d;
+  }
+  return null;
+}
+// "12/3" — month/day, no zero padding (matches the OCA cert artwork).
+function dateMD(raw) {
+  const d = _parseUtcDate(raw);
+  if (!d) return '';
+  return `${d.getUTCMonth() + 1}/${d.getUTCDate()}`;
+}
+// "25" — last 2 digits of the year. Pairs with the OCA "20___"
+// pre-printed prefix.
+function dateYY(raw) {
+  const d = _parseUtcDate(raw);
+  if (!d) return '';
+  return String(d.getUTCFullYear()).slice(-2);
+}
+
 /**
  * Text alignment helper
  */
@@ -192,12 +221,16 @@ async function generateBaptismCertificatePDF(record, options = {}) {
   const fontBold = await pdfDoc.embedFont(StandardFonts.TimesRomanBold);
   
   // Extract field data from record
+  const baptismDateRaw = record.reception_date || record.baptism_date || null;
   const fieldData = {
     fullName: `${record.first_name || ''} ${record.last_name || ''}`.trim(),
     birthDate: record.birth_date ? new Date(record.birth_date).toLocaleDateString() : '',
+    birthDateMD: dateMD(record.birth_date),
+    birthDateYY: dateYY(record.birth_date),
     birthplace: record.birthplace || '',
-    baptismDate: record.reception_date ? new Date(record.reception_date).toLocaleDateString() : 
-                 (record.baptism_date ? new Date(record.baptism_date).toLocaleDateString() : ''),
+    baptismDate: baptismDateRaw ? new Date(baptismDateRaw).toLocaleDateString() : '',
+    baptismDateMD: dateMD(baptismDateRaw),
+    baptismDateYY: dateYY(baptismDateRaw),
     sponsors: record.sponsors || record.godparents || '',
     clergyBy: record.clergy || '',
     clergyRector: record.clergy || '',
@@ -285,6 +318,8 @@ async function generateMarriageCertificatePDF(record, options = {}) {
     groomName: `${record.fname_groom || record.groom_first || ''} ${record.lname_groom || record.groom_last || ''}`.trim(),
     brideName: `${record.fname_bride || record.bride_first || ''} ${record.lname_bride || record.bride_last || ''}`.trim(),
     marriageDate: record.marriage_date ? new Date(record.marriage_date).toLocaleDateString() : '',
+    marriageDateMD: dateMD(record.marriage_date),
+    marriageDateYY: dateYY(record.marriage_date),
     marriagePlace: record.marriage_place || record.place || '',
     groomParents: record.parentsg || record.parents_groom || '',
     brideParents: record.parentsb || record.parents_bride || '',

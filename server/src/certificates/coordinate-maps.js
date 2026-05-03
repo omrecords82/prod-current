@@ -66,6 +66,36 @@ const BAPTISM_CERTIFICATE_MAP = {
       align: 'center',
       maxWidth: 200,
     },
+    // Split date variants — match the OCA artwork's "ON ___, 20___"
+    // layout. Operators drag to fine-tune; these are starter coords.
+    birthDateMD: {
+      x: 280,
+      y: 480,
+      fontSize: 14,
+      align: 'center',
+      maxWidth: 100,
+    },
+    birthDateYY: {
+      x: 430,
+      y: 480,
+      fontSize: 14,
+      align: 'center',
+      maxWidth: 40,
+    },
+    baptismDateMD: {
+      x: 280,
+      y: 400,
+      fontSize: 14,
+      align: 'center',
+      maxWidth: 100,
+    },
+    baptismDateYY: {
+      x: 430,
+      y: 400,
+      fontSize: 14,
+      align: 'center',
+      maxWidth: 40,
+    },
     sponsors: {
       x: 306,
       y: 350,
@@ -148,6 +178,22 @@ const MARRIAGE_CERTIFICATE_MAP = {
       fontSize: 14,
       align: 'center',
       maxWidth: 200,
+    },
+    // Split date variants — match the OCA artwork's "ON ___, 20___"
+    // layout. Operators drag to fine-tune; these are starter coords.
+    marriageDateMD: {
+      x: 280,
+      y: 420,
+      fontSize: 14,
+      align: 'center',
+      maxWidth: 100,
+    },
+    marriageDateYY: {
+      x: 430,
+      y: 420,
+      fontSize: 14,
+      align: 'center',
+      maxWidth: 40,
     },
     marriagePlace: {
       x: 306,

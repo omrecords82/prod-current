@@ -359,6 +359,43 @@ const generateMarriagePreview = async (record, fieldOffsets = {}, hiddenFields =
   ctx.fillStyle = '#000000';
   ctx.textAlign = 'center';
 
+  // ── Template path: positioned drawing (mirrors baptism) ──────────────────
+  // Previously this branch did nothing — the bare template image was
+  // returned as-is. So saved drag positions for marriage were silently
+  // ignored. Now we draw each known field at its saved (or default)
+  // position, including the new MD/YY split tiles.
+  if (fs.existsSync(MARRIAGE_TEMPLATE_PATH)) {
+    const positions = {};
+    Object.keys(MARRIAGE_POSITIONS).forEach(key => {
+      if (fieldOffsets[key] && typeof fieldOffsets[key].x === 'number' && typeof fieldOffsets[key].y === 'number') {
+        positions[key] = { x: fieldOffsets[key].x, y: fieldOffsets[key].y };
+      } else {
+        positions[key] = { x: MARRIAGE_POSITIONS[key].x, y: MARRIAGE_POSITIONS[key].y };
+      }
+    });
+
+    const draw = (key, value) => {
+      if (!value || hiddenFields.includes(key) || !positions[key]) return;
+      ctx.fillText(String(value), positions[key].x, positions[key].y);
+    };
+
+    const groomName = `${record.fname_groom || record.groom_first || ''} ${record.lname_groom || record.groom_last || ''}`.trim();
+    const brideName = `${record.fname_bride || record.bride_first || ''} ${record.lname_bride || record.bride_last || ''}`.trim();
+    draw('groomName', groomName);
+    draw('brideName', brideName);
+    draw('groomParents', record.parentsg || record.parents_groom);
+    draw('brideParents', record.parentsb || record.parents_bride);
+    if (record.marriage_date) {
+      draw('marriageDate', new Date(record.marriage_date).toLocaleDateString());
+      draw('marriageDateMD', dateMD(record.marriage_date));
+      draw('marriageDateYY', dateYY(record.marriage_date));
+    }
+    draw('marriagePlace', record.marriage_place || record.place || record.mlicense);
+    draw('clergy', record.clergy);
+    draw('church', record.churchName || 'Orthodox Church');
+    draw('witnesses', record.witnesses);
+  }
+
   // For template-less version
   if (!fs.existsSync(MARRIAGE_TEMPLATE_PATH)) {
     const baseY = 260;
