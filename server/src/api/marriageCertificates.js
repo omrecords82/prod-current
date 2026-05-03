@@ -6,6 +6,7 @@ const fs = require('fs');
 const path = require('path');
 const { createCanvas, loadImage } = require('canvas');
 const { promisePool } = require('../config/db-compat'); // Use promisePool instead of db
+const { recordCertificateGeneration, churchIdFromReq, userIdFromReq } = require('../certificates/audit');
 
 // Records live in the church-scoped DB (om_church_<id>), not the platform DB.
 // Resolve the right pool from the authenticated user's church_id.
@@ -177,10 +178,24 @@ router.get('/:id', async (req, res) => {
     const outputFile = path.join(OUTPUT_DIR, `marriage_${id}.png`);
     const outStream = fs.createWriteStream(outputFile);
     const stream = canvas.createPNGStream();
-    
+
     stream.pipe(outStream);
     outStream.on('finish', () => {
-      res.sendFile(outputFile);
+      res.sendFile(outputFile, (sendErr) => {
+        if (sendErr) return;
+        let fileSize = null;
+        try { fileSize = fs.statSync(outputFile).size; } catch {}
+        recordCertificateGeneration({
+          churchId: churchIdFromReq(req),
+          recordType: 'marriage',
+          recordId: id,
+          status: 'generated',
+          filePath: outputFile,
+          fileSize,
+          userId: userIdFromReq(req),
+          metadata: { source: 'legacy_png_endpoint', route: 'GET /api/marriageCertificates/:id' },
+        });
+      });
     });
 
   } catch (err) {
@@ -255,10 +270,24 @@ router.get('/:id/download', async (req, res) => {
     const filename = `marriage_certificate_${record.fname_groom}_${record.lname_groom}_${record.fname_bride}_${record.lname_bride}_${id}.png`;
     res.setHeader('Content-Type', 'image/png');
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-    
+
     // Send the image buffer
     const buffer = canvas.toBuffer('image/png');
     res.send(buffer);
+    recordCertificateGeneration({
+      churchId: churchIdFromReq(req),
+      recordType: 'marriage',
+      recordId: id,
+      status: 'downloaded',
+      filePath: null,
+      fileSize: buffer.length,
+      userId: userIdFromReq(req),
+      metadata: {
+        source: 'legacy_png_endpoint',
+        route: 'GET /api/marriageCertificates/:id/download',
+        filename,
+      },
+    });
 
   } catch (err) {
     console.error(err);

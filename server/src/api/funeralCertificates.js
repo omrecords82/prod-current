@@ -6,6 +6,7 @@ const fs = require('fs');
 const path = require('path');
 const { createCanvas, loadImage } = require('canvas');
 const { promisePool } = require('../config/db-compat'); // Use promisePool instead of db
+const { recordCertificateGeneration, churchIdFromReq, userIdFromReq } = require('../certificates/audit');
 
 // Records live in the church-scoped DB (om_church_<id>), not the platform DB.
 // Resolve the right pool from the authenticated user's church_id.
@@ -187,10 +188,25 @@ router.get('/:id/download', async (req, res) => {
     const filename = `funeral_certificate_${record.first_name}_${record.last_name}_${id}.png`;
     res.setHeader('Content-Type', 'image/png');
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-    
+
     // Send the image buffer
     const buffer = canvas.toBuffer('image/png');
     res.send(buffer);
+    recordCertificateGeneration({
+      churchId: churchIdFromReq(req),
+      recordType: 'funeral',
+      recordId: id,
+      status: 'downloaded',
+      filePath: null,
+      fileSize: buffer.length,
+      userId: userIdFromReq(req),
+      metadata: {
+        source: 'legacy_png_endpoint',
+        route: 'GET /api/funeralCertificates/:id/download',
+        filename,
+        hiddenFields: hiddenFields.length ? hiddenFields : undefined,
+      },
+    });
 
   } catch (err) {
     console.error(err);
