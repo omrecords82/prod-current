@@ -52,7 +52,7 @@ import { useTheme } from '@mui/material/styles';
 import { ColDef } from 'ag-grid-community';
 import { AgGridReact } from 'ag-grid-react';
 import React, { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import RecordSection from '../../common/RecordSection';
 import { useLanguage } from '@/context/LanguageContext';
 
@@ -77,6 +77,8 @@ const highlightSearchMatch = (text: string, searchTerm: string): React.ReactNode
 const RecordsPage: React.FC<RecordsPageProps> = ({ defaultRecordType = 'baptism' }) => {
   const { t } = useLanguage();
   const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const location = useLocation();
   
   // State management
   const [records, setRecords] = useState<BaptismRecord[]>([]);
@@ -399,12 +401,31 @@ const RecordsPage: React.FC<RecordsPageProps> = ({ defaultRecordType = 'baptism'
   // Handlers
   const handleRecordTypeChange = useCallback((newType: string) => {
     setSelectedRecordType(newType);
+    // Switching record type changes the path (/portal/records/<type>),
+    // not just a ?type= query param. Each type has its own route, so
+    // staying on /portal/records/baptism with ?type=marriage left the
+    // URL in a misleading state and broke deep-link / refresh.
+    if (validRecordTypes.includes(newType)) {
+      const target = location.pathname.replace(
+        /\/records\/(baptism|marriage|funeral)(\/.*)?$/,
+        `/records/${newType}$2`,
+      );
+      if (target !== location.pathname) {
+        // Drop any stale ?type= from the URL when navigating.
+        const params = new URLSearchParams(searchParams);
+        params.delete('type');
+        const qs = params.toString();
+        navigate(qs ? `${target}?${qs}` : target, { replace: true });
+        return;
+      }
+    }
+    // Fallback: same path, just sync the query param.
     setSearchParams(prev => {
       const next = new URLSearchParams(prev);
       next.set('type', newType);
       return next;
     }, { replace: true });
-  }, [setSearchParams]);
+  }, [setSearchParams, navigate, location.pathname, searchParams]);
 
   const handleSort = (key: keyof BaptismRecord) => {
     const newDirection = sortConfig.key === key && sortConfig.direction === 'asc' ? 'desc' : 'asc';
