@@ -884,6 +884,13 @@ app.use('/api/user/sessions', userSessionsRouter);
 const workSessionsRouter = require('./routes/work-sessions');
 app.use('/api/work-sessions', workSessionsRouter);
 
+// CS-OMSTUDIO-PLATFORM-PROVIDERS-V1 — read-only platform-provider
+// feeds for OMStudio (church-summary, resource-usage). Authenticates
+// via X-Service-Token. Mounts BEFORE the session-cookie auth so its
+// middleware runs first.
+const platformProviderRouter = require('./routes/platform');
+app.use('/api/platform', platformProviderRouter);
+
 // Profile image upload routes (avatar + banner)
 const profileUploadRouter = require('./routes/upload');
 app.use('/api/upload', profileUploadRouter);
