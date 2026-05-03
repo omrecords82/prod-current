@@ -7,6 +7,7 @@
  */
 
 const { promisePool } = require('../config/db');
+const { validateRecord: validateRecordFields } = require('./records-validation');
 
 // Cache: churchId -> database_name
 const churchDbCache = new Map();
@@ -245,6 +246,18 @@ const createRecord = async (req, res) => {
     const churchId = req.params.churchId || req.user?.church_id;
     const table = qt(dbName, getTableName(recordType));
 
+    // Field-level validation BEFORE the SQL — turns malformed input
+    // (e.g. 5-digit year typo) into a clean 400 with structured
+    // fieldErrors instead of a 500 + SQL stack trace.
+    const v = validateRecordFields(recordType, req.body || {});
+    if (!v.ok) {
+      return res.status(400).json({
+        error: 'Validation failed',
+        message: 'One or more fields are invalid.',
+        fieldErrors: v.fieldErrors,
+      });
+    }
+
     const cols = mapFields(recordType, req.body, churchId);
 
     // Set entry_type default for baptism
@@ -285,6 +298,16 @@ const updateRecord = async (req, res) => {
     const [existing] = await promisePool.execute(`SELECT id FROM ${table} WHERE id = ?`, [id]);
     if (existing.length === 0) {
       return res.status(404).json({ error: 'Record not found' });
+    }
+
+    // Field-level validation BEFORE the SQL — same defense as create.
+    const v = validateRecordFields(recordType, req.body || {});
+    if (!v.ok) {
+      return res.status(400).json({
+        error: 'Validation failed',
+        message: 'One or more fields are invalid.',
+        fieldErrors: v.fieldErrors,
+      });
     }
 
     const cols = mapFields(recordType, req.body, churchId);
