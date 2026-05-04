@@ -602,6 +602,7 @@ router.get('/phase1/staged', requireRole(ADMIN_ROLES), async (req, res) => {
              c.phone, c.website, c.latitude, c.longitude,
              c.jurisdiction, c.jurisdiction_id, c.onboarding_phase,
              c.crm_lead_id, c.created_at,
+             c.rector_name, c.admin_email,
              cl.pipeline_stage, cl.is_client
       FROM churches c
       LEFT JOIN omai_crm_leads cl ON c.crm_lead_id = cl.id
@@ -612,6 +613,69 @@ router.get('/phase1/staged', requireRole(ADMIN_ROLES), async (req, res) => {
   } catch (err) {
     console.error('Phase1 staged list error:', err);
     res.status(500).json({ success: false, error: 'Failed to load staged churches' });
+  }
+});
+
+// POST /api/admin/church-onboarding/:churchId/contact — Set the church's primary contact
+// (rector name + real email address) on a staged/onboarded church row. Used by the
+// onboarding pipeline UI before sending an invite — without this, the church row only
+// has a placeholder email like onboarding-{leadId}@placeholder.orthodoxmetrics.com and
+// there's nobody/nothing to send a login invite to.
+//
+// Body: { rector_name?: string, admin_email?: string }
+//   - admin_email must be a valid-looking address; rector_name is free-form (Fr. James, etc.).
+//   - Either field may be omitted to leave the existing value alone; passing an empty string
+//     clears that field.
+router.post('/:churchId/contact', requireRole(ADMIN_ROLES), async (req, res) => {
+  const churchId = parseInt(req.params.churchId);
+  if (isNaN(churchId)) {
+    return res.status(400).json({ success: false, message: 'Invalid church ID.' });
+  }
+
+  const { rector_name, admin_email } = req.body || {};
+  const updates = [];
+  const params = [];
+
+  if (rector_name !== undefined) {
+    const trimmed = typeof rector_name === 'string' ? rector_name.trim() : '';
+    updates.push('rector_name = ?');
+    params.push(trimmed === '' ? null : trimmed);
+  }
+  if (admin_email !== undefined) {
+    const trimmed = typeof admin_email === 'string' ? admin_email.trim() : '';
+    if (trimmed !== '' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
+      return res.status(400).json({ success: false, message: 'admin_email is not a valid email address.' });
+    }
+    updates.push('admin_email = ?');
+    params.push(trimmed === '' ? null : trimmed);
+  }
+
+  if (updates.length === 0) {
+    return res.status(400).json({ success: false, message: 'No fields supplied (expected rector_name and/or admin_email).' });
+  }
+
+  try {
+    const pool = getAppPool();
+    const [existing] = await pool.query(
+      'SELECT id, name, onboarding_phase FROM churches WHERE id = ?',
+      [churchId]
+    );
+    if (existing.length === 0) {
+      return res.status(404).json({ success: false, message: 'Church not found.' });
+    }
+
+    params.push(churchId);
+    await pool.query(`UPDATE churches SET ${updates.join(', ')} WHERE id = ?`, params);
+
+    const [updated] = await pool.query(
+      'SELECT id, name, rector_name, admin_email, onboarding_phase FROM churches WHERE id = ?',
+      [churchId]
+    );
+
+    res.json({ success: true, church: updated[0] });
+  } catch (err) {
+    console.error('Set contact error:', err);
+    res.status(500).json({ success: false, error: 'Failed to set contact info', detail: err.message });
   }
 });
 
