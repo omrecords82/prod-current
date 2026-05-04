@@ -729,8 +729,6 @@ const ConversationLogPage: React.FC = () => {
     );
   };
 
-  };
-
   return (
     <Box ref={topRef} sx={{ p: 3 }}>
       {/* Header */}
