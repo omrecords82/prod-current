@@ -461,11 +461,56 @@ router.delete('/users/:id', requireAdmin, async (req, res) => {
             }
         }
 
-        // Delete user
-        await getAppPool().query(
-            'DELETE FROM orthodoxmetrics_db.users WHERE id = ?',
-            [userId]
-        );
+        // Delete user inside a transaction so dependent rows are cleaned atomically.
+        // Schema has 3 RESTRICT FKs into users.id that block a bare DELETE:
+        //   - church_users.user_id        (membership rows; safe to remove with the user)
+        //   - interactive_reports.created_by_user_id (audit-bearing; refuse and ask admin to reassign)
+        //   - backup_jobs.requested_by    (audit-bearing; refuse and ask admin to reassign)
+        // Other FKs (refresh_tokens, user_roles, password_resets, etc.) already CASCADE or SET NULL.
+        const conn = await getAppPool().getConnection();
+        try {
+            await conn.beginTransaction();
+
+            const [reportRows] = await conn.query(
+                'SELECT COUNT(*) AS n FROM orthodoxmetrics_db.interactive_reports WHERE created_by_user_id = ?',
+                [userId]
+            );
+            const [backupRows] = await conn.query(
+                'SELECT COUNT(*) AS n FROM orthodoxmetrics_db.backup_jobs WHERE requested_by = ?',
+                [userId]
+            );
+            const reportCount = reportRows[0].n;
+            const backupCount = backupRows[0].n;
+
+            if (reportCount > 0 || backupCount > 0) {
+                await conn.rollback();
+                const blockers = [];
+                if (reportCount > 0) blockers.push(`${reportCount} interactive report(s)`);
+                if (backupCount > 0) blockers.push(`${backupCount} backup job(s)`);
+                return res.status(409).json({
+                    success: false,
+                    message: `Cannot delete user: ${blockers.join(' and ')} are owned by this user. Reassign or archive them first.`,
+                    code: 'DELETE_BLOCKED_BY_DEPENDENCIES',
+                    dependencies: { interactive_reports: reportCount, backup_jobs: backupCount },
+                });
+            }
+
+            await conn.query(
+                'DELETE FROM orthodoxmetrics_db.church_users WHERE user_id = ?',
+                [userId]
+            );
+            await conn.query(
+                'DELETE FROM orthodoxmetrics_db.users WHERE id = ?',
+                [userId]
+            );
+
+            await conn.commit();
+        } catch (txErr) {
+            await conn.rollback();
+            throw txErr;
+        } finally {
+            conn.release();
+        }
 
         console.log(`✅ User deleted: ${targetUser.email} by ${currentUser.email} (role: ${currentUser.role})`);
 
