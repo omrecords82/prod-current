@@ -1,0 +1,8 @@
+{
+  "app": "om",
+  "target": "frontend",
+  "gitSha": "dev",
+  "gitBranch": "dev",
+  "builtAt": null,
+  "buildHost": null
+}

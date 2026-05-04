@@ -8,6 +8,7 @@ import ScrollToTop from '@/shared/ui/ScrollToTop';
 import { CustomizerContext } from '@/context/CustomizerContext';
 import config from '@/context/config';
 import ImpersonationBanner from '@/components/ImpersonationBanner';
+import DeploymentFingerprintBar from '@/components/admin/DeploymentFingerprintBar';
 import { getPageTitle } from '@/config/pageTitles';
 import { OmAssistant } from '@/components/OmAssistant';
 import WorkSessionPrompt from '@/components/layout/WorkSessionPrompt';
@@ -62,6 +63,10 @@ const FullLayout: FC = () => {
             }),
           }}
         >
+          {/* ------------------------------------------- */}
+          {/* Deployment Fingerprint Bar (super_admin only) */}
+          {/* ------------------------------------------- */}
+          <DeploymentFingerprintBar />
           {/* ------------------------------------------- */}
           {/* Impersonation Banner (pushes content down when active) */}
           {/* ------------------------------------------- */}

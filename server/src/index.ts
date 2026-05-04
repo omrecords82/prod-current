@@ -666,6 +666,11 @@ const buildStatusRouter = require('./routes/admin/buildStatus');
 app.use('/api/admin', buildStatusRouter);
 console.log('✅ [Server] Mounted /api/admin/build-status route');
 
+// Deployment fingerprint (super_admin only) — used by DeploymentFingerprintBar
+const deploymentFingerprintRouter = require('./routes/admin/deployment-fingerprint');
+app.use('/api/admin', deploymentFingerprintRouter);
+console.log('✅ [Server] Mounted /api/admin/deployment-fingerprint route');
+
 const buildApprovalRouter = require('./routes/admin/build-approval');
 app.use('/api/admin/build-approval', buildApprovalRouter);
 console.log('✅ [Server] Mounted /api/admin/build-approval route');
