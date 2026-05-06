@@ -149,158 +149,78 @@ To register a new feature, add it to `FEATURE_REGISTRY` in `featureRegistry.ts` 
 
 ## AI Agent Work Tracking (REQUIRED)
 
-**Every change you make MUST be tracked as an OMAI Daily item with branch lifecycle management.** This is mandatory, not optional.
+**Authoritative source: [AGENTS.md](AGENTS.md) at repo root.** That file is the
+execution contract for every AI coding agent operating against OM, OMAI, or
+OMStudio. When AGENTS.md and this section disagree, **AGENTS.md wins**.
 
-**Full workflow documentation:** [ai-agent-workflow.md](ai-agent-workflow.md) (repo root — authoritative for OM)
+The pointers below are a quick orientation only. Read AGENTS.md for the full
+contract — preflight checklist, secret handling, danger zones, stop
+conditions, completion-report format, and the actual canonical work-item
+prefixes.
 
-### Workspace Rule
+### What this means in practice for OM work
 
-**Always work from your assigned worktree.** Never work from deploy directories directly — they are deploy-only.
+- **Work-item prefix:** `OMOD-####` (OM), `OMAD-####` (OMAI), `OMSD-####`
+  (OMStudio). See [AGENTS.md §3.1](AGENTS.md#31-naming-and-prefixes).
+- **Branch format:** `<type>/<work-item-id>/<yyyy-mm-dd>/<slug>` — three
+  types only: `feature`, `fix`, `chore`. See
+  [AGENTS.md §4.1](AGENTS.md#41-branch-naming).
+- **Workspace:** always work in your assigned worktree, never in the deploy
+  directory `/var/www/orthodoxmetrics/prod`. OM worktrees:
+  `/var/www/om-workspaces/agent-{claude,claude2,cursor,windsurf}`.
+- **Sequence:** create the work item (POST `/api/omai-daily/items`) → branch
+  is auto-created → check the branch out → commit work → POST
+  `/api/omai-daily/items/:id/start-work` to enter `in_progress` → finish work
+  → POST `/api/omai-daily/items/:id/agent-complete` to enter `self_review` →
+  open PR with `gh pr create`. Never self-merge.
+- **Auth:** OMAI work-item endpoints take an operator JWT. Log in as
+  `omsvc@orthodoxmetrics.com` with the vaulted `OMSVC_PASSWORD` (rendered to
+  `.239` at `/var/lib/omstudio/secrets/OMSVC_PASSWORD.creds`). See
+  [AGENTS.md §3.4 / §6](AGENTS.md#34-creating-a-work-item-omai-is-the-source-of-truth).
+- **Completion report format:** mandatory, exact structure in
+  [AGENTS.md §10](AGENTS.md#10-mandatory-completion-report-format).
+- **Implementation drift to be aware of:** the OMAI auto-sync currently
+  generates branch names with the legacy `omd-####` prefix regardless of
+  repo target. Migration to per-system prefixes (`omod-` / `omad-` / `omsd-`)
+  is tracked separately. Until that lands, the work-item title, PR title,
+  and completion report carry the canonical `OMOD-####` form even if the
+  branch name itself is auto-emitted as `feature/omd-####/...`.
 
-#### OrthodoxMetrics (OM) workspaces — repo: `prod-current`
-
-| Agent | Workspace |
-|-------|-----------|
-| Claude CLI | `/var/www/om-workspaces/agent-claude` |
-| Cursor | `/var/www/om-workspaces/agent-cursor` |
-| Windsurf | `/var/www/om-workspaces/agent-windsurf` |
-
-#### OMAI workspaces — repo: `omai`
-
-| Agent | Workspace |
-|-------|-----------|
-| Claude CLI | `/var/www/omai-workspaces/agent-claude` |
-| Cursor | `/var/www/omai-workspaces/agent-cursor` |
-| Windsurf | `/var/www/omai-workspaces/agent-windsurf` |
-
-### Quick Reference — Branch Lifecycle
-
-```bash
-# 0. Enter your OM workspace
-cd /var/www/om-workspaces/agent-claude
-
-# 1. Create item (BEFORE starting work) — status MUST be "backlog"
-curl -X POST http://127.0.0.1:7060/api/omai-daily/items \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer $TOKEN" \
-  -d '{"title":"...","task_type":"chore","status":"backlog","source":"agent","agent_tool":"claude_cli","priority":"medium","category":"om-frontend","description":"..."}'
-
-# 2. Start work — creates branch from main, checks it out locally
-curl -X POST http://127.0.0.1:7060/api/omai-daily/items/:id/start-work \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer $TOKEN" \
-  -d '{"branch_type":"enhancement","agent_tool":"claude_cli"}'
-
-# 3. Verify branch
-git branch --show-current
-
-# 4. Do your work, commit changes to the branch, push regularly
-git push -u origin HEAD
-
-# 5. Signal work complete — moves item to Self Review
-curl -X POST http://127.0.0.1:7060/api/omai-daily/items/:id/agent-complete \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer $TOKEN" \
-  -d '{"agent_tool":"claude_cli","summary":"Brief description of what was done"}'
-
-# 6. Create Pull Request
-gh pr create --base main --head "$(git branch --show-current)" \
-  --title "OMD-<id>: Short description" --body "..." --label "agent-pr"
-
-# 7. Admin reviews and merges — agents never self-merge
-```
-
-### Workflow
-
-0. **Enter workspace** → `cd /var/www/om-workspaces/agent-claude` (OM worktree, **not** the OMAI worktree)
-1. **Create item** → `POST /api/omai-daily/items` with `status: "backlog"`, `source: "agent"`, `agent_tool: "claude_cli"`
-2. **Start work** → `POST /api/omai-daily/items/:id/start-work` with `branch_type` — creates and checks out a branch from `main`
-3. **During work** → Commit changes to the branch. Push regularly with `git push -u origin HEAD`. Update `progress` (0-100) if the task is large
-4. **Signal complete** → `POST /api/omai-daily/items/:id/agent-complete` — moves item from In Progress → Self Review. **ALWAYS call this when you finish work on a task.** Idempotent and safe to call multiple times.
-5. **Create PR** → `gh pr create` against `main` with OMD item ID in the title. Never self-merge.
-6. **If abandoned** → Set `status: "cancelled"` with reason in description
-
-### Task Types
-
-`feature` | `enhancement` | `bugfix` | `refactor` | `migration` | `chore` | `spike` | `docs`
-
-### Branch Naming Standard
-
-All branches use the authoritative format: `<type>/<work-item-id>/<yyyy-mm-dd>/<slug>`
-
-| branch_type | Branch prefix | Example |
-|-------------|---------------|---------|
-| `feature` | `feature` | `feature/omd-412/2026-03-31/work-session-foundation` |
-| `enhancement` | `feature` | `feature/omd-413/2026-03-31/improve-ocr-accuracy` |
-| `bugfix` | `fix` | `fix/omd-414/2026-03-31/session-cookie-issue` |
-| `refactor` | `chore` | `chore/omd-415/2026-03-31/extract-db-helpers` |
-| `migration` | `chore` | `chore/omd-416/2026-03-31/move-crm-to-omai` |
-| `chore` | `chore` | `chore/omd-417/2026-03-31/update-deps` |
-| `spike` | `feature` | `feature/omd-418/2026-03-31/evaluate-ocr-engine` |
-| `docs` | `chore` | `chore/omd-419/2026-03-31/api-reference` |
-
-**Three branch types**: `feature`, `fix`, `chore`. All task types map to one of these.
-
-**Work item ID**: `omd-NNN` for OMAI Daily items, username for human work, agent tool name for agent work.
-
-**Create with**: `/var/omai-ops/scripts/orthodoxmetrics/start-task-branch.sh <type> <description> --item <id>`
-
-**Legacy branches** (feat/, enh/, ref/, etc.) are allowed temporarily with a deprecation warning. All new work must use the standard format.
-
-### Categories
-
-**OM (prod-current):** `om-frontend` | `om-backend` | `om-database` | `om-ocr` | `om-records` | `om-admin` | `om-portal` | `om-auth` | `om-devops`
-**OMAI:** `omai-frontend` | `omai-backend` | `omai-sdlc` | `omai-ai`
-**Shared:** `docs`
-
-### SDLC Status Ownership (Canonical 8-Status Model)
+### SDLC status ownership (quick view — AGENTS.md is canonical)
 
 ```
 draft → backlog → in_progress → self_review → review → staging → done
-blocked (from any active status)
-cancelled (from any status)
+blocked / cancelled (from any status)
 ```
 
 | Status | DB Value | Owner | Trigger |
 |--------|----------|-------|---------|
-| Draft | `draft` | Creator | Structured intake (pre-backlog shaping) |
-| Backlog | `backlog` | Admin | Intake promotion / item created |
+| Backlog | `backlog` | Admin | Item created |
 | In Progress | `in_progress` | **Agent** | POST /start-work |
 | Self Review | `self_review` | **Agent** | POST /agent-complete |
-| Review | `review` | Admin | PR opened (GitHub webhook) |
-| Staging | `staging` | Admin | PR approved (GitHub webhook) |
-| Done | `done` | — | PR merged (GitHub webhook) |
-| Blocked | `blocked` | Admin | Manual or webhook |
-| Cancelled | `cancelled` | — | Manual |
+| Review | `review` | Admin | PR opened |
+| Staging | `staging` | Admin | PR approved |
+| Done | `done` | — | PR merged |
 
-**Key enforcement:**
-- Agents pass `actor_type: "agent"` in PATCH /status calls to identify themselves
-- Agents own `in_progress` and `self_review` — admins cannot skip these steps
-- Admins own `backlog`, `review`, `staging` — agents cannot self-approve
-- `blocked` and `cancelled` transitions are always allowed by any actor
-- Backend PATCH /status enforces the transition matrix — invalid transitions are rejected
+Agents own `in_progress` and `self_review`; admins own `backlog`, `review`,
+`staging`. Agents pass `actor_type: "agent"` on PATCH `/status`. The
+backend transition matrix rejects invalid jumps.
 
-### Key Rules
+### Categories (from `om_daily_items.category`)
 
-- **ALWAYS work from your workspace** — Never `cd` into `/var/www/omai/` to make changes. Pre-commit hooks will block you.
-- **ALWAYS signal completion** — Call `POST /items/:id/agent-complete` when you finish work. This moves the item to Self Review so the board reflects your progress. Without this call, items stay stuck in In Progress.
-- **ALWAYS create a PR** — After agent-complete, open a PR with `gh pr create`. Never self-merge.
-- **Agent transitions use actor_type** — When calling PATCH /status directly, include `"actor_type": "agent"` in the body. The `agent-complete` and `start-work` endpoints handle this automatically.
-- **Fast-forward only** — `complete-work` uses `git merge --ff-only`. If main has diverged, rebase first.
-- **Clean tree required** — All changes must be committed before calling `complete-work`.
-- **Explicit actions** — Branches are NOT auto-merged on status change. You must call the endpoints.
-- **One branch per item, one PR per branch** — Each OMAI Daily item gets its own isolated branch and PR.
+OM: `om-frontend`, `om-backend`, `om-database`, `om-ocr`, `om-records`,
+`om-admin`, `om-portal`, `om-auth`, `om-devops`.
+OMAI: `omai-frontend`, `omai-backend`, `omai-sdlc`, `omai-ai`.
+Shared: `docs`.
 
-### Priorities: `critical`, `high`, `medium` (default), `low`
-### Categories: `om-frontend`, `om-backend`, `om-database`, `om-ocr`, `om-records`, `om-admin`, `om-portal`, `om-auth`, `om-devops`, `omai-frontend`, `omai-backend`, `omai-sdlc`, `omai-ai`, `docs`
+### Agent Plans (assigned work plans)
 
-### Agent Plans (Assigned Work Plans)
-
-Check for assigned plans at conversation start:
 ```bash
 curl -H "Authorization: Bearer $TOKEN" http://127.0.0.1:3001/api/prompt-plans/agent/claude_cli
 ```
-If an active plan is returned, read the `next_step.prompt_text` and execute that stage. Work items are auto-linked to the plan's Change Set. See [ai-agent-workflow.md](ai-agent-workflow.md) for full details.
+
+If an active plan is returned, read `next_step.prompt_text` and execute that
+stage. Work items are auto-linked to the plan's Change Set.
 
 ## Documentation
 
