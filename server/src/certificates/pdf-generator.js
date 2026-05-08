@@ -44,6 +44,16 @@ function dateYY(raw) {
   if (!d) return '';
   return String(d.getUTCFullYear()).slice(-2);
 }
+// "12/3/2025" — full M/D/YYYY for cert templates that have a single
+// date string field (no split tiles). Used for birthDate / baptismDate /
+// marriageDate. Was previously `new Date(raw).toLocaleDateString()`,
+// which resolves in the server-process timezone and rendered the
+// day-before for midnight-UTC values on non-UTC hosts.
+function dateMDY(raw) {
+  const d = _parseUtcDate(raw);
+  if (!d) return '';
+  return `${d.getUTCMonth() + 1}/${d.getUTCDate()}/${d.getUTCFullYear()}`;
+}
 
 // Saved positions live in template-image pixel space (top-left origin,
 // native image dimensions — what handleDrop captured via naturalWidth/
@@ -278,11 +288,11 @@ async function generateBaptismCertificatePDF(record, options = {}) {
   const [fatherName, motherName] = splitParents(record.parents);
   const fieldData = {
     fullName: `${record.first_name || ''} ${record.last_name || ''}`.trim(),
-    birthDate: record.birth_date ? new Date(record.birth_date).toLocaleDateString() : '',
+    birthDate: dateMDY(record.birth_date),
     birthDateMD: dateMD(record.birth_date),
     birthDateYY: dateYY(record.birth_date),
     birthplace: record.birthplace || '',
-    baptismDate: baptismDateRaw ? new Date(baptismDateRaw).toLocaleDateString() : '',
+    baptismDate: dateMDY(baptismDateRaw),
     baptismDateMD: dateMD(baptismDateRaw),
     baptismDateYY: dateYY(baptismDateRaw),
     sponsors: record.sponsors || record.godparents || '',
@@ -392,7 +402,7 @@ async function generateMarriageCertificatePDF(record, options = {}) {
   const fieldData = {
     groomName: `${record.fname_groom || record.groom_first || ''} ${record.lname_groom || record.groom_last || ''}`.trim(),
     brideName: `${record.fname_bride || record.bride_first || ''} ${record.lname_bride || record.bride_last || ''}`.trim(),
-    marriageDate: (record.mdate || record.marriage_date) ? new Date(record.mdate || record.marriage_date).toLocaleDateString() : '',
+    marriageDate: dateMDY(record.mdate || record.marriage_date),
     marriageDateMD: dateMD(record.mdate || record.marriage_date),
     marriageDateYY: dateYY(record.mdate || record.marriage_date),
     witnesses: record.witness || record.witnesses || '',
