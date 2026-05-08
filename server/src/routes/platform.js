@@ -767,4 +767,217 @@ router.get('/build-runs/summary', async (req, res) => {
   }
 });
 
+// ─── /tenant-config/known-slots ────────────────────────────────────────
+// OMOD-1502 — read-only known-slots endpoint that OMStudio's preflight
+// validator consumes (CS-OM-TENANT-PORTAL-CONFIG-REGISTRY-V1).
+//
+// Auth: X-Service-Token + X-On-Behalf-Of-Email (same pattern as
+// /work-sessions/active and /build-runs/summary). Additionally requires
+// X-Source-System: omstudio — defense in depth so a leaked service token
+// can't be used by a non-OMStudio caller.
+//
+// Returns the shape OMStudio's lib/packages/compatibility.js consumes
+// from tenantConfigResolver(tenant_id):
+//   {
+//     exists,                                  // bool
+//     modules: { "<category>.<module_key>": bool, ... },
+//     known_slots: ["<config_key>", ...],      // flat array of layout-slot keys
+//     active_roles: ["priest", "church_admin", ...],
+//     branding: { logo_position, ... } | null,
+//     theme_modes: ["light", "dark"]
+//   }
+//
+// IMPORTANT: returns 404 — NOT 200 with {exists:false} — when the tenant_id
+// doesn't match any active church. OMStudio's resolver distinguishes
+// "registry not shipped" (null from connector) from "tenant not found"
+// (404 → log + null) — see lib/packages/index.js / compatibility.js. Per
+// the connector contract, 4xx (other than 404) and 5xx are graceful
+// degrade (degraded), while 404 is a clean negative answer.
+
+const KNOWN_SLOT_DEFAULTS = {
+  // Slots that exist by virtue of OM shipping the portal at all — present
+  // for every active church regardless of whether someone has explicitly
+  // populated rows in tenant_portal_config_items yet. V1 is informational;
+  // V2 will narrow these to "rows that exist AND are is_active=1".
+  baseline_known_slots: [
+    'portal.layout.chrome',
+    'portal.dashboard.hub_root',
+    'portal.dashboard.search_box',
+    'portal.dashboard.recent_activity',
+    'portal.dashboard.record_pipeline',
+    'records.baptism.list',
+    'records.marriage.list',
+    'records.funeral.list',
+    'church_profile.name',
+    'church_profile.contact_email',
+    'navigation.role_default_landing',
+    'analytics.parish_summary',
+  ],
+  baseline_modules: {
+    'records.baptism': true,
+    'records.marriage': true,
+    'records.funeral': true,
+    'records.batches': true,
+    'analytics.charts': true,
+    'analytics.parish_summary': true,
+    'auth.login': true,
+    'auth.sessions': true,
+  },
+  baseline_active_roles: [
+    'super_admin', 'admin', 'church_admin', 'priest', 'deacon', 'editor',
+  ],
+  baseline_theme_modes: ['light', 'dark'],
+};
+
+router.get('/tenant-config/known-slots', async (req, res) => {
+  try {
+    // 1. on-behalf-of-email
+    const rawEmail = req.serviceCaller && typeof req.serviceCaller.email === 'string'
+      ? req.serviceCaller.email.trim()
+      : '';
+    if (!rawEmail) {
+      return res.status(400).json({
+        ok: false,
+        error: 'missing_on_behalf_of_email',
+        message: 'X-On-Behalf-Of-Email header is required for this endpoint.',
+      });
+    }
+    if (!EMAIL_RE.test(rawEmail)) {
+      return res.status(400).json({
+        ok: false,
+        error: 'invalid_email',
+        message: 'X-On-Behalf-Of-Email is not a valid email format.',
+      });
+    }
+
+    // 2. source system gate — must be omstudio
+    const sourceSystem = (req.serviceCaller && req.serviceCaller.sourceSystem)
+      || req.get('X-Source-System')
+      || '';
+    if ((sourceSystem || '').toLowerCase() !== 'omstudio') {
+      return res.status(403).json({
+        ok: false,
+        error: 'source_system_not_allowed',
+        message: 'X-Source-System: omstudio header is required for this endpoint.',
+      });
+    }
+
+    // 3. tenant_id
+    const tenantIdRaw = req.query.tenant_id;
+    const tenantId = parseInt(tenantIdRaw, 10);
+    if (!Number.isFinite(tenantId) || tenantId <= 0) {
+      return res.status(400).json({
+        ok: false,
+        error: 'missing_tenant_id',
+        message: 'tenant_id query param is required (positive integer).',
+      });
+    }
+
+    // 4. resolve church — 404 if not found OR not active. The connector
+    //    treats 404 as "tenant not found" (clean negative); other errors
+    //    degrade.
+    const [churches] = await queryPlatform(
+      `SELECT id, name, church_name, primary_color, secondary_color,
+              logo_path, logo_dark_path, favicon_path,
+              has_baptism_records, has_marriage_records, has_funeral_records,
+              is_active, setup_complete
+       FROM churches WHERE id = ? LIMIT 1`,
+      [tenantId],
+    );
+    if (!churches.length || !churches[0].is_active) {
+      return res.status(404).json({
+        ok: false,
+        error: 'tenant_not_found',
+        message: `No active church with tenant_id=${tenantId}.`,
+      });
+    }
+    const church = churches[0];
+
+    // 5. registry rows for this tenant
+    const [rows] = await queryPlatform(
+      `SELECT config_key, category, target_surface, user_roles, current_source,
+              layout_contract, omstudio_package_relevance
+       FROM tenant_portal_config_items
+       WHERE church_id = ? AND is_active = 1`,
+      [tenantId],
+    );
+
+    // 6. compose response
+    //
+    // known_slots: every active registry row's config_key, unioned with the
+    // baseline. Baseline covers the case where this tenant has no rows yet
+    // — V1 is informational, so we return the safe-known-good set rather
+    // than an empty array, and downstream OMStudio still gets a valid
+    // pass/fail signal.
+    const slotSet = new Set(KNOWN_SLOT_DEFAULTS.baseline_known_slots);
+    const moduleMap = { ...KNOWN_SLOT_DEFAULTS.baseline_modules };
+    const roleSet = new Set(KNOWN_SLOT_DEFAULTS.baseline_active_roles);
+
+    for (const r of rows) {
+      slotSet.add(r.config_key);
+
+      // Per-row module signal: row config_key 'records.baptism.list' →
+      // module 'records.baptism' enabled. We take the first two
+      // dot-segments (or the whole key if only one).
+      const firstDot = r.config_key.indexOf('.');
+      if (firstDot > 0) {
+        const secondDot = r.config_key.indexOf('.', firstDot + 1);
+        const moduleKey = secondDot > 0
+          ? r.config_key.slice(0, secondDot)
+          : r.config_key;
+        moduleMap[moduleKey] = true;
+      }
+
+      // user_roles influences the active_roles set
+      let userRoles = null;
+      try {
+        userRoles = typeof r.user_roles === 'string'
+          ? JSON.parse(r.user_roles)
+          : r.user_roles;
+      } catch { userRoles = null; }
+      if (Array.isArray(userRoles)) {
+        for (const role of userRoles) {
+          if (typeof role === 'string') roleSet.add(role);
+        }
+      }
+    }
+
+    // has_*_records flags from the church row override module presence
+    moduleMap['records.baptism']  = !!church.has_baptism_records;
+    moduleMap['records.marriage'] = !!church.has_marriage_records;
+    moduleMap['records.funeral']  = !!church.has_funeral_records;
+
+    const branding = (church.primary_color || church.logo_path) ? {
+      primary_color:    church.primary_color || null,
+      secondary_color:  church.secondary_color || null,
+      logo_path:        church.logo_path || null,
+      logo_dark_path:   church.logo_dark_path || null,
+      favicon_path:     church.favicon_path || null,
+    } : null;
+
+    return res.json({
+      ok: true,
+      exists: true,
+      tenant_id: tenantId,
+      tenant_name: church.church_name || church.name || null,
+      modules: moduleMap,
+      known_slots: Array.from(slotSet).sort(),
+      active_roles: Array.from(roleSet).sort(),
+      branding,
+      theme_modes: KNOWN_SLOT_DEFAULTS.baseline_theme_modes,
+      registry_row_count: rows.length,
+      registry_version: 'v1_informational',
+    });
+  } catch (err) {
+    console.error(
+      '[platform] tenant-config/known-slots failed:',
+      err && err.message ? err.message : err,
+    );
+    return res.status(500).json({
+      ok: false,
+      error: 'tenant_config_known_slots_failed',
+    });
+  }
+});
+
 module.exports = router;

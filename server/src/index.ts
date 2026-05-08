@@ -621,6 +621,11 @@ console.log('✅ [Server] Mounted /api/parish-settings route');
 const parishStatsRouter = require('./routes/parish-stats');
 app.use('/api/parish-stats', parishStatsRouter);
 console.log('✅ [Server] Mounted /api/parish-stats route');
+// OMOD-1502: Tenant Portal Config Registry (per-tenant rows, §C of OMSD-1491).
+// Platform-side known-slots read endpoint lives in routes/platform.js.
+const tenantConfigRouter = require('./routes/tenant-config');
+app.use('/api/tenant-config', tenantConfigRouter);
+console.log('✅ [Server] Mounted /api/tenant-config route');
 // Church records landing page branding
 const churchRecordsLandingRouter = require('./routes/church-records-landing');
 app.use('/api/churches', churchRecordsLandingRouter);

@@ -40,6 +40,8 @@ const Kanban = Loadable(lazy(() => import('../features/apps/kanban/Kanban')));
 const DynamicRecordsPage = Loadable(lazy(() => import('../features/records-centralized/components/dynamic/DynamicRecordsPage')));
 const AnalyticsDashboard = Loadable(lazy(() => import('../features/admin/AnalyticsDashboard')));
 const WebsiteStatsPage = Loadable(lazy(() => import('../features/admin/website-stats/WebsiteStatsPage')));
+// OMOD-1502: Tenant Portal Config Registry (Phase 5 of 8 of OMSD-1491)
+const TenantPortalConfigPage = Loadable(lazy(() => import('../features/admin/tenant-portal-config/TenantPortalConfigPage')));
 const Followers = Loadable(lazy(() => import('../features/apps/user-profile/Followers')));
 const Friends = Loadable(lazy(() => import('../features/apps/user-profile/Friends')));
 const UserProfileGallery = Loadable(lazy(() => import('../features/apps/user-profile/Gallery')));
@@ -385,6 +387,15 @@ const Router = [
         element: (
           <ProtectedRoute requiredRole={['super_admin']}>
             <ChurchSetupWizard />
+          </ProtectedRoute>
+        )
+      },
+      // OMOD-1502: Tenant Portal Config Registry (Phase 5 of OMSD-1491)
+      {
+        path: '/admin/tenant-portal-config',
+        element: (
+          <ProtectedRoute requiredRole={['super_admin', 'admin']}>
+            <TenantPortalConfigPage />
           </ProtectedRoute>
         )
       },
