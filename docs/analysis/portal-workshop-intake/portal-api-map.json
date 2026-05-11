@@ -1,0 +1,1290 @@
+[
+  {
+    "method": "GET",
+    "path": "/:param-records",
+    "callers": [
+      "front-end/src/features/records-centralized/components/records/RecordsPage/useRecordsFetch.ts",
+      "front-end/src/shared/lib/churchService.ts"
+    ],
+    "call_count": 2,
+    "mounted_at": "/api",
+    "backend_router_module": "./routes/church-register",
+    "effective_url": "/api/:param-records"
+  },
+  {
+    "method": "GET",
+    "path": "/:param-records/autocomplete",
+    "callers": [
+      "front-end/src/features/records-centralized/components/records/RecordsPage/useRecordsAutocomplete.ts"
+    ],
+    "call_count": 1,
+    "mounted_at": "/api",
+    "backend_router_module": "./routes/church-register",
+    "effective_url": "/api/:param-records/autocomplete"
+  },
+  {
+    "method": "GET",
+    "path": "/:param-records/dropdown-options/:param",
+    "callers": [
+      "front-end/src/api/metrics.api.ts"
+    ],
+    "call_count": 1,
+    "mounted_at": "/api",
+    "backend_router_module": "./routes/church-register",
+    "effective_url": "/api/:param-records/dropdown-options/:param"
+  },
+  {
+    "method": "POST",
+    "path": "/:param-records/export",
+    "callers": [
+      "front-end/src/api/metrics.api.ts"
+    ],
+    "call_count": 1,
+    "mounted_at": "/api",
+    "backend_router_module": "./routes/church-register",
+    "effective_url": "/api/:param-records/export"
+  },
+  {
+    "method": "GET",
+    "path": "/admin/church-database/:param/record-counts",
+    "callers": [
+      "front-end/src/features/portal/PortalSettingsPage.tsx"
+    ],
+    "call_count": 1,
+    "mounted_at": "/api/admin/church-database",
+    "backend_router_module": "./routes/admin/church-database",
+    "effective_url": "/api/admin/church-database/:param/record-counts"
+  },
+  {
+    "method": "GET",
+    "path": "/admin/churches/:param/field-mapper",
+    "callers": [
+      "front-end/src/features/portal/PortalSettingsPage.tsx"
+    ],
+    "call_count": 1,
+    "mounted_at": "/api/admin/churches",
+    "backend_router_module": "./routes/admin/churches-compat",
+    "effective_url": "/api/admin/churches/:param/field-mapper"
+  },
+  {
+    "method": "POST",
+    "path": "/admin/churches/:param/field-mapper",
+    "callers": [
+      "front-end/src/features/portal/PortalSettingsPage.tsx"
+    ],
+    "call_count": 1,
+    "mounted_at": "/api/admin/churches",
+    "backend_router_module": "./routes/admin/churches-compat",
+    "effective_url": "/api/admin/churches/:param/field-mapper"
+  },
+  {
+    "method": "POST",
+    "path": "/api/church/:param/ocr/feeder/pages/:param/rerun",
+    "callers": [
+      "front-end/src/features/devel-tools/om-ocr/components/workbench/OcrWorkbench.tsx"
+    ],
+    "call_count": 1,
+    "mounted_at": "/api/church/:param/ocr/feeder",
+    "backend_router_module": "routes/ocr/jobs.ts",
+    "effective_url": "/api/church/:param/ocr/feeder/pages/:param/rerun"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/church/:param/ocr/jobs",
+    "callers": [
+      "front-end/src/features/devel-tools/om-ocr/hooks/useOcrJobs.ts"
+    ],
+    "call_count": 1,
+    "mounted_at": "/api/church/:param/ocr/jobs",
+    "backend_router_module": "routes/ocr/jobs.ts",
+    "effective_url": "/api/church/:param/ocr/jobs"
+  },
+  {
+    "method": "GET",
+    "path": "/api/church/:param/ocr/jobs",
+    "callers": [
+      "front-end/src/features/ocr/components/OcrPipelineOverview.tsx",
+      "front-end/src/features/records-centralized/apps/upload-records/UploadRecordsPage.tsx"
+    ],
+    "call_count": 3,
+    "mounted_at": "/api/church/:param/ocr/jobs",
+    "backend_router_module": "routes/ocr/jobs.ts",
+    "effective_url": "/api/church/:param/ocr/jobs"
+  },
+  {
+    "method": "GET",
+    "path": "/api/church/:param/ocr/jobs/:param",
+    "callers": [
+      "front-end/src/features/devel-tools/om-ocr/hooks/useOcrJobs.ts"
+    ],
+    "call_count": 1,
+    "mounted_at": "/api/church/:param/ocr/jobs",
+    "backend_router_module": "routes/ocr/jobs.ts",
+    "effective_url": "/api/church/:param/ocr/jobs/:param"
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/church/:param/ocr/jobs/:param",
+    "callers": [
+      "front-end/src/features/devel-tools/om-ocr/components/FieldMappingPanel.tsx",
+      "front-end/src/features/devel-tools/om-ocr/hooks/useOcrJobs.ts"
+    ],
+    "call_count": 2,
+    "mounted_at": "/api/church/:param/ocr/jobs",
+    "backend_router_module": "routes/ocr/jobs.ts",
+    "effective_url": "/api/church/:param/ocr/jobs/:param"
+  },
+  {
+    "method": "POST",
+    "path": "/api/church/:param/ocr/jobs/:param/finalize",
+    "callers": [
+      "front-end/src/features/devel-tools/om-ocr/components/FieldMappingPanel.tsx"
+    ],
+    "call_count": 1,
+    "mounted_at": "/api/church/:param/ocr/jobs",
+    "backend_router_module": "routes/ocr/jobs.ts",
+    "effective_url": "/api/church/:param/ocr/jobs/:param/finalize"
+  },
+  {
+    "method": "POST",
+    "path": "/api/church/:param/ocr/jobs/:param/finalize-batch",
+    "callers": [
+      "front-end/src/features/devel-tools/om-ocr/components/FieldMappingPanel.tsx"
+    ],
+    "call_count": 1,
+    "mounted_at": "/api/church/:param/ocr/jobs",
+    "backend_router_module": "routes/ocr/jobs.ts",
+    "effective_url": "/api/church/:param/ocr/jobs/:param/finalize-batch"
+  },
+  {
+    "method": "POST",
+    "path": "/api/church/:param/ocr/jobs/:param/retry",
+    "callers": [
+      "front-end/src/features/devel-tools/om-ocr/hooks/useOcrJobs.ts",
+      "front-end/src/features/records-centralized/apps/upload-records/UploadRecordsPage.tsx"
+    ],
+    "call_count": 3,
+    "mounted_at": "/api/church/:param/ocr/jobs",
+    "backend_router_module": "routes/ocr/jobs.ts",
+    "effective_url": "/api/church/:param/ocr/jobs/:param/retry"
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/church/:param/ocr/jobs/:param/review-status",
+    "callers": [
+      "front-end/src/features/records-centralized/apps/upload-records/UploadRecordsPage.tsx"
+    ],
+    "call_count": 1,
+    "mounted_at": "/api/church/:param/ocr/jobs",
+    "backend_router_module": "routes/ocr/jobs.ts",
+    "effective_url": "/api/church/:param/ocr/jobs/:param/review-status"
+  },
+  {
+    "method": "POST",
+    "path": "/api/church/:param/ocr/jobs/:param/save-draft",
+    "callers": [
+      "front-end/src/features/devel-tools/om-ocr/components/FieldMappingPanel.tsx"
+    ],
+    "call_count": 1,
+    "mounted_at": "/api/church/:param/ocr/jobs",
+    "backend_router_module": "routes/ocr/jobs.ts",
+    "effective_url": "/api/church/:param/ocr/jobs/:param/save-draft"
+  },
+  {
+    "method": "GET",
+    "path": "/api/churches",
+    "callers": [
+      "front-end/src/features/records-centralized/apps/upload-records/UploadRecordsPage.tsx"
+    ],
+    "call_count": 1,
+    "mounted_at": "/api/churches",
+    "backend_router_module": "./routes/churches",
+    "effective_url": "/api/churches"
+  },
+  {
+    "method": "GET",
+    "path": "/api/my/churches",
+    "callers": [
+      "front-end/src/features/records-centralized/apps/upload-records/UploadRecordsPage.tsx"
+    ],
+    "call_count": 1,
+    "mounted_at": "/api/my",
+    "backend_router_module": "./routes/churches",
+    "effective_url": "/api/my/churches"
+  },
+  {
+    "method": "POST",
+    "path": "/api/ocr/batch-reprocess",
+    "callers": [
+      "front-end/src/features/devel-tools/om-ocr/components/TemplateBuilder.tsx"
+    ],
+    "call_count": 1,
+    "mounted_at": "/api/ocr",
+    "backend_router_module": "routes/ocr/index.ts",
+    "effective_url": "/api/ocr/batch-reprocess"
+  },
+  {
+    "method": "GET",
+    "path": "/api/ocr/jobs/:param",
+    "callers": [
+      "front-end/src/features/devel-tools/om-ocr/components/TemplateBuilder.tsx"
+    ],
+    "call_count": 1,
+    "mounted_at": "/api/ocr/jobs",
+    "backend_router_module": "routes/ocr/jobs.ts",
+    "effective_url": "/api/ocr/jobs/:param"
+  },
+  {
+    "method": "POST",
+    "path": "/api/ocr/jobs/upload",
+    "callers": [
+      "front-end/src/features/records-centralized/apps/upload-records/UploadRecordsPage.tsx"
+    ],
+    "call_count": 1,
+    "mounted_at": "/api/ocr/jobs",
+    "backend_router_module": "routes/ocr/jobs.ts",
+    "effective_url": "/api/ocr/jobs/upload"
+  },
+  {
+    "method": "POST",
+    "path": "/api/ocr/layout-templates",
+    "callers": [
+      "front-end/src/features/devel-tools/om-ocr/components/TemplateBuilder.tsx"
+    ],
+    "call_count": 1,
+    "mounted_at": "/api/ocr",
+    "backend_router_module": "routes/ocr/index.ts",
+    "effective_url": "/api/ocr/layout-templates"
+  },
+  {
+    "method": "GET",
+    "path": "/api/ocr/structure-clusters",
+    "callers": [
+      "front-end/src/features/devel-tools/om-ocr/components/TemplateBuilder.tsx"
+    ],
+    "call_count": 1,
+    "mounted_at": "/api/ocr",
+    "backend_router_module": "routes/ocr/index.ts",
+    "effective_url": "/api/ocr/structure-clusters"
+  },
+  {
+    "method": "POST",
+    "path": "/baptism-records",
+    "callers": [
+      "front-end/src/api/metrics.api.ts"
+    ],
+    "call_count": 1,
+    "mounted_at": "/api/baptism-records",
+    "backend_router_module": "./routes/baptism",
+    "effective_url": "/api/baptism-records"
+  },
+  {
+    "method": "DELETE",
+    "path": "/baptism-records/:param",
+    "callers": [
+      "front-end/src/api/metrics.api.ts"
+    ],
+    "call_count": 1,
+    "mounted_at": "/api/baptism-records",
+    "backend_router_module": "./routes/baptism",
+    "effective_url": "/api/baptism-records/:param"
+  },
+  {
+    "method": "GET",
+    "path": "/baptism-records/:param",
+    "callers": [
+      "front-end/src/api/metrics.api.ts",
+      "front-end/src/features/records-centralized/baptism/BaptismRecordEntryPage.tsx"
+    ],
+    "call_count": 2,
+    "mounted_at": "/api/baptism-records",
+    "backend_router_module": "./routes/baptism",
+    "effective_url": "/api/baptism-records/:param"
+  },
+  {
+    "method": "PUT",
+    "path": "/baptism-records/:param",
+    "callers": [
+      "front-end/src/api/metrics.api.ts"
+    ],
+    "call_count": 1,
+    "mounted_at": "/api/baptism-records",
+    "backend_router_module": "./routes/baptism",
+    "effective_url": "/api/baptism-records/:param"
+  },
+  {
+    "method": "GET",
+    "path": "/baptism-records:param",
+    "callers": [
+      "front-end/src/api/metrics.api.ts"
+    ],
+    "call_count": 1,
+    "mounted_at": "/api",
+    "backend_router_module": "./routes/church-register",
+    "effective_url": "/api/baptism-records:param"
+  },
+  {
+    "method": "GET",
+    "path": "/calendar/day/:param",
+    "callers": [
+      "front-end/src/api/metrics.api.ts"
+    ],
+    "call_count": 1,
+    "mounted_at": "/api/calendar",
+    "backend_router_module": "./routes/calendar",
+    "effective_url": "/api/calendar/day/:param"
+  },
+  {
+    "method": "GET",
+    "path": "/calendar/feasts/:param",
+    "callers": [
+      "front-end/src/api/metrics.api.ts"
+    ],
+    "call_count": 1,
+    "mounted_at": "/api/calendar",
+    "backend_router_module": "./routes/calendar",
+    "effective_url": "/api/calendar/feasts/:param"
+  },
+  {
+    "method": "GET",
+    "path": "/calendar/pascha/:param",
+    "callers": [
+      "front-end/src/api/metrics.api.ts"
+    ],
+    "call_count": 1,
+    "mounted_at": "/api/calendar",
+    "backend_router_module": "./routes/calendar",
+    "effective_url": "/api/calendar/pascha/:param"
+  },
+  {
+    "method": "GET",
+    "path": "/calendar/saints/:param",
+    "callers": [
+      "front-end/src/api/metrics.api.ts"
+    ],
+    "call_count": 1,
+    "mounted_at": "/api/calendar",
+    "backend_router_module": "./routes/calendar",
+    "effective_url": "/api/calendar/saints/:param"
+  },
+  {
+    "method": "GET",
+    "path": "/calendar/season/current",
+    "callers": [
+      "front-end/src/api/metrics.api.ts"
+    ],
+    "call_count": 1,
+    "mounted_at": "/api/calendar",
+    "backend_router_module": "./routes/calendar",
+    "effective_url": "/api/calendar/season/current"
+  },
+  {
+    "method": "GET",
+    "path": "/calendar:param",
+    "callers": [
+      "front-end/src/api/metrics.api.ts"
+    ],
+    "call_count": 1,
+    "mounted_at": "/api",
+    "backend_router_module": "./routes/church-register",
+    "effective_url": "/api/calendar:param"
+  },
+  {
+    "method": "GET",
+    "path": "/certificate-templates/by-type/:param",
+    "callers": [
+      "front-end/src/features/portal/PortalCertificatesPage.tsx"
+    ],
+    "call_count": 1,
+    "mounted_at": "/api/certificate-templates",
+    "backend_router_module": "./routes/certificate-templates",
+    "effective_url": "/api/certificate-templates/by-type/:param"
+  },
+  {
+    "method": "POST",
+    "path": "/certificate-templates/generate",
+    "callers": [
+      "front-end/src/features/portal/PortalCertificatesPage.tsx"
+    ],
+    "call_count": 1,
+    "mounted_at": "/api/certificate-templates",
+    "backend_router_module": "./routes/certificate-templates",
+    "effective_url": "/api/certificate-templates/generate"
+  },
+  {
+    "method": "GET",
+    "path": "/certificate-templates/generated/list",
+    "callers": [
+      "front-end/src/features/portal/PortalCertificatesPage.tsx"
+    ],
+    "call_count": 1,
+    "mounted_at": "/api/certificate-templates",
+    "backend_router_module": "./routes/certificate-templates",
+    "effective_url": "/api/certificate-templates/generated/list"
+  },
+  {
+    "method": "POST",
+    "path": "/certificates/baptism/:param",
+    "callers": [
+      "front-end/src/api/metrics.api.ts"
+    ],
+    "call_count": 1,
+    "mounted_at": "/api/certificates",
+    "backend_router_module": "certificatesRouter",
+    "effective_url": "/api/certificates/baptism/:param"
+  },
+  {
+    "method": "POST",
+    "path": "/certificates/funeral/:param",
+    "callers": [
+      "front-end/src/api/metrics.api.ts"
+    ],
+    "call_count": 1,
+    "mounted_at": "/api/certificates",
+    "backend_router_module": "certificatesRouter",
+    "effective_url": "/api/certificates/funeral/:param"
+  },
+  {
+    "method": "POST",
+    "path": "/certificates/marriage/:param",
+    "callers": [
+      "front-end/src/api/metrics.api.ts"
+    ],
+    "call_count": 1,
+    "mounted_at": "/api/certificates",
+    "backend_router_module": "certificatesRouter",
+    "effective_url": "/api/certificates/marriage/:param"
+  },
+  {
+    "method": "GET",
+    "path": "/church-branding/header/:param",
+    "callers": [
+      "front-end/src/context/ChurchContext.tsx"
+    ],
+    "call_count": 1,
+    "mounted_at": "/api/church-branding",
+    "backend_router_module": "./routes/church-branding",
+    "effective_url": "/api/church-branding/header/:param"
+  },
+  {
+    "method": "POST",
+    "path": "/church/:param/certificate/:param/:param/preview",
+    "callers": [
+      "front-end/src/features/certificates/CertificateGeneratorPage.tsx"
+    ],
+    "call_count": 1,
+    "mounted_at": "/api/church/:param/certificate",
+    "backend_router_module": "churchCertificatesRouter",
+    "effective_url": "/api/church/:param/certificate/:param/:param/preview"
+  },
+  {
+    "method": "GET",
+    "path": "/church/:param/certificate/:param/template",
+    "callers": [
+      "front-end/src/features/certificates/CertificateGeneratorPage.tsx"
+    ],
+    "call_count": 1,
+    "mounted_at": "/api/church/:param/certificate",
+    "backend_router_module": "churchCertificatesRouter",
+    "effective_url": "/api/church/:param/certificate/:param/template"
+  },
+  {
+    "method": "GET",
+    "path": "/church/:param/certificate/positions/:param",
+    "callers": [
+      "front-end/src/features/certificates/CertificateGeneratorPage.tsx"
+    ],
+    "call_count": 1,
+    "mounted_at": "/api/church/:param/certificate",
+    "backend_router_module": "churchCertificatesRouter",
+    "effective_url": "/api/church/:param/certificate/positions/:param"
+  },
+  {
+    "method": "POST",
+    "path": "/church/:param/certificate/positions/:param",
+    "callers": [
+      "front-end/src/features/certificates/CertificateGeneratorPage.tsx"
+    ],
+    "call_count": 1,
+    "mounted_at": "/api/church/:param/certificate",
+    "backend_router_module": "churchCertificatesRouter",
+    "effective_url": "/api/church/:param/certificate/positions/:param"
+  },
+  {
+    "method": "GET",
+    "path": "/church/:param/ocr/jobs",
+    "callers": [
+      "front-end/src/api/metrics.api.ts"
+    ],
+    "call_count": 1,
+    "mounted_at": "/api/church/:param/ocr/jobs",
+    "backend_router_module": "routes/ocr/jobs.ts",
+    "effective_url": "/api/church/:param/ocr/jobs"
+  },
+  {
+    "method": "DELETE",
+    "path": "/church/:param/ocr/jobs/:param",
+    "callers": [
+      "front-end/src/api/metrics.api.ts"
+    ],
+    "call_count": 1,
+    "mounted_at": "/api/church/:param/ocr/jobs",
+    "backend_router_module": "routes/ocr/jobs.ts",
+    "effective_url": "/api/church/:param/ocr/jobs/:param"
+  },
+  {
+    "method": "GET",
+    "path": "/church/:param/ocr/jobs/:param",
+    "callers": [
+      "front-end/src/api/metrics.api.ts"
+    ],
+    "call_count": 1,
+    "mounted_at": "/api/church/:param/ocr/jobs",
+    "backend_router_module": "routes/ocr/jobs.ts",
+    "effective_url": "/api/church/:param/ocr/jobs/:param"
+  },
+  {
+    "method": "GET",
+    "path": "/church/:param/ocr/jobs/:param/debug",
+    "callers": [
+      "front-end/src/features/devel-tools/om-ocr/components/RecordReviewWizard.tsx"
+    ],
+    "call_count": 1,
+    "mounted_at": "/api/church/:param/ocr/jobs",
+    "backend_router_module": "routes/ocr/jobs.ts",
+    "effective_url": "/api/church/:param/ocr/jobs/:param/debug"
+  },
+  {
+    "method": "GET",
+    "path": "/church/:param/ocr/jobs/:param/export",
+    "callers": [
+      "front-end/src/api/metrics.api.ts"
+    ],
+    "call_count": 1,
+    "mounted_at": "/api/church/:param/ocr/jobs",
+    "backend_router_module": "routes/ocr/jobs.ts",
+    "effective_url": "/api/church/:param/ocr/jobs/:param/export"
+  },
+  {
+    "method": "POST",
+    "path": "/church/:param/ocr/jobs/:param/retry",
+    "callers": [
+      "front-end/src/api/metrics.api.ts"
+    ],
+    "call_count": 1,
+    "mounted_at": "/api/church/:param/ocr/jobs",
+    "backend_router_module": "routes/ocr/jobs.ts",
+    "effective_url": "/api/church/:param/ocr/jobs/:param/retry"
+  },
+  {
+    "method": "GET",
+    "path": "/church/:param/ocr/settings",
+    "callers": [
+      "front-end/src/api/metrics.api.ts"
+    ],
+    "call_count": 1,
+    "mounted_at": "/api/church/:param/ocr/settings",
+    "backend_router_module": "routes/ocr/settings.ts",
+    "effective_url": "/api/church/:param/ocr/settings"
+  },
+  {
+    "method": "PUT",
+    "path": "/church/:param/ocr/settings",
+    "callers": [
+      "front-end/src/api/metrics.api.ts"
+    ],
+    "call_count": 1,
+    "mounted_at": "/api/church/:param/ocr/settings",
+    "backend_router_module": "routes/ocr/settings.ts",
+    "effective_url": "/api/church/:param/ocr/settings"
+  },
+  {
+    "method": "GET",
+    "path": "/church/records/:param",
+    "callers": [
+      "front-end/src/features/portal/PortalCertificatesPage.tsx"
+    ],
+    "call_count": 1,
+    "mounted_at": "/api",
+    "backend_router_module": "./routes/church-register",
+    "effective_url": "/api/church/records/:param"
+  },
+  {
+    "method": "POST",
+    "path": "/churches",
+    "callers": [
+      "front-end/src/shared/lib/churchService.ts"
+    ],
+    "call_count": 1,
+    "mounted_at": "/api/churches",
+    "backend_router_module": "./routes/churches",
+    "effective_url": "/api/churches"
+  },
+  {
+    "method": "DELETE",
+    "path": "/churches/:param",
+    "callers": [
+      "front-end/src/shared/lib/churchService.ts"
+    ],
+    "call_count": 1,
+    "mounted_at": "/api/churches",
+    "backend_router_module": "./routes/churches",
+    "effective_url": "/api/churches/:param"
+  },
+  {
+    "method": "GET",
+    "path": "/churches/:param",
+    "callers": [
+      "front-end/src/shared/lib/churchService.ts"
+    ],
+    "call_count": 1,
+    "mounted_at": "/api/churches",
+    "backend_router_module": "./routes/churches",
+    "effective_url": "/api/churches/:param"
+  },
+  {
+    "method": "PUT",
+    "path": "/churches/:param",
+    "callers": [
+      "front-end/src/shared/lib/churchService.ts"
+    ],
+    "call_count": 1,
+    "mounted_at": "/api/churches",
+    "backend_router_module": "./routes/churches",
+    "effective_url": "/api/churches/:param"
+  },
+  {
+    "method": "GET",
+    "path": "/churches/:param/charts/summary",
+    "callers": [
+      "front-end/src/features/church/apps/om-charts/OMChartsPage.tsx",
+      "front-end/src/features/records-centralized/components/records/RecordsAnalyticsView.tsx"
+    ],
+    "call_count": 2,
+    "mounted_at": "/api/churches/:param/charts",
+    "backend_router_module": "./api/om-charts",
+    "effective_url": "/api/churches/:param/charts/summary"
+  },
+  {
+    "method": "GET",
+    "path": "/churches/:param/clergy-tenure",
+    "callers": [
+      "front-end/src/features/portal/ChurchPortalHub.tsx"
+    ],
+    "call_count": 1,
+    "mounted_at": "/api/churches/:param/clergy-tenure",
+    "backend_router_module": "./routes/clergy-tenure",
+    "effective_url": "/api/churches/:param/clergy-tenure"
+  },
+  {
+    "method": "GET",
+    "path": "/churches/:param/dashboard",
+    "callers": [
+      "front-end/src/features/church/apps/om-charts/OMChartsPage.tsx",
+      "front-end/src/features/records-centralized/components/records/RecordsAnalyticsView.tsx",
+      "front-end/src/features/records-centralized/components/records/RecordsPage.tsx"
+    ],
+    "call_count": 3,
+    "mounted_at": "/api/churches/:param/dashboard",
+    "backend_router_module": "./api/dashboard-home",
+    "effective_url": "/api/churches/:param/dashboard"
+  },
+  {
+    "method": "GET",
+    "path": "/churches/:param/records-landing",
+    "callers": [
+      "front-end/src/hooks/useChurchRecordsLanding.ts"
+    ],
+    "call_count": 1,
+    "mounted_at": "/api/churches",
+    "backend_router_module": "./routes/churches",
+    "effective_url": "/api/churches/:param/records-landing"
+  },
+  {
+    "method": "PUT",
+    "path": "/churches/:param/records-landing",
+    "callers": [
+      "front-end/src/hooks/useChurchRecordsLanding.ts"
+    ],
+    "call_count": 1,
+    "mounted_at": "/api/churches",
+    "backend_router_module": "./routes/churches",
+    "effective_url": "/api/churches/:param/records-landing"
+  },
+  {
+    "method": "DELETE",
+    "path": "/churches/:param/records-landing/background",
+    "callers": [
+      "front-end/src/hooks/useChurchRecordsLanding.ts"
+    ],
+    "call_count": 1,
+    "mounted_at": "/api/churches",
+    "backend_router_module": "./routes/churches",
+    "effective_url": "/api/churches/:param/records-landing/background"
+  },
+  {
+    "method": "POST",
+    "path": "/churches/:param/records-landing/background",
+    "callers": [
+      "front-end/src/hooks/useChurchRecordsLanding.ts"
+    ],
+    "call_count": 1,
+    "mounted_at": "/api/churches",
+    "backend_router_module": "./routes/churches",
+    "effective_url": "/api/churches/:param/records-landing/background"
+  },
+  {
+    "method": "DELETE",
+    "path": "/churches/:param/records-landing/logo",
+    "callers": [
+      "front-end/src/hooks/useChurchRecordsLanding.ts"
+    ],
+    "call_count": 1,
+    "mounted_at": "/api/churches",
+    "backend_router_module": "./routes/churches",
+    "effective_url": "/api/churches/:param/records-landing/logo"
+  },
+  {
+    "method": "POST",
+    "path": "/churches/:param/records-landing/logo",
+    "callers": [
+      "front-end/src/hooks/useChurchRecordsLanding.ts"
+    ],
+    "call_count": 1,
+    "mounted_at": "/api/churches",
+    "backend_router_module": "./routes/churches",
+    "effective_url": "/api/churches/:param/records-landing/logo"
+  },
+  {
+    "method": "GET",
+    "path": "/churches/:param/records/:param",
+    "callers": [
+      "front-end/src/features/records-centralized/components/collaborationLinks/CollaborationWizardDialog.tsx"
+    ],
+    "call_count": 1,
+    "mounted_at": "/api/churches/:param/records",
+    "backend_router_module": "./routes/records",
+    "effective_url": "/api/churches/:param/records/:param"
+  },
+  {
+    "method": "POST",
+    "path": "/collaboration-links",
+    "callers": [
+      "front-end/src/features/records-centralized/components/collaborationLinks/CollaborationWizardDialog.tsx"
+    ],
+    "call_count": 1,
+    "mounted_at": "/api/collaboration-links",
+    "backend_router_module": "collaborationLinksRouter",
+    "effective_url": "/api/collaboration-links"
+  },
+  {
+    "method": "GET",
+    "path": "/dashboard/charts",
+    "callers": [
+      "front-end/src/api/metrics.api.ts"
+    ],
+    "call_count": 1,
+    "mounted_at": "/api/dashboard",
+    "backend_router_module": "./routes/dashboard",
+    "effective_url": "/api/dashboard/charts"
+  },
+  {
+    "method": "GET",
+    "path": "/dashboard/metrics",
+    "callers": [
+      "front-end/src/api/metrics.api.ts"
+    ],
+    "call_count": 1,
+    "mounted_at": "/api/dashboard",
+    "backend_router_module": "./routes/dashboard",
+    "effective_url": "/api/dashboard/metrics"
+  },
+  {
+    "method": "GET",
+    "path": "/dashboard/recent-activity",
+    "callers": [
+      "front-end/src/api/metrics.api.ts"
+    ],
+    "call_count": 1,
+    "mounted_at": "/api/dashboard",
+    "backend_router_module": "./routes/dashboard",
+    "effective_url": "/api/dashboard/recent-activity"
+  },
+  {
+    "method": "POST",
+    "path": "/funeral-records",
+    "callers": [
+      "front-end/src/api/metrics.api.ts"
+    ],
+    "call_count": 1,
+    "mounted_at": "/api/funeral-records",
+    "backend_router_module": "./routes/funeral",
+    "effective_url": "/api/funeral-records"
+  },
+  {
+    "method": "DELETE",
+    "path": "/funeral-records/:param",
+    "callers": [
+      "front-end/src/api/metrics.api.ts"
+    ],
+    "call_count": 1,
+    "mounted_at": "/api/funeral-records",
+    "backend_router_module": "./routes/funeral",
+    "effective_url": "/api/funeral-records/:param"
+  },
+  {
+    "method": "GET",
+    "path": "/funeral-records/:param",
+    "callers": [
+      "front-end/src/api/metrics.api.ts",
+      "front-end/src/features/records-centralized/funeral/FuneralRecordEntryPage.tsx"
+    ],
+    "call_count": 2,
+    "mounted_at": "/api/funeral-records",
+    "backend_router_module": "./routes/funeral",
+    "effective_url": "/api/funeral-records/:param"
+  },
+  {
+    "method": "PUT",
+    "path": "/funeral-records/:param",
+    "callers": [
+      "front-end/src/api/metrics.api.ts"
+    ],
+    "call_count": 1,
+    "mounted_at": "/api/funeral-records",
+    "backend_router_module": "./routes/funeral",
+    "effective_url": "/api/funeral-records/:param"
+  },
+  {
+    "method": "GET",
+    "path": "/funeral-records:param",
+    "callers": [
+      "front-end/src/api/metrics.api.ts"
+    ],
+    "call_count": 1,
+    "mounted_at": "/api",
+    "backend_router_module": "./routes/church-register",
+    "effective_url": "/api/funeral-records:param"
+  },
+  {
+    "method": "POST",
+    "path": "/invoices",
+    "callers": [
+      "front-end/src/api/metrics.api.ts"
+    ],
+    "call_count": 1,
+    "mounted_at": "/api",
+    "backend_router_module": "./routes/church-register",
+    "effective_url": "/api/invoices"
+  },
+  {
+    "method": "DELETE",
+    "path": "/invoices/:param",
+    "callers": [
+      "front-end/src/api/metrics.api.ts"
+    ],
+    "call_count": 1,
+    "mounted_at": "/api",
+    "backend_router_module": "./routes/church-register",
+    "effective_url": "/api/invoices/:param"
+  },
+  {
+    "method": "GET",
+    "path": "/invoices/:param",
+    "callers": [
+      "front-end/src/api/metrics.api.ts"
+    ],
+    "call_count": 1,
+    "mounted_at": "/api",
+    "backend_router_module": "./routes/church-register",
+    "effective_url": "/api/invoices/:param"
+  },
+  {
+    "method": "PUT",
+    "path": "/invoices/:param",
+    "callers": [
+      "front-end/src/api/metrics.api.ts"
+    ],
+    "call_count": 1,
+    "mounted_at": "/api",
+    "backend_router_module": "./routes/church-register",
+    "effective_url": "/api/invoices/:param"
+  },
+  {
+    "method": "POST",
+    "path": "/invoices/:param/mark-paid",
+    "callers": [
+      "front-end/src/api/metrics.api.ts"
+    ],
+    "call_count": 1,
+    "mounted_at": "/api",
+    "backend_router_module": "./routes/church-register",
+    "effective_url": "/api/invoices/:param/mark-paid"
+  },
+  {
+    "method": "POST",
+    "path": "/invoices/:param/pdf",
+    "callers": [
+      "front-end/src/api/metrics.api.ts"
+    ],
+    "call_count": 1,
+    "mounted_at": "/api",
+    "backend_router_module": "./routes/church-register",
+    "effective_url": "/api/invoices/:param/pdf"
+  },
+  {
+    "method": "POST",
+    "path": "/invoices/:param/send",
+    "callers": [
+      "front-end/src/api/metrics.api.ts"
+    ],
+    "call_count": 1,
+    "mounted_at": "/api",
+    "backend_router_module": "./routes/church-register",
+    "effective_url": "/api/invoices/:param/send"
+  },
+  {
+    "method": "GET",
+    "path": "/invoices/stats",
+    "callers": [
+      "front-end/src/api/metrics.api.ts"
+    ],
+    "call_count": 1,
+    "mounted_at": "/api",
+    "backend_router_module": "./routes/church-register",
+    "effective_url": "/api/invoices/stats"
+  },
+  {
+    "method": "GET",
+    "path": "/invoices:param",
+    "callers": [
+      "front-end/src/api/metrics.api.ts"
+    ],
+    "call_count": 1,
+    "mounted_at": "/api",
+    "backend_router_module": "./routes/church-register",
+    "effective_url": "/api/invoices:param"
+  },
+  {
+    "method": "POST",
+    "path": "/marriage-records",
+    "callers": [
+      "front-end/src/api/metrics.api.ts"
+    ],
+    "call_count": 1,
+    "mounted_at": "/api/marriage-records",
+    "backend_router_module": "./routes/marriage",
+    "effective_url": "/api/marriage-records"
+  },
+  {
+    "method": "DELETE",
+    "path": "/marriage-records/:param",
+    "callers": [
+      "front-end/src/api/metrics.api.ts"
+    ],
+    "call_count": 1,
+    "mounted_at": "/api/marriage-records",
+    "backend_router_module": "./routes/marriage",
+    "effective_url": "/api/marriage-records/:param"
+  },
+  {
+    "method": "GET",
+    "path": "/marriage-records/:param",
+    "callers": [
+      "front-end/src/api/metrics.api.ts",
+      "front-end/src/features/records-centralized/marriage/MarriageRecordEntryPage.tsx"
+    ],
+    "call_count": 2,
+    "mounted_at": "/api/marriage-records",
+    "backend_router_module": "./routes/marriage",
+    "effective_url": "/api/marriage-records/:param"
+  },
+  {
+    "method": "PUT",
+    "path": "/marriage-records/:param",
+    "callers": [
+      "front-end/src/api/metrics.api.ts"
+    ],
+    "call_count": 1,
+    "mounted_at": "/api/marriage-records",
+    "backend_router_module": "./routes/marriage",
+    "effective_url": "/api/marriage-records/:param"
+  },
+  {
+    "method": "GET",
+    "path": "/marriage-records:param",
+    "callers": [
+      "front-end/src/api/metrics.api.ts"
+    ],
+    "call_count": 1,
+    "mounted_at": "/api",
+    "backend_router_module": "./routes/church-register",
+    "effective_url": "/api/marriage-records:param"
+  },
+  {
+    "method": "GET",
+    "path": "/my/church-settings",
+    "callers": [
+      "front-end/src/features/portal/PortalSettingsPage.tsx"
+    ],
+    "call_count": 1,
+    "mounted_at": "/api/my",
+    "backend_router_module": "./routes/churches",
+    "effective_url": "/api/my/church-settings"
+  },
+  {
+    "method": "PUT",
+    "path": "/my/church-settings",
+    "callers": [
+      "front-end/src/features/portal/PortalSettingsPage.tsx"
+    ],
+    "call_count": 1,
+    "mounted_at": "/api/my",
+    "backend_router_module": "./routes/churches",
+    "effective_url": "/api/my/church-settings"
+  },
+  {
+    "method": "GET",
+    "path": "/my/churches",
+    "callers": [
+      "front-end/src/features/church/apps/om-charts/OMChartsPage.tsx",
+      "front-end/src/features/portal/ChurchPortalHub.tsx"
+    ],
+    "call_count": 2,
+    "mounted_at": "/api/my",
+    "backend_router_module": "./routes/churches",
+    "effective_url": "/api/my/churches"
+  },
+  {
+    "method": "GET",
+    "path": "/my/churches:param",
+    "callers": [
+      "front-end/src/shared/lib/churchService.ts"
+    ],
+    "call_count": 1,
+    "mounted_at": "/api/my",
+    "backend_router_module": "./routes/churches",
+    "effective_url": "/api/my/churches:param"
+  },
+  {
+    "method": "GET",
+    "path": "/my/ui-preferences",
+    "callers": [
+      "front-end/src/api/uiPreferences.ts"
+    ],
+    "call_count": 1,
+    "mounted_at": "/api/my/ui-preferences",
+    "backend_router_module": "./routes/ui-preferences",
+    "effective_url": "/api/my/ui-preferences"
+  },
+  {
+    "method": "PUT",
+    "path": "/my/ui-preferences",
+    "callers": [
+      "front-end/src/api/uiPreferences.ts"
+    ],
+    "call_count": 1,
+    "mounted_at": "/api/my/ui-preferences",
+    "backend_router_module": "./routes/ui-preferences",
+    "effective_url": "/api/my/ui-preferences"
+  },
+  {
+    "method": "DELETE",
+    "path": "/ocr/:param",
+    "callers": [
+      "front-end/src/api/metrics.api.ts"
+    ],
+    "call_count": 1,
+    "mounted_at": "/api/ocr",
+    "backend_router_module": "routes/ocr/index.ts",
+    "effective_url": "/api/ocr/:param"
+  },
+  {
+    "method": "GET",
+    "path": "/ocr/:param",
+    "callers": [
+      "front-end/src/api/metrics.api.ts"
+    ],
+    "call_count": 1,
+    "mounted_at": "/api/ocr",
+    "backend_router_module": "routes/ocr/index.ts",
+    "effective_url": "/api/ocr/:param"
+  },
+  {
+    "method": "POST",
+    "path": "/ocr/:param/process",
+    "callers": [
+      "front-end/src/api/metrics.api.ts"
+    ],
+    "call_count": 1,
+    "mounted_at": "/api/ocr",
+    "backend_router_module": "routes/ocr/index.ts",
+    "effective_url": "/api/ocr/:param/process"
+  },
+  {
+    "method": "GET",
+    "path": "/ocr/:param/results",
+    "callers": [
+      "front-end/src/api/metrics.api.ts"
+    ],
+    "call_count": 1,
+    "mounted_at": "/api/ocr",
+    "backend_router_module": "routes/ocr/index.ts",
+    "effective_url": "/api/ocr/:param/results"
+  },
+  {
+    "method": "GET",
+    "path": "/ocr/stats",
+    "callers": [
+      "front-end/src/api/metrics.api.ts"
+    ],
+    "call_count": 1,
+    "mounted_at": "/api/ocr",
+    "backend_router_module": "routes/ocr/index.ts",
+    "effective_url": "/api/ocr/stats"
+  },
+  {
+    "method": "GET",
+    "path": "/ocr:param",
+    "callers": [
+      "front-end/src/api/metrics.api.ts"
+    ],
+    "call_count": 1,
+    "mounted_at": "/api",
+    "backend_router_module": "./routes/church-register",
+    "effective_url": "/api/ocr:param"
+  },
+  {
+    "method": "PUT",
+    "path": "/om/profile/:param",
+    "callers": [
+      "front-end/src/context/UserDataContext/index.tsx"
+    ],
+    "call_count": 1,
+    "mounted_at": "/api/om/profile",
+    "backend_router_module": "./routes/om/profile",
+    "effective_url": "/api/om/profile/:param"
+  },
+  {
+    "method": "POST",
+    "path": "/public/ocr/process",
+    "callers": [
+      "front-end/src/api/metrics.api.ts"
+    ],
+    "call_count": 1,
+    "mounted_at": "/api",
+    "backend_router_module": "./routes/church-register",
+    "effective_url": "/api/public/ocr/process"
+  },
+  {
+    "method": "GET",
+    "path": "/record-batches/summary",
+    "callers": [
+      "front-end/src/features/portal/ChurchPortalHub.tsx"
+    ],
+    "call_count": 1,
+    "mounted_at": "/api/record-batches",
+    "backend_router_module": "./routes/record-batches",
+    "effective_url": "/api/record-batches/summary"
+  },
+  {
+    "method": "POST",
+    "path": "/test-ocr",
+    "callers": [
+      "front-end/src/api/metrics.api.ts"
+    ],
+    "call_count": 1,
+    "mounted_at": "/api",
+    "backend_router_module": "./routes/church-register",
+    "effective_url": "/api/test-ocr"
+  },
+  {
+    "method": "GET",
+    "path": "/utils/config",
+    "callers": [
+      "front-end/src/api/metrics.api.ts"
+    ],
+    "call_count": 1,
+    "mounted_at": "/api",
+    "backend_router_module": "./routes/church-register",
+    "effective_url": "/api/utils/config"
+  },
+  {
+    "method": "GET",
+    "path": "/utils/generate-password",
+    "callers": [
+      "front-end/src/api/metrics.api.ts"
+    ],
+    "call_count": 1,
+    "mounted_at": "/api",
+    "backend_router_module": "./routes/church-register",
+    "effective_url": "/api/utils/generate-password"
+  },
+  {
+    "method": "GET",
+    "path": "/utils/languages",
+    "callers": [
+      "front-end/src/api/metrics.api.ts"
+    ],
+    "call_count": 1,
+    "mounted_at": "/api",
+    "backend_router_module": "./routes/church-register",
+    "effective_url": "/api/utils/languages"
+  },
+  {
+    "method": "GET",
+    "path": "/utils/system-info",
+    "callers": [
+      "front-end/src/api/metrics.api.ts"
+    ],
+    "call_count": 1,
+    "mounted_at": "/api",
+    "backend_router_module": "./routes/church-register",
+    "effective_url": "/api/utils/system-info"
+  },
+  {
+    "method": "POST",
+    "path": "/utils/validate-email",
+    "callers": [
+      "front-end/src/api/metrics.api.ts"
+    ],
+    "call_count": 1,
+    "mounted_at": "/api",
+    "backend_router_module": "./routes/church-register",
+    "effective_url": "/api/utils/validate-email"
+  },
+  {
+    "method": "GET",
+    "path": ":param",
+    "callers": [
+      "front-end/src/features/devel-tools/om-ocr/api/pipelineApi.ts"
+    ],
+    "call_count": 1,
+    "mounted_at": null,
+    "backend_router_module": null
+  },
+  {
+    "method": "POST",
+    "path": ":param",
+    "callers": [
+      "front-end/src/features/records-centralized/baptism/BaptismRecordEntryPage.tsx",
+      "front-end/src/features/records-centralized/funeral/FuneralRecordEntryPage.tsx",
+      "front-end/src/features/records-centralized/marriage/MarriageRecordEntryPage.tsx"
+    ],
+    "call_count": 3,
+    "mounted_at": null,
+    "backend_router_module": null
+  },
+  {
+    "method": "PUT",
+    "path": ":param",
+    "callers": [
+      "front-end/src/features/records-centralized/baptism/BaptismRecordEntryPage.tsx",
+      "front-end/src/features/records-centralized/funeral/FuneralRecordEntryPage.tsx",
+      "front-end/src/features/records-centralized/marriage/MarriageRecordEntryPage.tsx"
+    ],
+    "call_count": 3,
+    "mounted_at": null,
+    "backend_router_module": null
+  }
+]
