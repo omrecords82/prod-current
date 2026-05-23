@@ -87,8 +87,6 @@ const OMChartsPage = Loadable(lazy(() => import('../features/church/apps/om-char
 const OMAIUltimateLogger = Loadable(lazy(() => import('../features/devel-tools/om-ultimatelogger/LoggerDashboard')));
 const SiteMapPage = Loadable(lazy(() => import('../features/admin/SiteMapPage')));
 const OmaiBridge = Loadable(lazy(() => import('../features/admin/OmaiBridge')));
-// Governance
-const ComponentIntelligenceRegistry = Loadable(lazy(() => import('../features/admin/governance/ComponentIntelligenceRegistry')));
 
 // OCR
 const OCRStudioPage = Loadable(lazy(() => import('../features/ocr/pages/OCRStudioPage')));
@@ -516,17 +514,6 @@ const Router = [
         )
       },
 
-      // Governance
-      {
-        path: '/governance/component-intelligence',
-        element: (
-          <ProtectedRoute requiredRole={['admin', 'super_admin']}>
-            <AdminErrorBoundary>
-              <ComponentIntelligenceRegistry />
-            </AdminErrorBoundary>
-          </ProtectedRoute>
-        )
-      },
       // OMB Editor placeholder
       {
         path: '/omb/editor',
