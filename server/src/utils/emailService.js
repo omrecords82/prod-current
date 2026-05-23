@@ -1282,6 +1282,91 @@ const sendPriestSummary = async ({ to, reportTitle, submittedBy, patchCount, chu
   }
 };
 
+// ────────────────────────────────────────────────────────────────────────
+// Enrollment form (public homepage "Enroll Now" / "Sign Up Today" CTA)
+// Mirrors sendContactEmail but with a slimmer field set and a hard-coded
+// destination address for the founder while pre-launch.
+// ────────────────────────────────────────────────────────────────────────
+const ENROLLMENT_RECIPIENT = process.env.ENROLLMENT_EMAIL || 'info@orthodoxmetrics.com';
+
+const sendEnrollmentEmail = async ({ parishName, contactName, email, phone }) => {
+  try {
+    const transporter = await createTransporter();
+    const dbConfig = await getActiveEmailConfig();
+    const senderName = dbConfig?.sender_name || 'Orthodox Metrics';
+    const senderEmail = dbConfig?.sender_email || process.env.SMTP_USER || process.env.EMAIL_USER;
+
+    const htmlContent = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+    .header { background: #2d1b4e; color: #d4af37; padding: 24px; text-align: center; }
+    .header h1 { margin: 0; font-size: 22px; }
+    .header p { margin: 6px 0 0; color: rgba(255,255,255,0.75); font-size: 13px; }
+    .content { padding: 24px; }
+    .detail-card { background: #f9f9f9; border-left: 4px solid #d4af37; padding: 16px; margin: 12px 0; }
+    .detail-card h3 { margin: 0 0 8px; color: #2d1b4e; font-size: 15px; }
+    .detail-card p { margin: 4px 0; font-size: 14px; }
+    .footer { background: #f1f1f1; padding: 12px; text-align: center; font-size: 11px; color: #777; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>New Parish Enrollment Inquiry</h1>
+    <p>Submitted via orthodoxmetrics.com homepage</p>
+  </div>
+  <div class="content">
+    <div class="detail-card">
+      <h3>Parish</h3>
+      <p><strong>${parishName}</strong></p>
+    </div>
+    <div class="detail-card">
+      <h3>Contact</h3>
+      <p><strong>Name:</strong> ${contactName}</p>
+      <p><strong>Email:</strong> <a href="mailto:${email}">${email}</a></p>
+      <p><strong>Phone:</strong> ${phone || '(not provided)'}</p>
+    </div>
+    <p style="font-size: 12px; color: #888;"><em>Submitted ${new Date().toLocaleString()}</em></p>
+  </div>
+  <div class="footer">
+    <p>&copy; ${new Date().getFullYear()} Orthodox Metrics</p>
+  </div>
+</body>
+</html>
+    `;
+
+    const text = [
+      'New Parish Enrollment Inquiry',
+      '',
+      `Parish: ${parishName}`,
+      `Contact: ${contactName}`,
+      `Email: ${email}`,
+      `Phone: ${phone || '(not provided)'}`,
+      '',
+      `Submitted ${new Date().toISOString()}`,
+    ].join('\n');
+
+    const mailOptions = {
+      from: `"${senderName}" <${senderEmail}>`,
+      to: ENROLLMENT_RECIPIENT,
+      replyTo: email,
+      subject: `Enroll Now: ${parishName} (${contactName})`,
+      html: htmlContent,
+      text,
+    };
+
+    const info = await transporter.sendMail(mailOptions);
+    console.log('✅ Enrollment email sent:', { messageId: info.messageId, parish: parishName, contact: email });
+    return { success: true, messageId: info.messageId };
+  } catch (error) {
+    console.error('❌ Failed to send enrollment email:', error.message);
+    return { success: false, error: error.message };
+  }
+};
+
 module.exports = {
   sendOCRReceipt,
   sendSessionVerification,
@@ -1292,6 +1377,7 @@ module.exports = {
   sendTaskCreationEmail,
   sendBackupNotification,
   sendContactEmail,
+  sendEnrollmentEmail,
   sendPasswordResetEmail,
   sendInviteEmail,
   sendVerificationEmail,

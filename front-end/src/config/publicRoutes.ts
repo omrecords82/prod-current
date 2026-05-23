@@ -16,6 +16,7 @@ export const PUBLIC_ROUTES = {
   TOUR: '/tour',
   BLOG: '/frontend-pages/blog',
   CONTACT: '/frontend-pages/contact',
+  ENROLL: '/frontend-pages/enroll',
   FAQ: '/frontend-pages/faq',
   LOGIN: '/auth/login',
   PRIVACY: '/privacy',

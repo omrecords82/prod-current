@@ -87,6 +87,8 @@ const OMChartsPage = Loadable(lazy(() => import('../features/church/apps/om-char
 const OMAIUltimateLogger = Loadable(lazy(() => import('../features/devel-tools/om-ultimatelogger/LoggerDashboard')));
 const SiteMapPage = Loadable(lazy(() => import('../features/admin/SiteMapPage')));
 const OmaiBridge = Loadable(lazy(() => import('../features/admin/OmaiBridge')));
+// Governance
+const ComponentIntelligenceRegistry = Loadable(lazy(() => import('../features/admin/governance/ComponentIntelligenceRegistry')));
 
 // OCR
 const OCRStudioPage = Loadable(lazy(() => import('../features/ocr/pages/OCRStudioPage')));
@@ -172,6 +174,7 @@ const Maintenance = Loadable(lazy(() => import('../features/auth/authentication/
 const Homepage = Loadable(lazy(() => import('../features/pages/frontend-pages/Homepage')));
 const About = Loadable(lazy(() => import('../features/pages/frontend-pages/About')));
 const Contact = Loadable(lazy(() => import('../features/pages/frontend-pages/Contact')));
+const Enrollment = Loadable(lazy(() => import('../features/pages/frontend-pages/Enrollment')));
 const Portfolio = Loadable(lazy(() => import('../features/pages/frontend-pages/Portfolio')));
 const PagePricing = Loadable(lazy(() => import('../features/pages/frontend-pages/Pricing')));
 const BlogPage = Loadable(lazy(() => import('../features/pages/frontend-pages/Blog')));
@@ -513,6 +516,17 @@ const Router = [
         )
       },
 
+      // Governance
+      {
+        path: '/governance/component-intelligence',
+        element: (
+          <ProtectedRoute requiredRole={['admin', 'super_admin']}>
+            <AdminErrorBoundary>
+              <ComponentIntelligenceRegistry />
+            </AdminErrorBoundary>
+          </ProtectedRoute>
+        )
+      },
       // OMB Editor placeholder
       {
         path: '/omb/editor',
@@ -936,6 +950,7 @@ const Router = [
           { path: '/frontend-pages/homepage', element: <Homepage /> },
           { path: '/frontend-pages/about', element: <About /> },
           { path: '/frontend-pages/contact', element: <Contact /> },
+          { path: '/frontend-pages/enroll', element: <Enrollment /> },
           { path: '/frontend-pages/pricing', element: <PagePricing /> },
           { path: '/frontend-pages/blog', element: <BlogPage /> },
           { path: '/samples', element: <Samples /> },

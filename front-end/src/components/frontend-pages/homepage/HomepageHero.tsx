@@ -99,10 +99,10 @@ const HomepageHero = () => {
                 <ArrowRight size={20} />
               </Link>
               <Link
-                to={PUBLIC_ROUTES.CONTACT}
+                to={PUBLIC_ROUTES.ENROLL}
                 className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-white/10 backdrop-blur-sm border border-white/20 text-white rounded-lg font-['Inter'] font-medium text-[16px] hover:bg-white/20 transition-colors no-underline"
               >
-                {t('home.hero_cta_demo')}
+                Enroll Now
               </Link>
             </div>
           </div>

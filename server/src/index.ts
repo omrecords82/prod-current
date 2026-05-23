@@ -918,6 +918,10 @@ app.use('/api/platform', platformProviderRouter);
 const profileUploadRouter = require('./routes/upload');
 app.use('/api/upload', profileUploadRouter);
 
+// Parish enrollment form (public - no auth required)
+const enrollRouter = require('./routes/enroll');
+app.use('/api/enroll', enrollRouter);
+
 // Contact form (public - no auth required)
 app.post('/api/contact', async (req: any, res: any) => {
   try {
