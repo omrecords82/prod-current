@@ -1,15 +1,17 @@
-import { useState } from "react";
-import "./styles/theme.css";
+import { CustomizerContext } from "@/context/CustomizerContext";
+import { useContext, useState } from "react";
 import { Landing } from "./components/views/Landing";
 import { Onboarding } from "./components/views/Onboarding";
+import "./styles/theme.css";
 
 type View = "landing" | "onboarding" | "complete";
 
 export default function App() {
   const [view, setView] = useState<View>("landing");
-  const [theme, setTheme] = useState<"light" | "dark">("light");
+  const { activeMode, setActiveMode } = useContext(CustomizerContext);
+  const theme: "light" | "dark" = activeMode === "dark" ? "dark" : "light";
 
-  const toggleTheme = () => setTheme((t) => (t === "light" ? "dark" : "light"));
+  const toggleTheme = () => setActiveMode(activeMode === "dark" ? "light" : "dark");
 
   return (
     <div className={`om-cornerstone-scope min-h-screen ${theme === "dark" ? "dark" : ""}`}>

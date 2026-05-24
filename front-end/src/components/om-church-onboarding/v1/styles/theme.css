@@ -5,8 +5,6 @@
  * by adding `dark` to its own wrapper (not to <html>).
  */
 
-@custom-variant dark (&:is(.dark, .dark *));
-
 .om-cornerstone-scope {
   --font-size: 15px;
   --brand-purple: #3a1d6e;
@@ -51,13 +49,13 @@
   --sidebar-border: rgba(255, 255, 255, 0.08);
   --sidebar-ring: #c9a14a;
 
+  font-family: 'Plus Jakarta Sans', sans-serif;
   font-size: var(--font-size);
   background: var(--background);
   color: var(--foreground);
 }
 
-.om-cornerstone-scope.dark,
-.dark .om-cornerstone-scope {
+.om-cornerstone-scope.dark {
   --background: #14091f;
   --foreground: #ede7f5;
   --card: #1d0f30;
