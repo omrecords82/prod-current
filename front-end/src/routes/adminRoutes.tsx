@@ -3,12 +3,21 @@
  * Each route is a FullLayout child (no layout wrapper needed here).
  */
 import { lazy } from 'react';
-import { Navigate } from 'react-router-dom';
-import ProtectedRoute from '../components/auth/ProtectedRoute';
-import AdminErrorBoundary from '../components/ErrorBoundary/AdminErrorBoundary';
-import EnvironmentAwarePage from '../components/routing/EnvironmentAwarePage';
 import HeadlineSourcePicker from '../features/admin/headlines/HeadlineSourcePicker';
 import Loadable from '../layouts/full/shared/loadable/Loadable';
+import {
+    ROLE_ADMIN_SUPER,
+    ROLE_STAFF,
+    ROLE_SUPER,
+    ROLE_SUPER_ADMIN,
+} from './rolePresets';
+import {
+    featureRoute,
+    guardedFeatureRoute,
+    guardedRoute,
+    protectedRoute,
+    redirectRoute,
+} from './routeConfigHelpers';
 
 /* ── Lazy imports ── */
 const OmaiBridge = Loadable(lazy(() => import('../features/admin/OmaiBridge')));
@@ -62,476 +71,62 @@ const EcosystemRoadmapPage = Loadable(lazy(() => import('../features/admin/ecosy
  */
 export const adminRoutes = [
   // OMAI Bridge — redirect to OMAI Berry with auth token
-  {
-    path: '/admin/omai',
-    element: (
-      <ProtectedRoute requiredRole={['super_admin', 'admin', 'church_admin', 'priest']}>
-        <OmaiBridge />
-      </ProtectedRoute>
-    )
-  },
-  {
-    path: '/admin/menu-permissions',
-    element: (
-      <ProtectedRoute requiredRole={['super_admin', 'admin']}>
-        <AdminErrorBoundary>
-          <MenuPermissions />
-        </AdminErrorBoundary>
-      </ProtectedRoute>
-    )
-  },
-  {
-    path: '/admin/menu-management',
-    element: (
-      <ProtectedRoute requiredRole={['super_admin', 'admin']}>
-        <AdminErrorBoundary>
-          <MenuManagement />
-        </AdminErrorBoundary>
-      </ProtectedRoute>
-    )
-  },
-  {
-    path: '/admin/settings',
-    element: (
-      <ProtectedRoute requiredRole={['admin', 'super_admin']}>
-        <AdminSettings />
-      </ProtectedRoute>
-    )
-  },
-  {
-    path: '/admin/publishing-guide',
-    element: (
-      <ProtectedRoute requiredRole={['admin', 'super_admin', 'church_admin']}>
-        <ChurchPublishingGuide />
-      </ProtectedRoute>
-    )
-  },
-  {
-    path: '/admin/tools/survey',
-    element: (
-      <ProtectedRoute requiredRole={['super_admin']}>
-        <AdminErrorBoundary>
-          <OMSiteSurvey />
-        </AdminErrorBoundary>
-      </ProtectedRoute>
-    )
-  },
-  {
-    path: '/admin/blog-admin',
-    element: (
-      <ProtectedRoute requiredRole={['super_admin', 'church_admin', 'admin']}>
-        <AdminErrorBoundary>
-          <BlogAdmin />
-        </AdminErrorBoundary>
-      </ProtectedRoute>
-    )
-  },
+  protectedRoute('/admin/omai', <OmaiBridge />, ROLE_STAFF),
+  guardedRoute('/admin/menu-permissions', <MenuPermissions />, ROLE_SUPER_ADMIN),
+  guardedRoute('/admin/menu-management', <MenuManagement />, ROLE_SUPER_ADMIN),
+  protectedRoute('/admin/settings', <AdminSettings />, ROLE_ADMIN_SUPER),
+  protectedRoute('/admin/publishing-guide', <ChurchPublishingGuide />, ['admin', 'super_admin', 'church_admin']),
+  guardedRoute('/admin/tools/survey', <OMSiteSurvey />, ROLE_SUPER),
+  guardedRoute('/admin/blog-admin', <BlogAdmin />, ['super_admin', 'church_admin', 'admin']),
   // /admin/tutorials — migrated to OMAI (/omai/ops/tutorials)
-  {
-    path: '/admin/logs',
-    element: (
-      <ProtectedRoute requiredRole={['admin', 'super_admin']}>
-        <ActivityLogs />
-      </ProtectedRoute>
-    )
-  },
-  {
-    path: '/admin/sessions',
-    element: (
-      <ProtectedRoute requiredRole={['admin', 'super_admin']}>
-        <SessionManagement />
-      </ProtectedRoute>
-    )
-  },
-  {
-    path: '/admin/activity-logs',
-    element: (
-      <ProtectedRoute requiredRole={['admin', 'super_admin']}>
-        <ActivityLogs />
-      </ProtectedRoute>
-    )
-  },
-  {
-    path: '/admin/script-runner',
-    element: (
-      <ProtectedRoute requiredRole={['admin', 'super_admin']}>
-        <AdminErrorBoundary>
-          <ScriptRunner />
-        </AdminErrorBoundary>
-      </ProtectedRoute>
-    )
-  },
-  {
-    path: '/admin/ai',
-    element: (
-      <ProtectedRoute requiredRole={['admin', 'super_admin']}>
-        <AIAdminPanel />
-      </ProtectedRoute>
-    )
-  },
+  protectedRoute('/admin/logs', <ActivityLogs />, ROLE_ADMIN_SUPER),
+  protectedRoute('/admin/sessions', <SessionManagement />, ROLE_ADMIN_SUPER),
+  protectedRoute('/admin/activity-logs', <ActivityLogs />, ROLE_ADMIN_SUPER),
+  guardedRoute('/admin/script-runner', <ScriptRunner />, ROLE_ADMIN_SUPER),
+  protectedRoute('/admin/ai', <AIAdminPanel />, ROLE_ADMIN_SUPER),
   // Removed: /admin/jit-terminal route
-  {
-    path: '/admin/headlines-config',
-    element: (
-      <ProtectedRoute requiredRole={['admin', 'super_admin']}>
-        <AdminErrorBoundary>
-          <HeadlineSourcePicker />
-        </AdminErrorBoundary>
-      </ProtectedRoute>
-    )
-  },
-  {
-    path: '/admin',
-    element: (
-      <ProtectedRoute requiredRole={['admin', 'super_admin']}>
-        <AdminPageFallback />
-      </ProtectedRoute>
-    )
-  },
-  {
-    path: '/admin/control-panel',
-    element: (
-      <ProtectedRoute requiredRole={['super_admin']}>
-        <AdminErrorBoundary>
-          <AdminControlPanel />
-        </AdminErrorBoundary>
-      </ProtectedRoute>
-    )
-  },
-  {
-    path: '/admin/control-panel/church-management',
-    element: (
-      <ProtectedRoute requiredRole={['super_admin']}>
-        <AdminErrorBoundary>
-          <ChurchManagementPage />
-        </AdminErrorBoundary>
-      </ProtectedRoute>
-    )
-  },
-  {
-    path: '/admin/control-panel/church-management/sacramental-restrictions',
-    element: (
-      <ProtectedRoute requiredRole={['super_admin']}>
-        <AdminErrorBoundary>
-          <OrthodoxScheduleGuidelinesPage />
-        </AdminErrorBoundary>
-      </ProtectedRoute>
-    )
-  },
-  {
-    path: '/admin/control-panel/pending-members',
-    element: (
-      <ProtectedRoute requiredRole={['super_admin', 'admin']}>
-        <AdminErrorBoundary>
-          <EnvironmentAwarePage featureId="pending-members" priority={4} featureName="Pending Members">
-            <PendingMembersPage />
-          </EnvironmentAwarePage>
-        </AdminErrorBoundary>
-      </ProtectedRoute>
-    )
-  },
-  {
-    path: '/admin/control-panel/church-onboarding',
-    element: <Navigate to="/admin/control-panel" replace />,
-  },
-  {
-    path: '/admin/control-panel/church-onboarding/:churchId',
-    element: <Navigate to="/admin/control-panel" replace />,
-  },
-  {
-    path: '/admin/control-panel/jurisdictions',
-    element: (
-      <ProtectedRoute requiredRole={['super_admin', 'admin']}>
-        <AdminErrorBoundary>
-          <EnvironmentAwarePage featureId="jurisdictions" priority={4} featureName="Jurisdictions">
-            <JurisdictionsPage />
-          </EnvironmentAwarePage>
-        </AdminErrorBoundary>
-      </ProtectedRoute>
-    )
-  },
-  {
-    path: '/admin/control-panel/demo-churches',
-    element: (
-      <ProtectedRoute requiredRole={['super_admin', 'admin']}>
-        <AdminErrorBoundary>
-          <EnvironmentAwarePage featureId="demo-churches" priority={4} featureName="Demo Churches">
-            <DemoChurchesPage />
-          </EnvironmentAwarePage>
-        </AdminErrorBoundary>
-      </ProtectedRoute>
-    )
-  },
-  {
-    path: '/admin/control-panel/certificate-templates',
-    element: (
-      <ProtectedRoute requiredRole={['super_admin']}>
-        <AdminErrorBoundary>
-          <CertificateTemplatesPage />
-        </AdminErrorBoundary>
-      </ProtectedRoute>
-    ),
-  },
-  {
-    path: '/admin/control-panel/church-pipeline',
-    element: <Navigate to="/admin/control-panel" replace />,
-  },
+  guardedRoute('/admin/headlines-config', <HeadlineSourcePicker />, ROLE_ADMIN_SUPER),
+  protectedRoute('/admin', <AdminPageFallback />, ROLE_ADMIN_SUPER),
+  guardedRoute('/admin/control-panel', <AdminControlPanel />, ROLE_SUPER),
+  guardedRoute('/admin/control-panel/church-management', <ChurchManagementPage />, ROLE_SUPER),
+  guardedRoute('/admin/control-panel/church-management/sacramental-restrictions', <OrthodoxScheduleGuidelinesPage />, ROLE_SUPER),
+  guardedFeatureRoute('/admin/control-panel/pending-members', <PendingMembersPage />, ROLE_SUPER_ADMIN, { featureId: 'pending-members', priority: 4, featureName: 'Pending Members' }),
+  redirectRoute('/admin/control-panel/church-onboarding', '/admin/control-panel'),
+  redirectRoute('/admin/control-panel/church-onboarding/:churchId', '/admin/control-panel'),
+  guardedFeatureRoute('/admin/control-panel/jurisdictions', <JurisdictionsPage />, ROLE_SUPER_ADMIN, { featureId: 'jurisdictions', priority: 4, featureName: 'Jurisdictions' }),
+  guardedFeatureRoute('/admin/control-panel/demo-churches', <DemoChurchesPage />, ROLE_SUPER_ADMIN, { featureId: 'demo-churches', priority: 4, featureName: 'Demo Churches' }),
+  guardedRoute('/admin/control-panel/certificate-templates', <CertificateTemplatesPage />, ROLE_SUPER),
+  redirectRoute('/admin/control-panel/church-pipeline', '/admin/control-panel'),
   // church-lifecycle list — retired from OM, feature now owned by OMAI (PP-0003)
-  {
-    path: '/admin/control-panel/church-lifecycle',
-    element: <Navigate to="/admin/control-panel" replace />,
-  },
+  redirectRoute('/admin/control-panel/church-lifecycle', '/admin/control-panel'),
   // church-lifecycle detail — OMAI opens this URL via window.open(); keep route for OMAI consumption
-  {
-    path: '/admin/control-panel/church-lifecycle/:churchId',
-    element: (
-      <ProtectedRoute requiredRole={['super_admin', 'admin']}>
-        <AdminErrorBoundary>
-          <EnvironmentAwarePage featureId="church-lifecycle-detail" priority={4} featureName="Church Lifecycle Detail">
-            <ChurchLifecycleDetailPage />
-          </EnvironmentAwarePage>
-        </AdminErrorBoundary>
-      </ProtectedRoute>
-    )
-  },
+  guardedFeatureRoute('/admin/control-panel/church-lifecycle/:churchId', <ChurchLifecycleDetailPage />, ROLE_SUPER_ADMIN, { featureId: 'church-lifecycle-detail', priority: 4, featureName: 'Church Lifecycle Detail' }),
   // Deprecated: onboarding-pipeline routes → redirect to church lifecycle (PP-0003 Stage 4)
-  { path: '/admin/control-panel/onboarding-pipeline', element: <Navigate to="/admin/control-panel" replace /> },
-  { path: '/admin/control-panel/onboarding-pipeline/:id', element: <Navigate to="/admin/control-panel" replace /> },
-  {
-    path: '/admin/control-panel/records-ocr',
-    element: (
-      <ProtectedRoute requiredRole={['super_admin']}>
-        <AdminErrorBoundary>
-          <RecordsOCRPage />
-        </AdminErrorBoundary>
-      </ProtectedRoute>
-    )
-  },
+  redirectRoute('/admin/control-panel/onboarding-pipeline', '/admin/control-panel'),
+  redirectRoute('/admin/control-panel/onboarding-pipeline/:id', '/admin/control-panel'),
+  guardedRoute('/admin/control-panel/records-ocr', <RecordsOCRPage />, ROLE_SUPER),
   // /admin/control-panel/crm-outreach — migrated to OMAI
-  {
-    path: '/admin/control-panel/system-server',
-    element: (
-      <ProtectedRoute requiredRole={['super_admin']}>
-        <AdminErrorBoundary>
-          <SystemServerPage />
-        </AdminErrorBoundary>
-      </ProtectedRoute>
-    )
-  },
-  {
-    path: '/admin/control-panel/ai-automation',
-    element: (
-      <ProtectedRoute requiredRole={['super_admin']}>
-        <AdminErrorBoundary>
-          <AIAutomationPage />
-        </AdminErrorBoundary>
-      </ProtectedRoute>
-    )
-  },
-  {
-    path: '/admin/ai/code-changes',
-    element: (
-      <ProtectedRoute requiredRole={['super_admin', 'admin']}>
-        <EnvironmentAwarePage featureId="code-change-detection" priority={2} featureName="Code Change Detection">
-          <CodeChangeDetection />
-        </EnvironmentAwarePage>
-      </ProtectedRoute>
-    )
-  },
-  {
-    path: '/admin/church-branding/records-landing',
-    element: (
-      <ProtectedRoute requiredRole={['super_admin', 'admin', 'church_admin']}>
-        <EnvironmentAwarePage featureId="records-landing-branding" priority={2} featureName="Records Landing Branding">
-          <RecordsLandingConfig />
-        </EnvironmentAwarePage>
-      </ProtectedRoute>
-    )
-  },
-  {
-    path: '/admin/control-panel/om-app-suite',
-    element: (
-      <ProtectedRoute requiredRole={['super_admin']}>
-        <AdminErrorBoundary>
-          <OMAppSuitePage />
-        </AdminErrorBoundary>
-      </ProtectedRoute>
-    )
-  },
-  {
-    path: '/admin/control-panel/components-in-development',
-    element: (
-      <ProtectedRoute requiredRole={['super_admin']}>
-        <AdminErrorBoundary>
-          <ComponentsInDevelopmentPage />
-        </AdminErrorBoundary>
-      </ProtectedRoute>
-    )
-  },
-  {
-    path: '/admin/control-panel/deprecated-components',
-    element: (
-      <ProtectedRoute requiredRole={['super_admin']}>
-        <AdminErrorBoundary>
-          <DeprecatedComponentsPage />
-        </AdminErrorBoundary>
-      </ProtectedRoute>
-    )
-  },
-  {
-    path: '/admin/control-panel/sdlc',
-    element: (
-      <ProtectedRoute requiredRole={['super_admin']}>
-        <AdminErrorBoundary>
-          <SDLCPage />
-        </AdminErrorBoundary>
-      </ProtectedRoute>
-    )
-  },
-  {
-    path: '/admin/control-panel/system-server/users-security',
-    element: (
-      <ProtectedRoute requiredRole={['super_admin']}>
-        <AdminErrorBoundary>
-          <UsersSecurityPage />
-        </AdminErrorBoundary>
-      </ProtectedRoute>
-    )
-  },
-  {
-    path: '/admin/control-panel/system-server/content-media',
-    element: (
-      <ProtectedRoute requiredRole={['super_admin']}>
-        <AdminErrorBoundary>
-          <ContentMediaPage />
-        </AdminErrorBoundary>
-      </ProtectedRoute>
-    )
-  },
-  {
-    path: '/admin/control-panel/system-server/social-comms',
-    element: (
-      <ProtectedRoute requiredRole={['super_admin']}>
-        <AdminErrorBoundary>
-          <SocialCommsPage />
-        </AdminErrorBoundary>
-      </ProtectedRoute>
-    )
-  },
-  {
-    path: '/admin/control-panel/system-server/server-devops',
-    element: (
-      <ProtectedRoute requiredRole={['super_admin']}>
-        <AdminErrorBoundary>
-          <ServerDevOpsPage />
-        </AdminErrorBoundary>
-      </ProtectedRoute>
-    )
-  },
-  {
-    path: '/admin/control-panel/system-server/platform-config',
-    element: (
-      <ProtectedRoute requiredRole={['super_admin']}>
-        <AdminErrorBoundary>
-          <PlatformConfigPage />
-        </AdminErrorBoundary>
-      </ProtectedRoute>
-    )
-  },
-  {
-    path: '/admin/control-panel/system-server/code-safety',
-    element: (
-      <ProtectedRoute requiredRole={['super_admin']}>
-        <AdminErrorBoundary>
-          <CodeSafetyPage />
-        </AdminErrorBoundary>
-      </ProtectedRoute>
-    )
-  },
-  {
-    path: '/admin/control-panel/system-server/platform-config/ssl-certificates',
-    element: (
-      <ProtectedRoute requiredRole={['super_admin']}>
-        <AdminErrorBoundary>
-          <SSLCertificatePage />
-        </AdminErrorBoundary>
-      </ProtectedRoute>
-    )
-  },
-  {
-    path: '/admin/ops',
-    element: (
-      <ProtectedRoute requiredRole={['admin', 'super_admin']}>
-        <AdminErrorBoundary>
-          <OpsReportsPage />
-        </AdminErrorBoundary>
-      </ProtectedRoute>
-    )
-  },
-  {
-    path: '/admin/orthodox-metrics',
-    element: (
-      <ProtectedRoute requiredRole={['super_admin', 'admin']}>
-        <AdminErrorBoundary>
-          <OrthodoxMetricsDash />
-        </AdminErrorBoundary>
-      </ProtectedRoute>
-    )
-  },
-  {
-    path: '/admin/bigbook',
-    element: (
-      <ProtectedRoute requiredRole={['admin', 'super_admin']}>
-        <AdminErrorBoundary>
-          <OMBigBook />
-        </AdminErrorBoundary>
-      </ProtectedRoute>
-    )
-  },
-  {
-    path: '/admin/omai/mobile',
-    element: (
-      <ProtectedRoute requiredRole={['super_admin']}>
-        <AdminErrorBoundary>
-          <OMAIDiscoveryPanelMobile />
-        </AdminErrorBoundary>
-      </ProtectedRoute>
-    )
-  },
-  {
-    path: '/admin/log-search',
-    element: (
-      <ProtectedRoute requiredRole={['admin', 'super_admin']}>
-        <AdminErrorBoundary>
-          <LogSearch />
-        </AdminErrorBoundary>
-      </ProtectedRoute>
-    )
-  },
-  {
-    path: '/admin/churches',
-    element: (
-      <ProtectedRoute requiredRole={['admin', 'super_admin']}>
-        <ChurchAdminList />
-      </ProtectedRoute>
-    )
-  },
-  {
-    path: '/admin/church/:id',
-    element: (
-      <ProtectedRoute requiredRole={['admin', 'super_admin']}>
-        <ChurchAdminPanel />
-      </ProtectedRoute>
-    )
-  },
-  {
-    path: '/admin/ecosystem-roadmap',
-    element: (
-      <ProtectedRoute requiredRole={['super_admin', 'admin']}>
-        <AdminErrorBoundary>
-          <EcosystemRoadmapPage />
-        </AdminErrorBoundary>
-      </ProtectedRoute>
-    ),
-  },
+  guardedRoute('/admin/control-panel/system-server', <SystemServerPage />, ROLE_SUPER),
+  guardedRoute('/admin/control-panel/ai-automation', <AIAutomationPage />, ROLE_SUPER),
+  featureRoute('/admin/ai/code-changes', <CodeChangeDetection />, ROLE_SUPER_ADMIN, { featureId: 'code-change-detection', priority: 2, featureName: 'Code Change Detection' }),
+  featureRoute('/admin/church-branding/records-landing', <RecordsLandingConfig />, ['super_admin', 'admin', 'church_admin'], { featureId: 'records-landing-branding', priority: 2, featureName: 'Records Landing Branding' }),
+  guardedRoute('/admin/control-panel/om-app-suite', <OMAppSuitePage />, ROLE_SUPER),
+  guardedRoute('/admin/control-panel/components-in-development', <ComponentsInDevelopmentPage />, ROLE_SUPER),
+  guardedRoute('/admin/control-panel/deprecated-components', <DeprecatedComponentsPage />, ROLE_SUPER),
+  guardedRoute('/admin/control-panel/sdlc', <SDLCPage />, ROLE_SUPER),
+  guardedRoute('/admin/control-panel/system-server/users-security', <UsersSecurityPage />, ROLE_SUPER),
+  guardedRoute('/admin/control-panel/system-server/content-media', <ContentMediaPage />, ROLE_SUPER),
+  guardedRoute('/admin/control-panel/system-server/social-comms', <SocialCommsPage />, ROLE_SUPER),
+  guardedRoute('/admin/control-panel/system-server/server-devops', <ServerDevOpsPage />, ROLE_SUPER),
+  guardedRoute('/admin/control-panel/system-server/platform-config', <PlatformConfigPage />, ROLE_SUPER),
+  guardedRoute('/admin/control-panel/system-server/code-safety', <CodeSafetyPage />, ROLE_SUPER),
+  guardedRoute('/admin/control-panel/system-server/platform-config/ssl-certificates', <SSLCertificatePage />, ROLE_SUPER),
+  guardedRoute('/admin/ops', <OpsReportsPage />, ROLE_ADMIN_SUPER),
+  guardedRoute('/admin/orthodox-metrics', <OrthodoxMetricsDash />, ROLE_SUPER_ADMIN),
+  guardedRoute('/admin/bigbook', <OMBigBook />, ROLE_ADMIN_SUPER),
+  guardedRoute('/admin/omai/mobile', <OMAIDiscoveryPanelMobile />, ROLE_SUPER),
+  guardedRoute('/admin/log-search', <LogSearch />, ROLE_ADMIN_SUPER),
+  protectedRoute('/admin/churches', <ChurchAdminList />, ROLE_ADMIN_SUPER),
+  protectedRoute('/admin/church/:id', <ChurchAdminPanel />, ROLE_ADMIN_SUPER),
+  guardedRoute('/admin/ecosystem-roadmap', <EcosystemRoadmapPage />, ROLE_SUPER_ADMIN),
 ];

@@ -3,9 +3,9 @@
  * Exports the full top-level route object with ChurchPortalLayout wrapper.
  */
 import { lazy } from 'react';
-import { Navigate } from 'react-router-dom';
-import ProtectedRoute from '../components/auth/ProtectedRoute';
 import Loadable from '../layouts/full/shared/loadable/Loadable';
+import { ROLE_ALL_CHURCH, ROLE_STAFF } from './rolePresets';
+import { protectedRoute, redirectRoute } from './routeConfigHelpers';
 
 /* ── Lazy imports ── */
 const ChurchPortalLayout = Loadable(lazy(() => import('../layouts/portal/ChurchPortalLayout')));
@@ -37,169 +37,38 @@ export const portalRoute = {
   children: [
     { index: true, element: <ChurchPortalHub /> },
     // Records hub — all church staff
-    {
-      path: 'records',
-      element: (
-        <ProtectedRoute requiredRole={['super_admin', 'admin', 'church_admin', 'priest', 'deacon', 'editor']}>
-          <PortalRecordsPage />
-        </ProtectedRoute>
-      ),
-    },
+    protectedRoute('records', <PortalRecordsPage />, ROLE_ALL_CHURCH),
     // Legacy records list routes → redirect to unified records page
-    {
-      path: 'records/baptism',
-      element: <Navigate to="/portal/records" replace />,
-    },
-    {
-      path: 'records/baptism/new',
-      element: (
-        <ProtectedRoute requiredRole={['super_admin', 'admin', 'church_admin', 'priest', 'deacon', 'editor']}>
-          <BaptismRecordEntryPage />
-        </ProtectedRoute>
-      ),
-    },
-    {
-      path: 'records/baptism/edit/:id',
-      element: (
-        <ProtectedRoute requiredRole={['super_admin', 'admin', 'church_admin', 'priest', 'deacon', 'editor']}>
-          <BaptismRecordEntryPage />
-        </ProtectedRoute>
-      ),
-    },
-    {
-      path: 'records/marriage',
-      element: <Navigate to="/portal/records" replace />,
-    },
-    {
-      path: 'records/marriage/new',
-      element: (
-        <ProtectedRoute requiredRole={['super_admin', 'admin', 'church_admin', 'priest', 'deacon', 'editor']}>
-          <MarriageRecordEntryPage />
-        </ProtectedRoute>
-      ),
-    },
-    {
-      path: 'records/marriage/edit/:id',
-      element: (
-        <ProtectedRoute requiredRole={['super_admin', 'admin', 'church_admin', 'priest', 'deacon', 'editor']}>
-          <MarriageRecordEntryPage />
-        </ProtectedRoute>
-      ),
-    },
-    {
-      path: 'records/funeral',
-      element: <Navigate to="/portal/records" replace />,
-    },
-    {
-      path: 'records/funeral/new',
-      element: (
-        <ProtectedRoute requiredRole={['super_admin', 'admin', 'church_admin', 'priest', 'deacon', 'editor']}>
-          <FuneralRecordEntryPage />
-        </ProtectedRoute>
-      ),
-    },
-    {
-      path: 'records/funeral/edit/:id',
-      element: (
-        <ProtectedRoute requiredRole={['super_admin', 'admin', 'church_admin', 'priest', 'deacon', 'editor']}>
-          <FuneralRecordEntryPage />
-        </ProtectedRoute>
-      ),
-    },
+    redirectRoute('records/baptism', '/portal/records'),
+    protectedRoute('records/baptism/new', <BaptismRecordEntryPage />, ROLE_ALL_CHURCH),
+    protectedRoute('records/baptism/edit/:id', <BaptismRecordEntryPage />, ROLE_ALL_CHURCH),
+    redirectRoute('records/marriage', '/portal/records'),
+    protectedRoute('records/marriage/new', <MarriageRecordEntryPage />, ROLE_ALL_CHURCH),
+    protectedRoute('records/marriage/edit/:id', <MarriageRecordEntryPage />, ROLE_ALL_CHURCH),
+    redirectRoute('records/funeral', '/portal/records'),
+    protectedRoute('records/funeral/new', <FuneralRecordEntryPage />, ROLE_ALL_CHURCH),
+    protectedRoute('records/funeral/edit/:id', <FuneralRecordEntryPage />, ROLE_ALL_CHURCH),
     // Upload Records (church_admin + priest)
-    {
-      path: 'upload',
-      element: (
-        <ProtectedRoute requiredRole={['super_admin', 'admin', 'church_admin', 'priest']}>
-          <UploadRecordsPage />
-        </ProtectedRoute>
-      ),
-    },
+    protectedRoute('upload', <UploadRecordsPage />, ROLE_STAFF),
     // Charts (church_admin + priest)
-    {
-      path: 'charts',
-      element: (
-        <ProtectedRoute requiredRole={['super_admin', 'admin', 'church_admin', 'priest']}>
-          <OMChartsPage />
-        </ProtectedRoute>
-      ),
-    },
+    protectedRoute('charts', <OMChartsPage />, ROLE_STAFF),
     // Certificates — new template-based flow
-    {
-      path: 'certificates',
-      element: (
-        <ProtectedRoute requiredRole={['super_admin', 'admin', 'church_admin', 'priest', 'deacon', 'editor']}>
-          <PortalCertificatesPage />
-        </ProtectedRoute>
-      ),
-    },
+    protectedRoute('certificates', <PortalCertificatesPage />, ROLE_ALL_CHURCH),
     // Certificates — legacy drag-and-drop generator
-    {
-      path: 'certificates/generate',
-      element: (
-        <ProtectedRoute requiredRole={['super_admin', 'admin', 'church_admin', 'priest', 'deacon', 'editor']}>
-          <CertificateGeneratorPage />
-        </ProtectedRoute>
-      ),
-    },
+    protectedRoute('certificates/generate', <CertificateGeneratorPage />, ROLE_ALL_CHURCH),
     // Parish Settings
-    {
-      path: 'settings',
-      element: (
-        <ProtectedRoute requiredRole={['super_admin', 'admin', 'church_admin', 'priest']}>
-          <PortalSettingsPage />
-        </ProtectedRoute>
-      ),
-    },
+    protectedRoute('settings', <PortalSettingsPage />, ROLE_STAFF),
     // User Profile → redirect to Account Hub
-    {
-      path: 'profile',
-      element: <Navigate to="/account/profile" replace />,
-    },
+    redirectRoute('profile', '/account/profile'),
     // User Guide
-    {
-      path: 'guide',
-      element: (
-        <ProtectedRoute>
-          <UserGuide />
-        </ProtectedRoute>
-      ),
-    },
+    protectedRoute('guide', <UserGuide />),
     // OCR Studio (portal version)
-    {
-      path: 'ocr',
-      element: (
-        <ProtectedRoute requiredRole={['super_admin', 'admin', 'church_admin', 'priest']}>
-          <OCRStudioPage />
-        </ProtectedRoute>
-      ),
-    },
+    protectedRoute('ocr', <OCRStudioPage />, ROLE_STAFF),
     // OCR Jobs History (portal version)
-    {
-      path: 'ocr/jobs',
-      element: (
-        <ProtectedRoute requiredRole={['super_admin', 'admin', 'church_admin', 'priest']}>
-          <OcrReviewPage />
-        </ProtectedRoute>
-      ),
-    },
+    protectedRoute('ocr/jobs', <OcrReviewPage />, ROLE_STAFF),
     // Sacramental Restrictions (portal version)
-    {
-      path: 'sacramental-restrictions',
-      element: (
-        <ProtectedRoute requiredRole={['super_admin', 'admin', 'church_admin', 'priest', 'deacon', 'editor']}>
-          <OrthodoxScheduleGuidelinesPage />
-        </ProtectedRoute>
-      ),
-    },
+    protectedRoute('sacramental-restrictions', <OrthodoxScheduleGuidelinesPage />, ROLE_ALL_CHURCH),
     // Site Map (portal version)
-    {
-      path: 'site-map',
-      element: (
-        <ProtectedRoute>
-          <SiteMapPage />
-        </ProtectedRoute>
-      ),
-    },
+    protectedRoute('site-map', <SiteMapPage />),
   ],
 };

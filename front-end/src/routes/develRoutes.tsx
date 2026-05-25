@@ -3,12 +3,21 @@
  * extracted from Router.tsx. Each route is a FullLayout child.
  */
 import { lazy } from 'react';
-import { Navigate } from 'react-router-dom';
-import ProtectedRoute from '../components/auth/ProtectedRoute';
-import AdminErrorBoundary from '../components/ErrorBoundary/AdminErrorBoundary';
-import EnvironmentAwarePage from '../components/routing/EnvironmentAwarePage';
 import OMDeps from '../features/devel-tools/om-deps/OM-deps';
 import Loadable from '../layouts/full/shared/loadable/Loadable';
+import {
+    ROLE_ADMIN_SUPER,
+    ROLE_STAFF,
+    ROLE_SUPER,
+    ROLE_SUPER_ADMIN,
+} from './rolePresets';
+import {
+    featureRoute,
+    guardedFeatureRoute,
+    guardedRoute,
+    protectedRoute,
+    redirectRoute,
+} from './routeConfigHelpers';
 
 /* ── Lazy imports ── */
 const OmtraceConsole = Loadable(lazy(() => import('../features/devel-tools/omtrace/OmtraceConsole')));
@@ -54,411 +63,52 @@ const UploadRecordsPage = Loadable(lazy(() => import('../features/records-centra
  * These are children of the FullLayout route.
  */
 export const develRoutes = [
+  guardedRoute('/devel-tools/omtrace', <OmtraceConsole />, ROLE_ADMIN_SUPER),
   {
-    path: '/devel-tools/omtrace',
-    element: (
-      <ProtectedRoute requiredRole={['admin', 'super_admin']}>
-        <AdminErrorBoundary>
-          <OmtraceConsole />
-        </AdminErrorBoundary>
-      </ProtectedRoute>
-    )
+    ...protectedRoute('/tools/file-deps', <OMDeps />, ROLE_SUPER),
+    meta: { requiresAuth: true, hidden: true },
   },
-  {
-    path: '/tools/file-deps',
-    element: (
-      <ProtectedRoute requiredRole={['super_admin']}>
-        <OMDeps />
-      </ProtectedRoute>
-    ),
-    meta: {
-      requiresAuth: true,
-      hidden: true
-    }
-  },
-  {
-    path: '/devel/router-menu-studio',
-    element: (
-      <ProtectedRoute requiredRole={['super_admin']}>
-        <AdminErrorBoundary>
-          <RouterMenuStudio />
-        </AdminErrorBoundary>
-      </ProtectedRoute>
-    )
-  },
-  {
-    path: '/devel-tools/menu-editor',
-    element: (
-      <ProtectedRoute requiredRole={['super_admin']}>
-        <AdminErrorBoundary>
-          <MenuEditor />
-        </AdminErrorBoundary>
-      </ProtectedRoute>
-    )
-  },
-  {
-    path: '/devel-tools/page-editor',
-    element: (
-      <ProtectedRoute requiredRole={['super_admin']}>
-        <EnvironmentAwarePage featureId="page-editor" priority={2} featureName="Page Content Editor">
-          <PageEditor />
-        </EnvironmentAwarePage>
-      </ProtectedRoute>
-    )
-  },
-  {
-    path: '/devel-tools/page-edit-audit',
-    element: (
-      <ProtectedRoute requiredRole={['super_admin']}>
-        <AdminErrorBoundary>
-          <PageEditAuditPage />
-        </AdminErrorBoundary>
-      </ProtectedRoute>
-    )
-  },
-  {
-    path: '/devel/dynamic-records',
-    element: (
-      <ProtectedRoute requiredRole={['super_admin', 'admin']}>
-        <AdminErrorBoundary>
-          <DynamicRecordsInspector />
-        </AdminErrorBoundary>
-      </ProtectedRoute>
-    )
-  },
-  {
-    path: '/devel-tools/refactor-console',
-    element: (
-      <ProtectedRoute requiredRole={['super_admin', 'admin']}>
-        <AdminErrorBoundary>
-          <RefactorConsole />
-        </AdminErrorBoundary>
-      </ProtectedRoute>
-    )
-  },
-  {
-    path: '/devel-tools/button-showcase',
-    element: (
-      <ProtectedRoute requiredRole={['super_admin', 'admin']}>
-        <AdminErrorBoundary>
-          <ButtonShowcase />
-        </AdminErrorBoundary>
-      </ProtectedRoute>
-    )
-  },
-  {
-    path: '/devel-tools/basic-refactor',
-    element: (
-      <ProtectedRoute requiredRole={['super_admin', 'admin']}>
-        <AdminErrorBoundary>
-          <BasicRefactor />
-        </AdminErrorBoundary>
-      </ProtectedRoute>
-    )
-  },
-  {
-    path: '/devel-tools/om-magic-image',
-    element: (
-      <ProtectedRoute requiredRole={['super_admin', 'admin']}>
-        <AdminErrorBoundary>
-          <OMMagicImage />
-        </AdminErrorBoundary>
-      </ProtectedRoute>
-    )
-  },
-  {
-    path: '/devel-tools/crm',
-    element: <Navigate to="/admin/control-panel" replace />,
-  },
-  {
-    path: '/devel-tools/us-church-map',
-    element: (
-      <ProtectedRoute requiredRole={['admin', 'super_admin']}>
-        <AdminErrorBoundary>
-          <USChurchMapPage />
-        </AdminErrorBoundary>
-      </ProtectedRoute>
-    )
-  },
-  {
-    path: '/devel-tools/repo-ops',
-    element: (
-      <ProtectedRoute requiredRole={['super_admin']}>
-        <EnvironmentAwarePage featureId="repo-ops">
-          <RepoOpsPage />
-        </EnvironmentAwarePage>
-      </ProtectedRoute>
-    )
-  },
-  {
-    path: '/devel-tools/git-operations',
-    element: <Navigate to="/devel-tools/repo-ops" replace />,
-  },
+  guardedRoute('/devel/router-menu-studio', <RouterMenuStudio />, ROLE_SUPER),
+  guardedRoute('/devel-tools/menu-editor', <MenuEditor />, ROLE_SUPER),
+  featureRoute('/devel-tools/page-editor', <PageEditor />, ROLE_SUPER, { featureId: 'page-editor', priority: 2, featureName: 'Page Content Editor' }),
+  guardedRoute('/devel-tools/page-edit-audit', <PageEditAuditPage />, ROLE_SUPER),
+  guardedRoute('/devel/dynamic-records', <DynamicRecordsInspector />, ROLE_SUPER_ADMIN),
+  guardedRoute('/devel-tools/refactor-console', <RefactorConsole />, ROLE_SUPER_ADMIN),
+  guardedRoute('/devel-tools/button-showcase', <ButtonShowcase />, ROLE_SUPER_ADMIN),
+  guardedRoute('/devel-tools/basic-refactor', <BasicRefactor />, ROLE_SUPER_ADMIN),
+  guardedRoute('/devel-tools/om-magic-image', <OMMagicImage />, ROLE_SUPER_ADMIN),
+  redirectRoute('/devel-tools/crm', '/admin/control-panel'),
+  guardedRoute('/devel-tools/us-church-map', <USChurchMapPage />, ROLE_ADMIN_SUPER),
+  featureRoute('/devel-tools/repo-ops', <RepoOpsPage />, ROLE_SUPER, { featureId: 'repo-ops' }),
+  redirectRoute('/devel-tools/git-operations', '/devel-tools/repo-ops'),
   // Record Creation Wizard — retired from OM, now on OMAI /omai/tools/om-seedlings
-  {
-    path: '/devel-tools/record-creation-wizard',
-    element: <Navigate to="/admin/control-panel" replace />,
-  },
-  {
-    path: '/devel-tools/ocr-operations',
-    element: (
-      <ProtectedRoute requiredRole={['super_admin']}>
-        <AdminErrorBoundary>
-          <OcrOperationsDashboard />
-        </AdminErrorBoundary>
-      </ProtectedRoute>
-    )
-  },
-  {
-    path: '/devel-tools/ocr-batch-manager',
-    element: (
-      <ProtectedRoute requiredRole={['super_admin']}>
-        <AdminErrorBoundary>
-          <OcrBatchManager />
-        </AdminErrorBoundary>
-      </ProtectedRoute>
-    )
-  },
+  redirectRoute('/devel-tools/record-creation-wizard', '/admin/control-panel'),
+  guardedRoute('/devel-tools/ocr-operations', <OcrOperationsDashboard />, ROLE_SUPER),
+  guardedRoute('/devel-tools/ocr-batch-manager', <OcrBatchManager />, ROLE_SUPER),
   // OM Tasks, Daily Tasks — retired from OM, now managed via OMAI OM Daily
-  {
-    path: '/devel-tools/work-session-admin',
-    element: (
-      <ProtectedRoute requiredRole={['super_admin']}>
-        <AdminErrorBoundary>
-          <WorkSessionAdmin />
-        </AdminErrorBoundary>
-      </ProtectedRoute>
-    )
-  },
-  {
-    path: '/devel-tools/api-explorer',
-    element: <Navigate to="/admin/control-panel" replace />,
-  },
-  {
-    path: '/apps/devel/loading-demo',
-    element: (
-      <ProtectedRoute requiredRole={['super_admin', 'admin']}>
-        <AdminErrorBoundary>
-          <LoadingDemo />
-        </AdminErrorBoundary>
-      </ProtectedRoute>
-    )
-  },
-  {
-    path: '/devel-tools/live-table-builder',
-    element: (
-      <ProtectedRoute requiredRole={['super_admin', 'admin']}>
-        <AdminErrorBoundary>
-          <LiveTableBuilderPage />
-        </AdminErrorBoundary>
-      </ProtectedRoute>
-    )
-  },
-  {
-    path: '/devel-tools/translation-manager',
-    element: (
-      <ProtectedRoute requiredRole={['super_admin']}>
-        <EnvironmentAwarePage featureId="translation-manager" priority={2} featureName="Translation Manager">
-          <TranslationManagerPage />
-        </EnvironmentAwarePage>
-      </ProtectedRoute>
-    )
-  },
-  {
-    path: '/devel-tools/om-permission-center',
-    element: (
-      <ProtectedRoute requiredRole={['super_admin', 'admin']}>
-        <AdminErrorBoundary>
-          <OMPermissionCenter />
-        </AdminErrorBoundary>
-      </ProtectedRoute>
-    )
-  },
-  {
-    path: '/devel-tools/interactive-reports/jobs',
-    element: (
-      <ProtectedRoute requiredRole={['admin', 'super_admin', 'church_admin', 'priest']}>
-        <EnvironmentAwarePage
-          featureId="interactive-report-jobs"
-          priority={4}
-          featureName="Interactive Report Jobs"
-        >
-          <InteractiveReportJobsPage />
-        </EnvironmentAwarePage>
-      </ProtectedRoute>
-    )
-  },
-  {
-    path: '/devel-tools/build-info',
-    element: <Navigate to="/devel-tools/repo-ops" replace />,
-  },
-  {
-    path: '/devel-tools/platform-status',
-    element: (
-      <ProtectedRoute requiredRole={['super_admin']}>
-        <PlatformStatusPage />
-      </ProtectedRoute>
-    )
-  },
-  {
-    path: '/devel-tools/command-center',
-    element: (
-      <ProtectedRoute requiredRole={['super_admin']}>
-        <CommandCenterPage />
-      </ProtectedRoute>
-    )
-  },
-  {
-    path: '/devel-tools/badge-state-manager',
-    element: (
-      <ProtectedRoute requiredRole={['super_admin']}>
-        <EnvironmentAwarePage featureId="badge-state-manager">
-          <BadgeStateManagerPage />
-        </EnvironmentAwarePage>
-      </ProtectedRoute>
-    )
-  },
+  guardedRoute('/devel-tools/work-session-admin', <WorkSessionAdmin />, ROLE_SUPER),
+  redirectRoute('/devel-tools/api-explorer', '/admin/control-panel'),
+  guardedRoute('/apps/devel/loading-demo', <LoadingDemo />, ROLE_SUPER_ADMIN),
+  guardedRoute('/devel-tools/live-table-builder', <LiveTableBuilderPage />, ROLE_SUPER_ADMIN),
+  featureRoute('/devel-tools/translation-manager', <TranslationManagerPage />, ROLE_SUPER, { featureId: 'translation-manager', priority: 2, featureName: 'Translation Manager' }),
+  guardedRoute('/devel-tools/om-permission-center', <OMPermissionCenter />, ROLE_SUPER_ADMIN),
+  featureRoute('/devel-tools/interactive-reports/jobs', <InteractiveReportJobsPage />, ['admin', 'super_admin', 'church_admin', 'priest'], { featureId: 'interactive-report-jobs', priority: 4, featureName: 'Interactive Report Jobs' }),
+  redirectRoute('/devel-tools/build-info', '/devel-tools/repo-ops'),
+  protectedRoute('/devel-tools/platform-status', <PlatformStatusPage />, ROLE_SUPER),
+  protectedRoute('/devel-tools/command-center', <CommandCenterPage />, ROLE_SUPER),
+  featureRoute('/devel-tools/badge-state-manager', <BadgeStateManagerPage />, ROLE_SUPER, { featureId: 'badge-state-manager' }),
   // OCR Studio routes
-  {
-    path: '/devel/ocr-studio',
-    element: (
-      <ProtectedRoute requiredRole={['super_admin', 'admin', 'church_admin', 'priest']}>
-        <AdminErrorBoundary>
-          <EnvironmentAwarePage
-            featureId="ocr-studio"
-            priority={4}
-            featureName="OCR Studio"
-          >
-            <OCRStudioPage />
-          </EnvironmentAwarePage>
-        </AdminErrorBoundary>
-      </ProtectedRoute>
-    )
-  },
-  {
-    path: '/devel/ocr-studio/church/:churchId',
-    element: (
-      <ProtectedRoute requiredRole={['super_admin', 'admin', 'church_admin', 'priest']}>
-        <AdminErrorBoundary>
-          <ChurchOCRPage />
-        </AdminErrorBoundary>
-      </ProtectedRoute>
-    )
-  },
-  {
-    path: '/devel/ocr-setup-wizard',
-    element: (
-      <ProtectedRoute requiredRole={['super_admin', 'admin', 'church_admin', 'priest']}>
-        <AdminErrorBoundary>
-          <OcrSetupWizardPage />
-        </AdminErrorBoundary>
-      </ProtectedRoute>
-    )
-  },
-  {
-    path: '/devel/ocr-studio/upload',
-    element: (
-      <ProtectedRoute requiredRole={['super_admin', 'admin', 'church_admin', 'priest']}>
-        <AdminErrorBoundary>
-          <EnvironmentAwarePage
-            featureId="enhanced-ocr-uploader"
-            priority={2}
-            featureName="OCR Upload"
-          >
-            <UploadRecordsPage />
-          </EnvironmentAwarePage>
-        </AdminErrorBoundary>
-      </ProtectedRoute>
-    )
-  },
-  {
-    path: '/devel/ocr-studio/review/:churchId/:jobId',
-    element: (
-      <ProtectedRoute requiredRole={['super_admin', 'admin', 'church_admin', 'priest']}>
-        <AdminErrorBoundary>
-          <OcrReviewPage />
-        </AdminErrorBoundary>
-      </ProtectedRoute>
-    )
-  },
-  {
-    path: '/devel/ocr-studio/review/:churchId',
-    element: (
-      <ProtectedRoute requiredRole={['super_admin', 'admin', 'church_admin', 'priest']}>
-        <AdminErrorBoundary>
-          <OcrReviewPage />
-        </AdminErrorBoundary>
-      </ProtectedRoute>
-    )
-  },
-  {
-    path: '/devel/ocr-studio/jobs',
-    element: (
-      <ProtectedRoute requiredRole={['super_admin']}>
-        <AdminErrorBoundary>
-          <OcrActivityMonitor />
-        </AdminErrorBoundary>
-      </ProtectedRoute>
-    )
-  },
-  {
-    path: '/devel/ocr-studio/table-extractor',
-    element: (
-      <ProtectedRoute requiredRole={['super_admin']}>
-        <AdminErrorBoundary>
-          <OcrTableExtractorPage />
-        </AdminErrorBoundary>
-      </ProtectedRoute>
-    )
-  },
-  {
-    path: '/devel/ocr-studio/layout-templates',
-    element: (
-      <ProtectedRoute requiredRole={['super_admin']}>
-        <AdminErrorBoundary>
-          <LayoutTemplateEditorPage />
-        </AdminErrorBoundary>
-      </ProtectedRoute>
-    )
-  },
-  {
-    path: '/devel/ocr-studio/settings',
-    element: (
-      <ProtectedRoute requiredRole={['super_admin', 'admin', 'church_admin', 'priest']}>
-        <AdminErrorBoundary>
-          <OCRSettingsPage />
-        </AdminErrorBoundary>
-      </ProtectedRoute>
-    )
-  },
-  {
-    path: '/devel/om-ocr-studio',
-    element: (
-      <ProtectedRoute requiredRole={['super_admin', 'admin', 'church_admin', 'priest']}>
-        <AdminErrorBoundary>
-          <UploadRecordsPage />
-        </AdminErrorBoundary>
-      </ProtectedRoute>
-    )
-  },
-  {
-    path: '/devel/ocr-settings',
-    element: (
-      <ProtectedRoute requiredRole={['super_admin', 'admin', 'church_admin', 'priest']}>
-        <AdminErrorBoundary>
-          <OCRSettingsPage />
-        </AdminErrorBoundary>
-      </ProtectedRoute>
-    )
-  },
-  {
-    path: '/devel/ocr-activity-monitor',
-    element: (
-      <ProtectedRoute requiredRole={['super_admin']}>
-        <AdminErrorBoundary>
-          <OcrActivityMonitor />
-        </AdminErrorBoundary>
-      </ProtectedRoute>
-    )
-  },
+  guardedFeatureRoute('/devel/ocr-studio', <OCRStudioPage />, ROLE_STAFF, { featureId: 'ocr-studio', priority: 4, featureName: 'OCR Studio' }),
+  guardedRoute('/devel/ocr-studio/church/:churchId', <ChurchOCRPage />, ROLE_STAFF),
+  guardedRoute('/devel/ocr-setup-wizard', <OcrSetupWizardPage />, ROLE_STAFF),
+  guardedFeatureRoute('/devel/ocr-studio/upload', <UploadRecordsPage />, ROLE_STAFF, { featureId: 'enhanced-ocr-uploader', priority: 2, featureName: 'OCR Upload' }),
+  guardedRoute('/devel/ocr-studio/review/:churchId/:jobId', <OcrReviewPage />, ROLE_STAFF),
+  guardedRoute('/devel/ocr-studio/review/:churchId', <OcrReviewPage />, ROLE_STAFF),
+  guardedRoute('/devel/ocr-studio/jobs', <OcrActivityMonitor />, ROLE_SUPER),
+  guardedRoute('/devel/ocr-studio/table-extractor', <OcrTableExtractorPage />, ROLE_SUPER),
+  guardedRoute('/devel/ocr-studio/layout-templates', <LayoutTemplateEditorPage />, ROLE_SUPER),
+  guardedRoute('/devel/ocr-studio/settings', <OCRSettingsPage />, ROLE_STAFF),
+  guardedRoute('/devel/om-ocr-studio', <UploadRecordsPage />, ROLE_STAFF),
+  guardedRoute('/devel/ocr-settings', <OCRSettingsPage />, ROLE_STAFF),
+  guardedRoute('/devel/ocr-activity-monitor', <OcrActivityMonitor />, ROLE_SUPER),
 ];
