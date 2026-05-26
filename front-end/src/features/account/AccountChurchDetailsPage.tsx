@@ -10,36 +10,34 @@
  * Read-only for all other authenticated users with church context.
  */
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { apiClient } from '@/api/utils/axiosInstance';
-import {
-  Alert,
-  Box,
-  Button,
-  Card,
-  CardContent,
-  Chip,
-  CircularProgress,
-  Divider,
-  MenuItem,
-  Snackbar,
-  TextField,
-  Tooltip,
-  Typography,
-} from '@mui/material';
-import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
-import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh';
 import { useAuth } from '@/context/AuthContext';
 import { useLanguage } from '@/context/LanguageContext';
-import { canEditBasicChurchInfo } from './accountPermissions';
+import { SNACKBAR_DURATION, useSnackbar } from '@/hooks/useSnackbar';
+import AppSnackbar from '@/shared/ui/AppSnackbar';
+import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh';
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import {
-  SnackbarState,
-  SNACKBAR_CLOSED,
-  SNACKBAR_DURATION,
-  LANGUAGE_OPTIONS,
-  getChurchDisplayName,
+    Alert,
+    Box,
+    Button,
+    Card,
+    CardContent,
+    Chip,
+    CircularProgress,
+    Divider,
+    MenuItem,
+    TextField,
+    Tooltip,
+    Typography,
+} from '@mui/material';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { churchApi, CrmMatch } from './accountApi';
+import {
+    getChurchDisplayName,
+    LANGUAGE_OPTIONS,
 } from './accountConstants';
-import { churchApi, CrmMatch, extractErrorMessage } from './accountApi';
+import { canEditBasicChurchInfo } from './accountPermissions';
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -116,7 +114,7 @@ const AccountChurchDetailsPage: React.FC = () => {
   const [saved, setSaved] = useState<ChurchFormData>(EMPTY_FORM);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [snackbar, setSnackbar] = useState<SnackbarState>(SNACKBAR_CLOSED);
+  const { snackbar, showSnackbar, closeSnackbar } = useSnackbar();
   const [jurisdictions, setJurisdictions] = useState<Jurisdiction[]>([]);
   const [crmMatch, setCrmMatch] = useState<CrmMatch | null>(null);
   const [crmApplied, setCrmApplied] = useState(false);
@@ -237,11 +235,7 @@ const AccountChurchDetailsPage: React.FC = () => {
         calendar_type: matched.calendar_type,
       }));
       setCrmApplied(true);
-      setSnackbar({
-        open: true,
-        message: `Liturgical settings populated from CRM: ${matched.name} (${matched.calendar_type})`,
-        severity: 'info',
-      });
+      showSnackbar(`Liturgical settings populated from CRM: ${matched.name} (${matched.calendar_type})`, 'info');
     }
   }, [crmMatch, jurisdictions]);
 
@@ -265,10 +259,10 @@ const AccountChurchDetailsPage: React.FC = () => {
       await churchApi.updateSettings(payload);
       setSaved({ ...form });
       setCrmApplied(false);
-      setSnackbar({ open: true, message: t('account.church_details_saved'), severity: 'success' });
+      showSnackbar(t('account.church_details_saved'), 'success');
     } catch (err: any) {
       console.error('Failed to save church details:', err);
-      setSnackbar({ open: true, message: err.message || t('account.network_error'), severity: 'error' });
+      showSnackbar(err.message || t('account.network_error'), 'error');
     } finally {
       setSaving(false);
     }
@@ -489,16 +483,13 @@ const AccountChurchDetailsPage: React.FC = () => {
         </CardContent>
       </Card>
 
-      <Snackbar
+      <AppSnackbar
         open={snackbar.open}
+        message={snackbar.message}
+        severity={snackbar.severity}
+        onClose={closeSnackbar}
         autoHideDuration={SNACKBAR_DURATION}
-        onClose={() => setSnackbar(SNACKBAR_CLOSED)}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-      >
-        <Alert severity={snackbar.severity} onClose={() => setSnackbar(SNACKBAR_CLOSED)}>
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
+      />
     </>
   );
 };

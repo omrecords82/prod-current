@@ -5,35 +5,34 @@
  * Accessible to all authenticated users.
  */
 
-import React, { useCallback, useEffect, useState } from 'react';
-import {
-  Alert,
-  Box,
-  Button,
-  Card,
-  CardContent,
-  Chip,
-  CircularProgress,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogContentText,
-  DialogTitle,
-  Divider,
-  Snackbar,
-  Stack,
-  Tooltip,
-  Typography,
-} from '@mui/material';
-import DevicesIcon from '@mui/icons-material/Devices';
+import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import ComputerIcon from '@mui/icons-material/Computer';
+import DevicesIcon from '@mui/icons-material/Devices';
+import LogoutIcon from '@mui/icons-material/Logout';
 import PhoneAndroidIcon from '@mui/icons-material/PhoneAndroid';
+import PublicIcon from '@mui/icons-material/Public';
+import SecurityIcon from '@mui/icons-material/Security';
 import TabletIcon from '@mui/icons-material/Tablet';
 import TerminalIcon from '@mui/icons-material/Terminal';
-import PublicIcon from '@mui/icons-material/Public';
-import AccessTimeIcon from '@mui/icons-material/AccessTime';
-import SecurityIcon from '@mui/icons-material/Security';
-import LogoutIcon from '@mui/icons-material/Logout';
+import {
+    Alert,
+    Box,
+    Button,
+    Card,
+    CardContent,
+    Chip,
+    CircularProgress,
+    Dialog,
+    DialogActions,
+    DialogContent,
+    DialogContentText,
+    DialogTitle,
+    Divider,
+    Stack,
+    Tooltip,
+    Typography,
+} from '@mui/material';
+import React, { useCallback, useEffect, useState } from 'react';
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -48,9 +47,10 @@ interface SessionData {
   revoked_at: string | null;
 }
 
-import { SnackbarState, SNACKBAR_CLOSED, SNACKBAR_DURATION } from './accountConstants';
-import { sessionsApi, extractErrorMessage } from './accountApi';
 import { useLanguage } from '@/context/LanguageContext';
+import { SNACKBAR_DURATION, useSnackbar } from '@/hooks/useSnackbar';
+import AppSnackbar from '@/shared/ui/AppSnackbar';
+import { sessionsApi } from './accountApi';
 
 interface ConfirmDialog {
   open: boolean;
@@ -149,7 +149,7 @@ const AccountSessionsPage: React.FC = () => {
   const [sessions, setSessions] = useState<SessionData[]>([]);
   const [loading, setLoading] = useState(true);
   const [revoking, setRevoking] = useState<number | 'all' | null>(null);
-  const [snackbar, setSnackbar] = useState<SnackbarState>(SNACKBAR_CLOSED);
+  const { snackbar, showSnackbar, closeSnackbar } = useSnackbar();
   const [confirmDialog, setConfirmDialog] = useState<ConfirmDialog>({ open: false, title: '', message: '', onConfirm: () => {} });
   const { t } = useLanguage();
 
@@ -187,10 +187,10 @@ const AccountSessionsPage: React.FC = () => {
         setRevoking(session.id);
         try {
           await sessionsApi.revokeSession(String(session.id));
-          setSnackbar({ open: true, message: t('account.session_revoked_success'), severity: 'success' });
+          showSnackbar(t('account.session_revoked_success'), 'success');
           fetchSessions();
         } catch (err: any) {
-          setSnackbar({ open: true, message: err.message || t('account.session_revoke_failed'), severity: 'error' });
+          showSnackbar(err.message || t('account.session_revoke_failed'), 'error');
         } finally {
           setRevoking(null);
         }
@@ -211,10 +211,10 @@ const AccountSessionsPage: React.FC = () => {
         try {
           const data = await sessionsApi.revokeOtherSessions();
           const count = data.data?.revoked_count || 0;
-          setSnackbar({ open: true, message: `Revoked ${count} session(s).`, severity: 'success' });
+          showSnackbar(`Revoked ${count} session(s).`, 'success');
           fetchSessions();
         } catch (err: any) {
-          setSnackbar({ open: true, message: err.message || t('account.sessions_revoke_failed'), severity: 'error' });
+          showSnackbar(err.message || t('account.sessions_revoke_failed'), 'error');
         } finally {
           setRevoking(null);
         }
@@ -378,16 +378,13 @@ const AccountSessionsPage: React.FC = () => {
       </Dialog>
 
       {/* Snackbar */}
-      <Snackbar
+      <AppSnackbar
         open={snackbar.open}
+        message={snackbar.message}
+        severity={snackbar.severity}
+        onClose={closeSnackbar}
         autoHideDuration={SNACKBAR_DURATION}
-        onClose={() => setSnackbar(SNACKBAR_CLOSED)}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-      >
-        <Alert severity={snackbar.severity} onClose={() => setSnackbar(SNACKBAR_CLOSED)}>
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
+      />
     </>
   );
 };

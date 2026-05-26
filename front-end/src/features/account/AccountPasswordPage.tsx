@@ -12,39 +12,37 @@
  *   GET  /api/user/profile/security-status — security metadata
  */
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLanguage } from '@/context/LanguageContext';
+import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
+import DevicesIcon from '@mui/icons-material/Devices';
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
+import LockIcon from '@mui/icons-material/Lock';
+import MarkEmailReadIcon from '@mui/icons-material/MarkEmailRead';
+import ScheduleIcon from '@mui/icons-material/Schedule';
+import SecurityIcon from '@mui/icons-material/Security';
+import SendIcon from '@mui/icons-material/Send';
+import ShieldIcon from '@mui/icons-material/Shield';
+import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import {
-  Alert,
-  Box,
-  Button,
-  Card,
-  CardContent,
-  Chip,
-  CircularProgress,
-  Divider,
-  IconButton,
-  InputAdornment,
-  LinearProgress,
-  Snackbar,
-  Stack,
-  TextField,
-  Tooltip,
-  Typography,
-  useTheme,
+    Box,
+    Button,
+    Card,
+    CardContent,
+    Chip,
+    CircularProgress,
+    Divider,
+    IconButton,
+    InputAdornment,
+    LinearProgress,
+    Stack,
+    TextField,
+    Tooltip,
+    Typography,
+    useTheme
 } from '@mui/material';
 import { IconEye, IconEyeOff } from '@tabler/icons-react';
-import { useLanguage } from '@/context/LanguageContext';
-import LockIcon from '@mui/icons-material/Lock';
-import ShieldIcon from '@mui/icons-material/Shield';
-import SecurityIcon from '@mui/icons-material/Security';
-import DevicesIcon from '@mui/icons-material/Devices';
-import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
-import WarningAmberIcon from '@mui/icons-material/WarningAmber';
-import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
-import ScheduleIcon from '@mui/icons-material/Schedule';
-import MarkEmailReadIcon from '@mui/icons-material/MarkEmailRead';
-import SendIcon from '@mui/icons-material/Send';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -59,9 +57,10 @@ interface SecurityStatus {
   two_factor_enabled: boolean;
 }
 
-// SnackbarState imported from accountConstants — uses SNACKBAR_DURATION_LONG for security actions
-import { SnackbarState, SNACKBAR_CLOSED, SNACKBAR_DURATION_LONG } from './accountConstants';
-import { profileApi, extractErrorMessage } from './accountApi';
+// useSnackbar hook — uses SNACKBAR_DURATION_LONG for security actions
+import { SNACKBAR_DURATION_LONG, useSnackbar } from '@/hooks/useSnackbar';
+import AppSnackbar from '@/shared/ui/AppSnackbar';
+import { profileApi } from './accountApi';
 
 // ── Password Strength ──────────────────────────────────────────────────────
 
@@ -137,7 +136,7 @@ const AccountPasswordPage: React.FC = () => {
   const [form, setForm] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
   const [showPw, setShowPw] = useState({ current: false, new: false, confirm: false });
   const [saving, setSaving] = useState(false);
-  const [snackbar, setSnackbar] = useState<SnackbarState>(SNACKBAR_CLOSED);
+  const { snackbar, showSnackbar, closeSnackbar } = useSnackbar();
 
   // Security status
   const [security, setSecurity] = useState<SecurityStatus | null>(null);
@@ -169,13 +168,13 @@ const AccountPasswordPage: React.FC = () => {
     setSendingVerification(true);
     try {
       const data = await profileApi.resendVerification();
-      setSnackbar({ open: true, message: data.message || 'Verification email sent.', severity: 'success' });
+      showSnackbar(data.message || 'Verification email sent.', 'success');
       loadSecurityStatus(); // Refresh to pick up verification_sent_at
     } catch (err: any) {
       if (err.status === 429) {
-        setSnackbar({ open: true, message: err.message || t('account.verification_wait'), severity: 'info' });
+        showSnackbar(err.message || t('account.verification_wait'), 'info');
       } else {
-        setSnackbar({ open: true, message: err.message || t('account.verification_failed'), severity: 'error' });
+        showSnackbar(err.message || t('account.verification_failed'), 'error');
       }
     } finally {
       setSendingVerification(false);
@@ -237,11 +236,11 @@ const AccountPasswordPage: React.FC = () => {
         data.sessions_revoked > 0
           ? ` ${data.sessions_revoked} other session${data.sessions_revoked > 1 ? 's' : ''} signed out for security.`
           : '';
-      setSnackbar({ open: true, message: `${t('account.password_changed_success')}${revokedMsg}`, severity: 'success' });
+      showSnackbar(`${t('account.password_changed_success')}${revokedMsg}`, 'success');
       // Refresh security status to reflect new password_changed_at
       loadSecurityStatus();
     } catch (err: any) {
-      setSnackbar({ open: true, message: err.message || t('account.password_change_failed'), severity: 'error' });
+      showSnackbar(err.message || t('account.password_change_failed'), 'error');
     } finally {
       setSaving(false);
     }
@@ -671,16 +670,13 @@ const AccountPasswordPage: React.FC = () => {
       )}
 
       {/* ── Snackbar ── */}
-      <Snackbar
+      <AppSnackbar
         open={snackbar.open}
+        message={snackbar.message}
+        severity={snackbar.severity}
+        onClose={closeSnackbar}
         autoHideDuration={SNACKBAR_DURATION_LONG}
-        onClose={() => setSnackbar(SNACKBAR_CLOSED)}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-      >
-        <Alert severity={snackbar.severity} onClose={() => setSnackbar(SNACKBAR_CLOSED)}>
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
+      />
     </>
   );
 };

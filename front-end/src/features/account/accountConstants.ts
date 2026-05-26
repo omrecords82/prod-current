@@ -5,21 +5,10 @@
  */
 
 // ── Shared Types ─────────────────────────────────────────────────────────────
-
-/** Common snackbar state used by all Account Hub settings pages. */
-export interface SnackbarState {
-  open: boolean;
-  message: string;
-  severity: 'success' | 'error' | 'info';
-}
-
-export const SNACKBAR_CLOSED: SnackbarState = { open: false, message: '', severity: 'success' };
-
-/** Standard snackbar auto-hide duration (ms). */
-export const SNACKBAR_DURATION = 4000;
-
-/** Extended snackbar duration for critical actions (password change, etc.). */
-export const SNACKBAR_DURATION_LONG = 6000;
+// Snackbar types and constants now live in the shared hook.
+// Re-exported here for backward compatibility with existing account page imports.
+export { SNACKBAR_CLOSED, SNACKBAR_DURATION, SNACKBAR_DURATION_LONG } from '../../hooks/useSnackbar';
+export type { SnackbarState } from '../../hooks/useSnackbar';
 
 // ── Church Field Constants ───────────────────────────────────────────────────
 

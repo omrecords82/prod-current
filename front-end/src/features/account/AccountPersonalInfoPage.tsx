@@ -3,23 +3,22 @@
  * Uses existing GET/PUT /api/user/profile endpoints.
  */
 
-import React, { useEffect, useMemo, useState } from 'react';
-import {
-  Alert,
-  Box,
-  Button,
-  Card,
-  CardContent,
-  CircularProgress,
-  Divider,
-  Snackbar,
-  TextField,
-  Typography,
-} from '@mui/material';
 import { useAuth } from '@/context/AuthContext';
 import { useLanguage } from '@/context/LanguageContext';
-import { SnackbarState, SNACKBAR_CLOSED, SNACKBAR_DURATION } from './accountConstants';
-import { profileApi, extractErrorMessage } from './accountApi';
+import { SNACKBAR_DURATION, useSnackbar } from '@/hooks/useSnackbar';
+import AppSnackbar from '@/shared/ui/AppSnackbar';
+import {
+    Box,
+    Button,
+    Card,
+    CardContent,
+    CircularProgress,
+    Divider,
+    TextField,
+    Typography,
+} from '@mui/material';
+import React, { useEffect, useMemo, useState } from 'react';
+import { profileApi } from './accountApi';
 
 interface ProfileFields {
   display_name: string;
@@ -44,7 +43,7 @@ const AccountPersonalInfoPage: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [fields, setFields] = useState<ProfileFields>(EMPTY_FIELDS);
   const [saved, setSaved] = useState<ProfileFields>(EMPTY_FIELDS);
-  const [snackbar, setSnackbar] = useState<SnackbarState>(SNACKBAR_CLOSED);
+  const { snackbar, showSnackbar, closeSnackbar } = useSnackbar();
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -92,9 +91,9 @@ const AccountPersonalInfoPage: React.FC = () => {
         phone: fields.phone,
       });
       setSaved(fields);
-      setSnackbar({ open: true, message: t('account.profile_saved'), severity: 'success' });
+      showSnackbar(t('account.profile_saved'), 'success');
     } catch (err: any) {
-      setSnackbar({ open: true, message: err.message || t('account.profile_save_failed'), severity: 'error' });
+      showSnackbar(err.message || t('account.profile_save_failed'), 'error');
     } finally {
       setSaving(false);
     }
@@ -173,16 +172,13 @@ const AccountPersonalInfoPage: React.FC = () => {
         </CardContent>
       </Card>
 
-      <Snackbar
+      <AppSnackbar
         open={snackbar.open}
+        message={snackbar.message}
+        severity={snackbar.severity}
+        onClose={closeSnackbar}
         autoHideDuration={SNACKBAR_DURATION}
-        onClose={() => setSnackbar(SNACKBAR_CLOSED)}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-      >
-        <Alert severity={snackbar.severity} onClose={() => setSnackbar(SNACKBAR_CLOSED)}>
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
+      />
     </>
   );
 };

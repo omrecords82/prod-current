@@ -6,40 +6,40 @@
  *           Document Processing, Document Retention.
  */
 
-import React, { useEffect, useState, useCallback } from 'react';
-import {
-  Alert,
-  Box,
-  Button,
-  Card,
-  CardContent,
-  Chip,
-  CircularProgress,
-  Divider,
-  FormControl,
-  FormControlLabel,
-  InputLabel,
-  MenuItem,
-  Select,
-  Slider,
-  Snackbar,
-  Stack,
-  Switch,
-  TextField,
-  Typography,
-} from '@mui/material';
+import { useAuth } from '@/context/AuthContext';
+import { useLanguage } from '@/context/LanguageContext';
+import { SNACKBAR_DURATION, useSnackbar } from '@/hooks/useSnackbar';
+import AppSnackbar from '@/shared/ui/AppSnackbar';
+import DeleteSweepIcon from '@mui/icons-material/DeleteSweep';
+import DescriptionIcon from '@mui/icons-material/Description';
 import DocumentScannerIcon from '@mui/icons-material/DocumentScanner';
+import ImageIcon from '@mui/icons-material/Image';
 import SaveIcon from '@mui/icons-material/Save';
 import TranslateIcon from '@mui/icons-material/Translate';
 import TuneIcon from '@mui/icons-material/Tune';
-import ImageIcon from '@mui/icons-material/Image';
-import DescriptionIcon from '@mui/icons-material/Description';
-import DeleteSweepIcon from '@mui/icons-material/DeleteSweep';
-import { useAuth } from '@/context/AuthContext';
-import { useLanguage } from '@/context/LanguageContext';
+import {
+    Alert,
+    Box,
+    Button,
+    Card,
+    CardContent,
+    Chip,
+    CircularProgress,
+    Divider,
+    FormControl,
+    FormControlLabel,
+    InputLabel,
+    MenuItem,
+    Select,
+    Slider,
+    Stack,
+    Switch,
+    TextField,
+    Typography,
+} from '@mui/material';
+import React, { useCallback, useEffect, useState } from 'react';
+import { ocrApi } from './accountApi';
 import { canManageOcrPreferences } from './accountPermissions';
-import { SnackbarState, SNACKBAR_CLOSED, SNACKBAR_DURATION } from './accountConstants';
-import { ocrApi, extractErrorMessage } from './accountApi';
 
 /* ── Language options ── */
 const LANGUAGES = [
@@ -97,7 +97,7 @@ const AccountOcrPreferencesPage: React.FC = () => {
   const [ocrEnabled, setOcrEnabled] = useState(true);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [snackbar, setSnackbar] = useState<SnackbarState>(SNACKBAR_CLOSED);
+  const { snackbar, showSnackbar, closeSnackbar } = useSnackbar();
   const [dirty, setDirty] = useState(false);
 
   const canManage = canManageOcrPreferences(user);
@@ -112,7 +112,7 @@ const AccountOcrPreferencesPage: React.FC = () => {
         setOcrEnabled(data.ocrEnabled !== false);
       }
     } catch (err: any) {
-      setSnackbar({ open: true, message: err.message || t('account.ocr_load_failed'), severity: 'error' });
+      showSnackbar(err.message || t('account.ocr_load_failed'), 'error');
     } finally {
       setLoading(false);
     }
@@ -128,10 +128,10 @@ const AccountOcrPreferencesPage: React.FC = () => {
     try {
       setSaving(true);
       await ocrApi.updatePreferences(prefs);
-      setSnackbar({ open: true, message: t('account.ocr_saved'), severity: 'success' });
+      showSnackbar(t('account.ocr_saved'), 'success');
       setDirty(false);
     } catch (err: any) {
-      setSnackbar({ open: true, message: err.message || t('account.ocr_save_failed'), severity: 'error' });
+      showSnackbar(err.message || t('account.ocr_save_failed'), 'error');
     } finally {
       setSaving(false);
     }
@@ -504,16 +504,13 @@ const AccountOcrPreferencesPage: React.FC = () => {
         </Box>
       )}
 
-      <Snackbar
+      <AppSnackbar
         open={snackbar.open}
+        message={snackbar.message}
+        severity={snackbar.severity}
+        onClose={closeSnackbar}
         autoHideDuration={SNACKBAR_DURATION}
-        onClose={() => setSnackbar(SNACKBAR_CLOSED)}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-      >
-        <Alert severity={snackbar.severity} onClose={() => setSnackbar(SNACKBAR_CLOSED)}>
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
+      />
     </Box>
   );
 };

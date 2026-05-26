@@ -6,29 +6,28 @@
  * Preferences are user-scoped and persisted in user_notification_preferences table.
  */
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import {
-  Alert,
-  Box,
-  Button,
-  Card,
-  CardContent,
-  CircularProgress,
-  Divider,
-  Snackbar,
-  Switch,
-  Tooltip,
-  Typography,
-} from '@mui/material';
-import NotificationsActiveIcon from '@mui/icons-material/NotificationsActive';
-import EmailIcon from '@mui/icons-material/Email';
-import NotificationsIcon from '@mui/icons-material/Notifications';
-import SecurityIcon from '@mui/icons-material/Security';
-import DescriptionIcon from '@mui/icons-material/Description';
-import EventNoteIcon from '@mui/icons-material/EventNote';
-import { SnackbarState, SNACKBAR_CLOSED, SNACKBAR_DURATION } from './accountConstants';
-import { notificationsApi, extractErrorMessage } from './accountApi';
 import { useLanguage } from '@/context/LanguageContext';
+import { SNACKBAR_DURATION, useSnackbar } from '@/hooks/useSnackbar';
+import AppSnackbar from '@/shared/ui/AppSnackbar';
+import DescriptionIcon from '@mui/icons-material/Description';
+import EmailIcon from '@mui/icons-material/Email';
+import EventNoteIcon from '@mui/icons-material/EventNote';
+import NotificationsIcon from '@mui/icons-material/Notifications';
+import NotificationsActiveIcon from '@mui/icons-material/NotificationsActive';
+import SecurityIcon from '@mui/icons-material/Security';
+import {
+    Box,
+    Button,
+    Card,
+    CardContent,
+    CircularProgress,
+    Divider,
+    Switch,
+    Tooltip,
+    Typography,
+} from '@mui/material';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { notificationsApi } from './accountApi';
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -136,7 +135,7 @@ const AccountNotificationsPage: React.FC = () => {
   const [saved, setSaved] = useState<NotifPref[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [snackbar, setSnackbar] = useState<SnackbarState>(SNACKBAR_CLOSED);
+  const { snackbar, showSnackbar, closeSnackbar } = useSnackbar();
   const { t } = useLanguage();
 
   // ── Load ──
@@ -227,9 +226,9 @@ const AccountNotificationsPage: React.FC = () => {
         })),
       );
       setSaved([...prefs]);
-      setSnackbar({ open: true, message: t('account.preferences_saved'), severity: 'success' });
+      showSnackbar(t('account.preferences_saved'), 'success');
     } catch (err: any) {
-      setSnackbar({ open: true, message: err.message || t('account.preferences_save_failed'), severity: 'error' });
+      showSnackbar(err.message || t('account.preferences_save_failed'), 'error');
     } finally {
       setSaving(false);
     }
@@ -381,16 +380,13 @@ const AccountNotificationsPage: React.FC = () => {
       </Box>
 
       {/* Snackbar */}
-      <Snackbar
+      <AppSnackbar
         open={snackbar.open}
+        message={snackbar.message}
+        severity={snackbar.severity}
+        onClose={closeSnackbar}
         autoHideDuration={SNACKBAR_DURATION}
-        onClose={() => setSnackbar(SNACKBAR_CLOSED)}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-      >
-        <Alert severity={snackbar.severity} onClose={() => setSnackbar(SNACKBAR_CLOSED)}>
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
+      />
     </>
   );
 };

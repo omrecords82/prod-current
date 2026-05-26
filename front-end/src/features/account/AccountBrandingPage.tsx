@@ -4,30 +4,31 @@
  * Uses GET/PUT /api/my/church-settings + POST/DELETE /api/my/church-branding/:field
  */
 
-import React, { useCallback, useEffect, useRef, useState } from 'react';
-import {
-  Alert,
-  Box,
-  Button,
-  Card,
-  CardContent,
-  CircularProgress,
-  Divider,
-  IconButton,
-  Snackbar,
-  TextField,
-  Tooltip,
-  Typography,
-} from '@mui/material';
-import PaletteIcon from '@mui/icons-material/Palette';
+import { useAuth } from '@/context/AuthContext';
+import { useLanguage } from '@/context/LanguageContext';
+import { SNACKBAR_DURATION, useSnackbar } from '@/hooks/useSnackbar';
+import AppSnackbar from '@/shared/ui/AppSnackbar';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import ImageIcon from '@mui/icons-material/Image';
-import { useAuth } from '@/context/AuthContext';
-import { useLanguage } from '@/context/LanguageContext';
+import PaletteIcon from '@mui/icons-material/Palette';
+import {
+    Alert,
+    Box,
+    Button,
+    Card,
+    CardContent,
+    CircularProgress,
+    Divider,
+    IconButton,
+    TextField,
+    Tooltip,
+    Typography,
+} from '@mui/material';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { churchApi } from './accountApi';
+import { getChurchDisplayName } from './accountConstants';
 import { canEditChurchSettings } from './accountPermissions';
-import { SnackbarState, SNACKBAR_CLOSED, SNACKBAR_DURATION, getChurchDisplayName } from './accountConstants';
-import { churchApi, extractErrorMessage } from './accountApi';
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -73,7 +74,7 @@ const AccountBrandingPage: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [branding, setBranding] = useState<BrandingData>(EMPTY_BRANDING);
   const [original, setOriginal] = useState<BrandingData>(EMPTY_BRANDING);
-  const [snackbar, setSnackbar] = useState<SnackbarState>(SNACKBAR_CLOSED);
+  const { snackbar, showSnackbar, closeSnackbar } = useSnackbar();
 
   // Upload state per field
   const [uploading, setUploading] = useState<Record<string, boolean>>({});
@@ -124,11 +125,11 @@ const AccountBrandingPage: React.FC = () => {
 
   const handleSave = async () => {
     if (!isValidColor(branding.primary_color)) {
-      setSnackbar({ open: true, message: t('account.primary_color_invalid'), severity: 'error' });
+      showSnackbar(t('account.primary_color_invalid'), 'error');
       return;
     }
     if (!isValidColor(branding.secondary_color)) {
-      setSnackbar({ open: true, message: t('account.secondary_color_invalid'), severity: 'error' });
+      showSnackbar(t('account.secondary_color_invalid'), 'error');
       return;
     }
 
@@ -146,9 +147,9 @@ const AccountBrandingPage: React.FC = () => {
         secondary_color: branding.secondary_color || null,
       });
       setOriginal({ ...branding });
-      setSnackbar({ open: true, message: t('account.branding_saved'), severity: 'success' });
+      showSnackbar(t('account.branding_saved'), 'success');
     } catch (err: any) {
-      setSnackbar({ open: true, message: err.message || 'Failed to save', severity: 'error' });
+      showSnackbar(err.message || 'Failed to save', 'error');
     } finally {
       setSaving(false);
     }
@@ -159,11 +160,11 @@ const AccountBrandingPage: React.FC = () => {
   const handleUpload = useCallback(async (field: string, file: File) => {
     // Client-side validation
     if (!ALLOWED_TYPES.includes(file.type)) {
-      setSnackbar({ open: true, message: 'Only PNG, JPEG, SVG, and WebP images are allowed', severity: 'error' });
+      showSnackbar('Only PNG, JPEG, SVG, and WebP images are allowed', 'error');
       return;
     }
     if (file.size > MAX_SIZE_BYTES) {
-      setSnackbar({ open: true, message: `File must be under ${MAX_SIZE_MB}MB`, severity: 'error' });
+      showSnackbar(`File must be under ${MAX_SIZE_MB}MB`, 'error');
       return;
     }
 
@@ -175,9 +176,9 @@ const AccountBrandingPage: React.FC = () => {
       const newPath = result.path + '?t=' + Date.now();
       setBranding((prev) => ({ ...prev, [pathKey]: newPath }));
       setOriginal((prev) => ({ ...prev, [pathKey]: newPath }));
-      setSnackbar({ open: true, message: t('account.uploaded_success').replace('{field}', field), severity: 'success' });
+      showSnackbar(t('account.uploaded_success').replace('{field}', field), 'success');
     } catch (err: any) {
-      setSnackbar({ open: true, message: err.message || 'Upload failed', severity: 'error' });
+      showSnackbar(err.message || 'Upload failed', 'error');
     } finally {
       setUploading((prev) => ({ ...prev, [field]: false }));
     }
@@ -190,9 +191,9 @@ const AccountBrandingPage: React.FC = () => {
       const pathKey = field === 'logo' ? 'logo_path' : field === 'logo-dark' ? 'logo_dark_path' : 'favicon_path';
       setBranding((prev) => ({ ...prev, [pathKey]: null }));
       setOriginal((prev) => ({ ...prev, [pathKey]: null }));
-      setSnackbar({ open: true, message: t('account.removed_success').replace('{field}', field), severity: 'success' });
+      showSnackbar(t('account.removed_success').replace('{field}', field), 'success');
     } catch (err: any) {
-      setSnackbar({ open: true, message: err.message || 'Failed to remove', severity: 'error' });
+      showSnackbar(err.message || 'Failed to remove', 'error');
     } finally {
       setUploading((prev) => ({ ...prev, [field]: false }));
     }
@@ -420,16 +421,13 @@ const AccountBrandingPage: React.FC = () => {
         </Card>
       )}
 
-      <Snackbar
+      <AppSnackbar
         open={snackbar.open}
+        message={snackbar.message}
+        severity={snackbar.severity}
+        onClose={closeSnackbar}
         autoHideDuration={SNACKBAR_DURATION}
-        onClose={() => setSnackbar(SNACKBAR_CLOSED)}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-      >
-        <Alert severity={snackbar.severity} onClose={() => setSnackbar(SNACKBAR_CLOSED)}>
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
+      />
     </>
   );
 };
