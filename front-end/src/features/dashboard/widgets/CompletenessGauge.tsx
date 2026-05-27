@@ -1,4 +1,5 @@
-import { Paper, Typography, Box, useTheme } from '@mui/material';
+import useChartDefaults from '@/hooks/useChartDefaults';
+import { Box, Paper, Typography } from '@mui/material';
 import Chart from 'react-apexcharts';
 
 interface Props {
@@ -7,27 +8,26 @@ interface Props {
 }
 
 const CompletenessGauge = ({ value, dateRange }: Props) => {
-  const theme = useTheme();
+  const { buildOptions, themeTokens } = useChartDefaults();
   const color = value >= 80 ? '#2e7d32' : value >= 50 ? '#ed6c02' : '#d32f2f';
 
-  const options: ApexCharts.ApexOptions = {
-    chart: { type: 'radialBar', fontFamily: theme.typography.fontFamily },
+  const options = buildOptions('radialBar', {
     plotOptions: {
       radialBar: {
         startAngle: -135,
         endAngle: 135,
         hollow: { size: '65%' },
-        track: { background: theme.palette.mode === 'dark' ? '#333' : '#f0f0f0', strokeWidth: '100%' },
+        track: { background: themeTokens.mode === 'dark' ? '#333' : '#f0f0f0', strokeWidth: '100%' },
         dataLabels: {
-          name: { show: true, offsetY: -10, color: theme.palette.text.secondary, fontSize: '13px' },
-          value: { show: true, fontSize: '28px', fontWeight: 700, color: theme.palette.text.primary, formatter: (val: number) => `${val}%` },
+          name: { show: true, offsetY: -10, color: themeTokens.textSecondary, fontSize: '13px' },
+          value: { show: true, fontSize: '28px', fontWeight: 700, color: themeTokens.textPrimary, formatter: (val: number) => `${val}%` },
         },
       },
     },
     colors: [color],
     labels: ['Complete'],
     stroke: { lineCap: 'round' },
-  };
+  });
 
   return (
     <Paper elevation={0} sx={{ p: 3, borderRadius: 2, border: '1px solid', borderColor: 'divider', height: '100%' }}>

@@ -1,5 +1,5 @@
-import { useTheme } from '@mui/material';
-import { Paper, Typography, Box } from '@mui/material';
+import useChartDefaults from '@/hooks/useChartDefaults';
+import { Box, Paper, Typography } from '@mui/material';
 import Chart from 'react-apexcharts';
 
 interface Props {
@@ -7,14 +7,13 @@ interface Props {
 }
 
 const TypeDistributionChart = ({ data }: Props) => {
-  const theme = useTheme();
+  const { buildOptions, themeTokens, OM_PALETTE } = useChartDefaults();
   const total = data.reduce((sum, d) => sum + d.value, 0);
 
-  const options: ApexCharts.ApexOptions = {
-    chart: { type: 'donut', fontFamily: theme.typography.fontFamily },
+  const options = buildOptions('donut', {
     labels: data.map(d => d.name),
-    colors: ['#1e88e5', '#e91e63', '#7b1fa2'],
-    legend: { position: 'bottom', labels: { colors: theme.palette.text.primary } },
+    colors: [...OM_PALETTE],
+    legend: { position: 'bottom', labels: { colors: themeTokens.textPrimary } },
     plotOptions: {
       pie: {
         donut: {
@@ -27,9 +26,7 @@ const TypeDistributionChart = ({ data }: Props) => {
       },
     },
     stroke: { width: 0 },
-    tooltip: { theme: theme.palette.mode },
-    dataLabels: { enabled: false },
-  };
+  });
 
   return (
     <Paper elevation={0} sx={{ p: 3, borderRadius: 2, border: '1px solid', borderColor: 'divider', height: '100%' }}>

@@ -1,5 +1,5 @@
-import { useTheme } from '@mui/material';
-import { Paper, Typography, Box } from '@mui/material';
+import useChartDefaults from '@/hooks/useChartDefaults';
+import { Box, Paper, Typography } from '@mui/material';
 import Chart from 'react-apexcharts';
 
 interface MonthlyData {
@@ -14,7 +14,7 @@ interface Props {
 }
 
 const SacramentsByYearChart = ({ data }: Props) => {
-  const theme = useTheme();
+  const { buildOptions, themeTokens, OM_PALETTE } = useChartDefaults();
 
   const categories = data.map(d => {
     const [y, m] = d.month.split('-');
@@ -22,17 +22,14 @@ const SacramentsByYearChart = ({ data }: Props) => {
     return date.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
   });
 
-  const options: ApexCharts.ApexOptions = {
-    chart: { type: 'bar', stacked: false, toolbar: { show: false }, fontFamily: theme.typography.fontFamily },
+  const options = buildOptions('bar', {
+    chart: { stacked: false },
     plotOptions: { bar: { borderRadius: 3, columnWidth: '60%' } },
-    colors: ['#1e88e5', '#e91e63', '#7b1fa2'],
-    xaxis: { categories, labels: { style: { colors: theme.palette.text.secondary } } },
-    yaxis: { labels: { style: { colors: theme.palette.text.secondary } } },
-    legend: { position: 'top', labels: { colors: theme.palette.text.primary } },
-    grid: { borderColor: theme.palette.divider, strokeDashArray: 4 },
-    tooltip: { theme: theme.palette.mode },
-    dataLabels: { enabled: false },
-  };
+    colors: [...OM_PALETTE],
+    xaxis: { categories, labels: { style: { colors: themeTokens.textSecondary } } },
+    yaxis: { labels: { style: { colors: themeTokens.textSecondary } } },
+    legend: { position: 'top', labels: { colors: themeTokens.textPrimary } },
+  });
 
   const series = [
     { name: 'Baptisms', data: data.map(d => d.baptism) },
