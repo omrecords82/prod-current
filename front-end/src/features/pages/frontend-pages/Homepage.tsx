@@ -3,6 +3,7 @@ import { Globe, Calendar, BarChart3, Shield, BookOpen, Search, ArrowRight, Check
 import { PUBLIC_ROUTES } from '@/config/publicRoutes';
 import EditableText from '@/components/frontend-pages/shared/EditableText';
 import HomepageHero from '@/components/frontend-pages/homepage/HomepageHero';
+import WelcomeCarousel from '@/components/frontend-pages/homepage/WelcomeCarousel';
 import HomepageIntro from '@/components/frontend-pages/homepage/HomepageIntro';
 import HomepageRecordsTransformSection from '@/components/frontend-pages/homepage/records-transform/HomepageRecordsTransformSection';
 import PublicSeo from '@/components/seo/PublicSeo';
@@ -20,6 +21,7 @@ const Homepage = () => {
         bare
       />
       <HomepageHero />
+      <WelcomeCarousel />
       <HomepageIntro />
 
       {/* How It Works */}
