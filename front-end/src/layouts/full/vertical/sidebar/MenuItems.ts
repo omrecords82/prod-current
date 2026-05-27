@@ -17,12 +17,10 @@ import {
     IconPoint,
     IconRocket,
     IconSettings,
-    IconShield,
     IconTerminal,
     IconUpload,
     IconUser,
-    IconUserPlus,
-    IconWriting
+    IconUserPlus
 } from '@tabler/icons-react';
 import { uniqueId } from 'lodash';
 
@@ -53,29 +51,9 @@ const Menuitems: MenuitemsType[] = [
   },
   {
     id: uniqueId(),
-    title: 'Control Panel',
-    icon: IconSettings,
-    href: '/admin/control-panel',
-  },
-  {
-    id: uniqueId(),
-    title: 'OMAI',
-    icon: IconRocket,
-    href: '/admin/omai',
-    chip: 'AI',
-    chipColor: 'primary',
-  },
-  {
-    id: uniqueId(),
     title: 'Account Hub',
     icon: IconUser,
     href: '/account/profile',
-  },
-  {
-    id: uniqueId(),
-    title: 'Church User Dashboard',
-    icon: IconShield,
-    href: '/dashboards/modern',
   },
   {
     id: uniqueId(),
@@ -215,20 +193,6 @@ const Menuitems: MenuitemsType[] = [
     ],
   },
 
-  // ========================================================================
-  // CRM & OUTREACH (matches Control Panel category 3)
-  // ========================================================================
-  {
-    navlabel: true,
-    subheader: '📣 Church Operations',
-  },
-  {
-    id: uniqueId(),
-    title: 'US Church Map',
-    icon: IconPoint,
-    href: '/devel-tools/us-church-map',
-    badgeKey: 'us-church-map',
-  },
 
   // ========================================================================
   // SYSTEM & SERVER (matches Control Panel category 4)
@@ -245,73 +209,9 @@ const Menuitems: MenuitemsType[] = [
     children: [
       {
         id: uniqueId(),
-        title: 'Menu Management',
-        icon: IconLayout,
-        href: '/admin/menu-management',
-      },
-      {
-        id: uniqueId(),
         title: 'Admin Settings',
         icon: IconSettings,
         href: '/admin/settings',
-      },
-    ],
-  },
-  {
-    id: uniqueId(),
-    title: 'Content Management',
-    icon: IconFileDescription,
-    href: '#',
-    children: [
-      {
-        id: uniqueId(),
-        title: 'Blog Management',
-        icon: IconWriting,
-        href: '/admin/blog-admin',
-      },
-      {
-        id: uniqueId(),
-        title: 'Notes',
-        icon: IconNotes,
-        href: '/apps/notes',
-      },
-      {
-        id: uniqueId(),
-        title: 'Welcome Message',
-        icon: IconMessage,
-        href: '/frontend-pages/welcome-message',
-      },
-    ],
-  },
-  {
-    id: uniqueId(),
-    title: 'Social Features',
-    icon: IconMessage,
-    href: '#',
-    children: [
-      {
-        id: uniqueId(),
-        title: 'Email',
-        icon: IconMessage,
-        href: '/apps/email',
-      },
-      {
-        id: uniqueId(),
-        title: 'Friends',
-        icon: IconUserPlus,
-        href: '/social/friends',
-      },
-      {
-        id: uniqueId(),
-        title: 'Chat',
-        icon: IconMessage,
-        href: '/social/chat',
-      },
-      {
-        id: uniqueId(),
-        title: 'Notifications',
-        icon: IconBell,
-        href: '/social/notifications',
       },
     ],
   },

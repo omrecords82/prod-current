@@ -24,7 +24,7 @@ export async function apiJson<T>(
   url: string,
   options: RequestInit = {}
 ): Promise<T> {
-  const authToken = localStorage.getItem("auth_token");
+  const authToken = localStorage.getItem("access_token");
   
   const headers = new Headers(options.headers);
   headers.set("Content-Type", "application/json");

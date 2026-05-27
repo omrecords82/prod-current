@@ -75,7 +75,7 @@ export function AddRecordModal({ open, recordType, clergyList, onClose, onSave }
       </DialogContent>
       <DialogActions sx={{ px: 3, pb: 2 }}>
         <Button onClick={onClose} sx={{ textTransform: 'none' }}>Cancel</Button>
-        <Button onClick={() => { onSave(form); onClose(); }} variant="contained" sx={{ textTransform: 'none', bgcolor: '#11307a', '&:hover': { bgcolor: '#0e2865' } }}>Save Record</Button>
+        <Button onClick={() => onSave(form)} variant="contained" sx={{ textTransform: 'none', bgcolor: '#11307a', '&:hover': { bgcolor: '#0e2865' } }}>Save Record</Button>
       </DialogActions>
     </Dialog>
   );

@@ -1,4 +1,5 @@
 import { metricsAPI } from "@/api/metrics.api";
+import { apiClient } from "@/api/utils/axiosInstance";
 import { useChurch } from "@/context/ChurchContext";
 import { Alert, Box, CircularProgress, Snackbar } from "@mui/material";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -245,7 +246,24 @@ const RecordsManagement: React.FC = () => {
         recordType={recordType}
         clergyList={clergyList.length > 0 ? clergyList : ["Rev. Nicholas Kryluk"]}
         onClose={() => setEditIdx(null)}
-        onSave={(id, data) => { setEditIdx(null); setToast("Record updated successfully"); loadRecords(recordType); }}
+        onSave={(id, data) => {
+          const cid = parseInt(String(churchId));
+          let endpoint: string;
+          let payload: any;
+          if (recordType === "baptism") {
+            endpoint = `/baptism-records/${id}`;
+            payload = { first_name: data.firstName || "", last_name: data.lastName || "", birth_date: data.dob || "", reception_date: data.baptismDate || "", birthplace: data.birthplace || "", clergy: data.clergy || "", parents: [data.fatherName, data.motherName].filter(Boolean).join(", "), sponsors: data.godparentNames || "", entry_type: data.receivedBy || "Baptism", church_id: cid };
+          } else if (recordType === "marriage") {
+            endpoint = `/marriage-records/${id}`;
+            payload = { fname_bride: data.brideFirstName || "", lname_bride: data.brideLastName || "", fname_groom: data.groomFirstName || "", lname_groom: data.groomLastName || "", mdate: data.marriageDate || "", clergy: data.celebrant || "", witness: [data.witness1, data.witness2].filter(Boolean).join(", "), church_id: cid };
+          } else {
+            endpoint = `/funeral-records/${id}`;
+            payload = { name: data.firstName || "", lastname: data.lastName || "", deceased_date: data.dod || "", burial_date: data.burialDate || "", burial_location: data.burialLocation || "", clergy: data.clergy || "", church_id: cid };
+          }
+          apiClient.put(endpoint, payload)
+            .then(() => { setEditIdx(null); setToast("Record updated successfully"); loadRecords(recordType); })
+            .catch((err: any) => { console.error("Failed to update record:", err); setToast(err?.response?.data?.error || err?.message || "Failed to update record"); });
+        }}
         onPrev={() => setEditIdx((i) => (i === null ? null : (i - 1 + filtered.length) % filtered.length))}
         onNext={() => setEditIdx((i) => (i === null ? null : (i + 1) % filtered.length))}
         currentIndex={editIdx ?? 0}
@@ -258,8 +276,36 @@ const RecordsManagement: React.FC = () => {
         clergyList={clergyList.length > 0 ? clergyList : ["Rev. Nicholas Kryluk"]}
         onClose={() => setAddOpen(false)}
         onSave={(d) => {
-          setToast(`${recordType[0].toUpperCase()}${recordType.slice(1)} record saved (demo)`);
-          loadRecords(recordType);
+          const cid = parseInt(String(churchId));
+          let endpoint: string;
+          let payload: any;
+          if (recordType === "baptism") {
+            endpoint = "/baptism-records";
+            const parts = (d.name || "").trim().split(/\s+/);
+            if (parts.length < 2 || !parts[0] || !parts[1]) { setToast("Please enter both first and last name"); return; }
+            if (!d.dob) { setToast("Please enter date of birth"); return; }
+            if (!d.clergy) { setToast("Please select clergy"); return; }
+            payload = { first_name: parts[0], last_name: parts.slice(1).join(" "), birth_date: d.dob, reception_date: d.baptismDate || "", birthplace: d.birthplace || "", clergy: d.clergy, entry_type: "Baptism", church_id: cid };
+          } else if (recordType === "marriage") {
+            endpoint = "/marriage-records";
+            const brideParts = (d.name || "").trim().split(/\s+/);
+            const groomParts = (d.address || "").trim().split(/\s+/);
+            if (brideParts.length < 2 || !brideParts[0] || !brideParts[1]) { setToast("Please enter bride's full name (first and last)"); return; }
+            if (groomParts.length < 2 || !groomParts[0] || !groomParts[1]) { setToast("Please enter groom's full name (first and last)"); return; }
+            if (!d.baptismDate) { setToast("Please enter marriage date"); return; }
+            if (!d.clergy) { setToast("Please select celebrant"); return; }
+            payload = { fname_bride: brideParts[0], lname_bride: brideParts.slice(1).join(" "), fname_groom: groomParts[0], lname_groom: groomParts.slice(1).join(" "), mdate: d.baptismDate, clergy: d.clergy, witness: d.birthplace || "", church_id: cid };
+          } else {
+            endpoint = "/funeral-records";
+            const parts = (d.name || "").trim().split(/\s+/);
+            if (parts.length < 2 || !parts[0] || !parts[1]) { setToast("Please enter both first and last name"); return; }
+            if (!d.dob) { setToast("Please enter date of death"); return; }
+            if (!d.clergy) { setToast("Please select clergy"); return; }
+            payload = { name: parts[0], lastname: parts.slice(1).join(" "), deceased_date: d.dob, burial_date: d.baptismDate || "", burial_location: d.birthplace || "", clergy: d.clergy, church_id: cid };
+          }
+          apiClient.post(endpoint, payload)
+            .then(() => { setAddOpen(false); setToast(`${recordType[0].toUpperCase()}${recordType.slice(1)} record created successfully`); loadRecords(recordType); })
+            .catch((err: any) => { console.error("Failed to create record:", err); setToast(err?.response?.data?.error || err?.message || "Failed to create record"); });
         }}
       />
 

@@ -906,8 +906,8 @@ const Router = [
       // Public "Get Started" entry — same Register inquiry wizard.
       // /auth/register stays as an alias for admin-issued registration-token links.
       { path: '/get-started', element: <Register /> },
-      { path: '/landingpage', element: <Navigate to="/admin/control-panel" replace /> },
-      { path: '/pages/pricing', element: <Navigate to="/admin/control-panel" replace /> },
+      { path: '/landingpage', element: <Navigate to="/account/profile" replace /> },
+      { path: '/pages/pricing', element: <Navigate to="/account/profile" replace /> },
       { path: '/pages/faq', element: <Faq /> },
       { path: '/frontend-pages/faq', element: <Faq /> },
       { path: '/frontend-pages/menu', element: <PagesMenu /> },
