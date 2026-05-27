@@ -1,11 +1,11 @@
-import { useState } from 'react';
-import { Box, useMediaQuery } from '@mui/material';
-import Breadcrumb from '@/layouts/full/shared/breadcrumb/Breadcrumb';
-import PageContainer from '@/shared/ui/PageContainer';
-import NoteSidebar from '@/components/apps/notes/NoteSidebar';
 import NoteContent from '@/components/apps/notes/NoteContent';
-import AppCard from '@/shared/ui/AppCard';
+import NoteSidebar from '@/components/apps/notes/NoteSidebar';
 import { NotesProvider } from '@/context/NotesContext';
+import Breadcrumb from '@/layouts/full/shared/breadcrumb/Breadcrumb';
+import AppCard from '@/shared/ui/AppCard';
+import PageContainer from '@/shared/ui/PageContainer';
+import { Box, useMediaQuery } from '@mui/material';
+import { useState } from 'react';
 
 const BCrumb = [
   {

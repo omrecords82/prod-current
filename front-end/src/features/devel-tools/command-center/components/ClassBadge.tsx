@@ -1,11 +1,11 @@
-import React from 'react';
-import { Chip } from '@mui/material';
 import { CLASSIFICATION } from '@/theme/adminTokens';
-import { CLASSIFICATION_CONFIG } from '../types';
+import { Chip } from '@mui/material';
+import React from 'react';
 import type { Classification } from '../types';
+import { CLASSIFICATION_CONFIG } from '../types';
 
 /** Classification badge chip */
-function ClassBadge({ classification }: { classification: Classification }) {
+const ClassBadge: React.FC<{ classification: Classification }> = ({ classification }) => {
   const cfg = CLASSIFICATION_CONFIG[classification];
   const Icon = cfg.icon;
   const tokens = CLASSIFICATION[classification] || CLASSIFICATION.monitor;
@@ -25,6 +25,6 @@ function ClassBadge({ classification }: { classification: Classification }) {
       }}
     />
   );
-}
+};
 
 export default ClassBadge;

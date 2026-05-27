@@ -1,6 +1,6 @@
-import { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { Box, CircularProgress, Typography } from '@mui/material';
+import React, { useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 // ==============================|| OMAI BRIDGE — REDIRECT TO OMAI WITH TOKEN ||============================== //
 
@@ -8,7 +8,7 @@ const OMAI_URL = window.location.hostname === 'localhost' || window.location.hos
   ? `http://${window.location.hostname}:7060`
   : `${window.location.origin}/omai`; // In production, OMAI is proxied under /omai/
 
-export default function OmaiBridge() {
+const OmaiBridge: React.FC = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -26,4 +26,6 @@ export default function OmaiBridge() {
       <Typography variant="body1">Redirecting to OMAI...</Typography>
     </Box>
   );
-}
+};
+
+export default OmaiBridge;

@@ -13,59 +13,53 @@
  *   - DELETE /api/badges/:itemKey     — remove badge entry
  */
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { apiClient } from '@/api/utils/axiosInstance';
+import Breadcrumb from '@/layouts/full/shared/breadcrumb/Breadcrumb';
+import PageContainer from '@/shared/ui/PageContainer';
+import StateBadge from '@/shared/ui/StateBadge';
+import { BadgeData } from '@/utils/badgeResolver';
 import {
-  Box,
-  Paper,
-  Typography,
-  Stack,
-  IconButton,
-  Tooltip,
-  CircularProgress,
-  Chip,
-  Button,
-  TextField,
-  InputAdornment,
-  Select,
-  MenuItem,
-  FormControl,
-  InputLabel,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Snackbar,
-  Alert,
-  useTheme,
-  alpha,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  TableSortLabel,
+    Alert,
+    alpha,
+    Box,
+    Button,
+    Chip,
+    CircularProgress,
+    Dialog,
+    DialogActions,
+    DialogContent,
+    DialogTitle,
+    FormControl,
+    IconButton,
+    InputAdornment,
+    InputLabel,
+    MenuItem,
+    Paper,
+    Select,
+    Snackbar,
+    Stack,
+    Table,
+    TableBody,
+    TableCell,
+    TableContainer,
+    TableHead,
+    TableRow,
+    TableSortLabel,
+    TextField,
+    Tooltip,
+    Typography,
+    useTheme,
 } from '@mui/material';
 import {
-  IconRefresh,
-  IconBell,
-  IconBellOff,
-  IconTrash,
-  IconPlayerPlay,
-  IconSearch,
-  IconAlertTriangle,
-  IconCheck,
-  IconEye,
-  IconEyeOff,
-  IconClock,
-  IconEdit,
-  IconPlus,
+    IconAlertTriangle,
+    IconBellOff,
+    IconPlayerPlay,
+    IconPlus,
+    IconRefresh,
+    IconSearch,
+    IconTrash
 } from '@tabler/icons-react';
-import { apiClient } from '@/api/utils/axiosInstance';
-import { BadgeData, BadgeState } from '@/utils/badgeResolver';
-import StateBadge from '@/shared/ui/StateBadge';
-import PageContainer from '@/shared/ui/PageContainer';
-import Breadcrumb from '@/layouts/full/shared/breadcrumb/Breadcrumb';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 
 // ── Known badge-capable items (mirrors badgeKey values in MenuItems.ts) ──
 
@@ -132,7 +126,7 @@ function timeUntilExpiry(expiresAt: string | null): string {
 
 // ── Main Component ───────────────────────────────────────────────
 
-export default function BadgeStateManagerPage() {
+const BadgeStateManagerPage: React.FC = () => {
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
 
@@ -778,4 +772,6 @@ export default function BadgeStateManagerPage() {
       </Snackbar>
     </PageContainer>
   );
-}
+};
+
+export default BadgeStateManagerPage;

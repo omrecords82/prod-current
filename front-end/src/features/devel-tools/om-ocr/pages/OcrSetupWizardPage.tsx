@@ -80,7 +80,7 @@ const steps = [
   'Ready to Launch'
 ];
 
-export default function OcrSetupWizardPage() {
+const OcrSetupWizardPage: React.FC = () => {
   const { isLayout } = useContext(CustomizerContext);
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -614,4 +614,6 @@ export default function OcrSetupWizardPage() {
       )}
     </Box>
   );
-}
+};
+
+export default OcrSetupWizardPage;

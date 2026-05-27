@@ -3,9 +3,11 @@
  * Route: /admin/ops
  */
 
-import React from 'react';
 import OpsReportsHub from '@/features/admin/ops/OpsReportsHub';
+import React from 'react';
 
-export default function OpsReportsPage() {
+const OpsReportsPage: React.FC = () => {
   return <OpsReportsHub />;
-}
+};
+
+export default OpsReportsPage;

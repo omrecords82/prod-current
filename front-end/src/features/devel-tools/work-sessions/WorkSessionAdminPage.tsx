@@ -8,54 +8,54 @@
  *   4. Generate — ad-hoc report generation
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { apiClient } from '@/api/utils/axiosInstance';
 import {
-  Box,
-  Tabs,
-  Tab,
-  Typography,
-  Paper,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Chip,
-  Button,
-  TextField,
-  Switch,
-  FormControlLabel,
-  Stack,
-  Alert,
-  IconButton,
-  Tooltip,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Checkbox,
-  FormGroup,
-  Select,
-  MenuItem,
-  InputLabel,
-  FormControl,
-  Pagination,
-  useTheme,
-  alpha,
-  CircularProgress,
+    Alert,
+    alpha,
+    Box,
+    Button,
+    Checkbox,
+    Chip,
+    CircularProgress,
+    Dialog,
+    DialogActions,
+    DialogContent,
+    DialogTitle,
+    FormControl,
+    FormControlLabel,
+    FormGroup,
+    IconButton,
+    InputLabel,
+    MenuItem,
+    Pagination,
+    Paper,
+    Select,
+    Stack,
+    Switch,
+    Tab,
+    Table,
+    TableBody,
+    TableCell,
+    TableContainer,
+    TableHead,
+    TableRow,
+    Tabs,
+    TextField,
+    Tooltip,
+    Typography,
+    useTheme,
 } from '@mui/material';
 import {
-  IconRefresh,
-  IconSend,
-  IconEye,
-  IconClock,
-  IconCalendar,
-  IconSettings,
-  IconReport,
-  IconPlayerPlay,
+    IconCalendar,
+    IconClock,
+    IconEye,
+    IconPlayerPlay,
+    IconRefresh,
+    IconReport,
+    IconSend,
+    IconSettings,
 } from '@tabler/icons-react';
-import { apiClient } from '@/api/utils/axiosInstance';
+import { useCallback, useEffect, useState } from 'react';
 
 // ============================================================================
 // Types
@@ -620,7 +620,7 @@ function GenerateTab() {
 // Main Page
 // ============================================================================
 
-export default function WorkSessionAdminPage() {
+const WorkSessionAdminPage: React.FC = () => {
   const theme = useTheme();
   const [tab, setTab] = useState(0);
 
@@ -650,4 +650,6 @@ export default function WorkSessionAdminPage() {
       {tab === 3 && <GenerateTab />}
     </Box>
   );
-}
+};
+
+export default WorkSessionAdminPage;

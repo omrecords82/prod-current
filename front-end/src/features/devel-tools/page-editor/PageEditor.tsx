@@ -5,41 +5,41 @@
  * super_admin to edit text directly in the source code.
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
-import {
-  Box,
-  Card,
-  CardContent,
-  CardActionArea,
-  Typography,
-  Button,
-  Alert,
-  CircularProgress,
-  Stack,
-  TextField,
-  IconButton,
-  Tooltip,
-  Chip,
-  InputAdornment,
-  Divider,
-  Paper,
-  Breadcrumbs,
-  Link,
-} from '@mui/material';
-import {
-  IconArrowLeft,
-  IconRefresh,
-  IconDeviceFloppy,
-  IconEdit,
-  IconSearch,
-  IconFileText,
-  IconCheck,
-  IconX,
-  IconCode,
-  IconAlertTriangle,
-} from '@tabler/icons-react';
 import apiClient from '@/api/utils/axiosInstance';
 import PageContainer from '@/shared/ui/PageContainer';
+import {
+    Alert,
+    Box,
+    Breadcrumbs,
+    Button,
+    Card,
+    CardActionArea,
+    CardContent,
+    Chip,
+    CircularProgress,
+    Divider,
+    IconButton,
+    InputAdornment,
+    Link,
+    Paper,
+    Stack,
+    TextField,
+    Tooltip,
+    Typography,
+} from '@mui/material';
+import {
+    IconAlertTriangle,
+    IconArrowLeft,
+    IconCheck,
+    IconCode,
+    IconDeviceFloppy,
+    IconEdit,
+    IconFileText,
+    IconRefresh,
+    IconSearch,
+    IconX,
+} from '@tabler/icons-react';
+import React, { useCallback, useEffect, useState } from 'react';
 
 interface PageEntry {
   id: string;
@@ -75,7 +75,7 @@ interface PageScan {
   sourceFiles?: string[];
 }
 
-export default function PageEditor() {
+const PageEditor: React.FC = () => {
   const [pages, setPages] = useState<PageEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -579,4 +579,6 @@ function TextItemRow({ item, editedText, onEdit, onCancel }: TextItemRowProps) {
       )}
     </Box>
   );
-}
+};
+
+export default PageEditor;

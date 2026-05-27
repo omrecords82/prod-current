@@ -1,6 +1,6 @@
 import { ChevronLeft, ChevronRight, Save, X, XCircle } from "@/ui/icons";
 import { Drawer } from "@mui/material";
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import type { AnyRecord, RecordType } from "../types";
 import { recordPrimaryName } from "../types";
 

@@ -1,9 +1,9 @@
-import { useState } from 'react';
 import { ChevronDown, Globe } from '@/ui/icons';
+import { useState } from 'react';
 import {
-  type MaintenanceLang,
-  MAINTENANCE_LANGUAGES,
-  maintenanceTranslations,
+    type MaintenanceLang,
+    MAINTENANCE_LANGUAGES,
+    maintenanceTranslations,
 } from './maintenance/maintenanceTranslations';
 
 /* ─── Orthodox 3-bar cross SVG ─── */

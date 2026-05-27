@@ -1,17 +1,17 @@
-import { useState, useEffect } from 'react';
-import { Box, Alert, Skeleton } from '@mui/material';
-import Grid2 from '@/components/compat/Grid2';
-import PageContainer from '@/shared/ui/PageContainer';
-import { useChurch } from '@/context/ChurchContext';
 import { apiClient } from '@/api/utils/axiosInstance';
+import Grid2 from '@/components/compat/Grid2';
+import { useChurch } from '@/context/ChurchContext';
+import PageContainer from '@/shared/ui/PageContainer';
+import { Alert, Box, Skeleton } from '@mui/material';
+import { useEffect, useState } from 'react';
 
+import CompletenessGauge from './widgets/CompletenessGauge';
+import OcrStatsCard from './widgets/OcrStatsCard';
+import RecentActivityList from './widgets/RecentActivityList';
 import SacramentCountCards from './widgets/SacramentCountCards';
 import SacramentsByYearChart from './widgets/SacramentsByYearChart';
 import TypeDistributionChart from './widgets/TypeDistributionChart';
-import RecentActivityList from './widgets/RecentActivityList';
 import YearOverYearCard from './widgets/YearOverYearCard';
-import CompletenessGauge from './widgets/CompletenessGauge';
-import OcrStatsCard from './widgets/OcrStatsCard';
 
 interface DashboardData {
   counts: { baptisms: number; marriages: number; funerals: number; total: number };

@@ -11,19 +11,19 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import FilterErrorBoundary from './components/ErrorBoundary/FilterErrorBoundary';
 import UpdateAvailableBanner from './components/global/UpdateAvailableBanner';
 import { AuthProvider } from './context/AuthContext';
-import { LanguageProvider } from './context/LanguageContext';
 import { ChurchProvider } from './context/ChurchContext';
 import { ChurchRecordsProvider } from './context/ChurchRecordsContext';
 import { CustomizerContext } from './context/CustomizerContext';
 import { EnvironmentProvider } from './context/EnvironmentContext';
+import { LanguageProvider } from './context/LanguageContext';
 import { MenuVisibilityProvider } from './context/MenuVisibilityContext';
 import { NotificationProvider } from './context/NotificationContext';
 import { WebSocketProvider } from './context/WebSocketContext';
+import LiturgicalThemeSync from './features/liturgical-calendar/LiturgicalThemeSync';
 import RTL from './layouts/full/shared/customizer/RTL';
 import router from './routes/Router';
 import { ThemeSettings } from './theme/Theme';
 import { setupAxiosInterceptors } from './utils/axiosInterceptor';
-import { LiturgicalThemeSync } from './features/liturgical-calendar/LiturgicalThemeSync';
 
 // Import Orthodox Theme System
 //import { ThemeProvider as OrthodoxThemeProvider } from './context/ThemeContext';

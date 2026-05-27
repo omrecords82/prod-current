@@ -1,21 +1,21 @@
-import { useEffect, useMemo, useState } from 'react';
-import {
-  Alert,
-  Box,
-  Card,
-  CardContent,
-  Chip,
-  CircularProgress,
-  FormControl,
-  InputLabel,
-  MenuItem,
-  Paper,
-  Select,
-  Stack,
-  Typography,
-} from '@mui/material';
 import { apiClient } from '@/api/utils/axiosInstance';
 import { activeProvider } from '@/lib/analytics';
+import {
+    Alert,
+    Box,
+    Card,
+    CardContent,
+    Chip,
+    CircularProgress,
+    FormControl,
+    InputLabel,
+    MenuItem,
+    Paper,
+    Select,
+    Stack,
+    Typography,
+} from '@mui/material';
+import { useEffect, useMemo, useState } from 'react';
 
 type Period = '24h' | '7d' | '30d' | '12mo';
 
@@ -65,7 +65,7 @@ function formatPercent(value: number): string {
   return `${Math.round(value)}%`;
 }
 
-export default function WebsiteStatsPage() {
+const WebsiteStatsPage: React.FC = () => {
   const [period, setPeriod] = useState<Period>('7d');
   const [data, setData] = useState<StatsResponse | null>(null);
   const [loading, setLoading] = useState(false);
@@ -242,4 +242,6 @@ function RankedTable({ title, rows }: { title: string; rows: { name: string; val
       </Stack>
     </Paper>
   );
-}
+};
+
+export default WebsiteStatsPage;

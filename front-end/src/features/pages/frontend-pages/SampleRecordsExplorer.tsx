@@ -1,25 +1,40 @@
-import { useState, useMemo, useCallback, useRef, useEffect, useContext } from 'react';
-import { Link } from 'react-router-dom';
-import { useTheme } from '@mui/material/styles';
 import {
-  Table2, LayoutGrid, Clock, BarChart3, Search, ChevronDown,
-  Cross, Church, Heart, User, Calendar, MapPin, BookOpen, ArrowLeft, Globe, Filter, Check,
+    getAllSampleRecords,
+    getClergyCounts,
+    getDecadeCounts,
+    getLanguageCounts,
+    getRecordTypeCounts,
+    type UnifiedSampleRecord,
+} from '@/components/frontend-pages/shared/sampleExplorerAdapter';
+import { HeroSection } from '@/components/frontend-pages/shared/sections';
+import { PUBLIC_ROUTES } from '@/config/publicRoutes';
+import { CustomizerContext } from '@/context/CustomizerContext';
+import { useLanguage } from '@/context/LanguageContext';
+import { agGridIconMap } from '@/ui/agGridIcons';
+import {
+    ArrowLeft,
+    BarChart3,
+    BookOpen,
+    Calendar,
+    Check,
+    ChevronDown,
+    Church,
+    Clock,
+    Cross,
+    Filter,
+    Globe,
+    Heart,
+    LayoutGrid,
+    MapPin,
+    Search,
+    Table2,
+    User,
 } from '@/ui/icons';
+import { useTheme } from '@mui/material/styles';
 import { ColDef, themeQuartz } from 'ag-grid-community';
 import { AgGridReact } from 'ag-grid-react';
-import { agGridIconMap } from '@/ui/agGridIcons';
-import { PUBLIC_ROUTES } from '@/config/publicRoutes';
-import { HeroSection } from '@/components/frontend-pages/shared/sections';
-import { useLanguage } from '@/context/LanguageContext';
-import { CustomizerContext } from '@/context/CustomizerContext';
-import {
-  getAllSampleRecords,
-  getRecordTypeCounts,
-  getLanguageCounts,
-  getDecadeCounts,
-  getClergyCounts,
-  type UnifiedSampleRecord,
-} from '@/components/frontend-pages/shared/sampleExplorerAdapter';
+import React, { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
 
 // ── Types & Constants ──
 type ViewMode = 'table' | 'cards' | 'timeline' | 'analytics';

@@ -8,18 +8,25 @@
  *      preview and one-click apply for auto-wiring EditableText.
  */
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
-import {
-  Box, Typography, Button, Stack, TextField,
-  CircularProgress, Alert,
-  InputAdornment, FormControlLabel, Switch, Tab, Tabs,
-} from '@mui/material';
-import { IconRefresh, IconSearch, IconWand } from '@tabler/icons-react';
 import apiClient from '@/api/utils/axiosInstance';
 import PageContainer from '@/shared/ui/PageContainer';
-import type { AuditResponse } from './pageEditAuditTypes';
-import { SummaryBar, AuditTable } from './AuditTab';
+import {
+    Alert,
+    Box,
+    Button,
+    CircularProgress,
+    FormControlLabel,
+    InputAdornment,
+    Stack,
+    Switch, Tab, Tabs,
+    TextField,
+    Typography,
+} from '@mui/material';
+import { IconRefresh, IconSearch, IconWand } from '@tabler/icons-react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { AuditTable, SummaryBar } from './AuditTab';
 import CandidatesPanel from './CandidatesTab';
+import type { AuditResponse } from './pageEditAuditTypes';
 
 
 // ── Component ───────────────────────────────────────────────────────────

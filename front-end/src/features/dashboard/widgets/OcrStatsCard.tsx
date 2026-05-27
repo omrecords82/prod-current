@@ -1,12 +1,12 @@
-import { useEffect, useState } from 'react';
-import { Box, Paper, Skeleton, Typography, useTheme } from '@mui/material';
-import Grid2 from '@/components/compat/Grid2';
-import {
-  IconScan,
-  IconCalendarStats,
-  IconClipboardCheck,
-} from '@tabler/icons-react';
 import { apiClient } from '@/api/utils/axiosInstance';
+import Grid2 from '@/components/compat/Grid2';
+import { Box, Paper, Skeleton, Typography, useTheme } from '@mui/material';
+import {
+    IconCalendarStats,
+    IconClipboardCheck,
+    IconScan,
+} from '@tabler/icons-react';
+import { useEffect, useState } from 'react';
 
 interface OcrStats {
   totalDigitized: number;

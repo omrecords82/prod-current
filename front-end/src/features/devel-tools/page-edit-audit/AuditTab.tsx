@@ -3,19 +3,37 @@
  * orphaned override cleanup, shared sections, and rule results.
  * Extracted from PageEditAuditPage.tsx
  */
-import { useState } from 'react';
+import apiClient from '@/api/utils/axiosInstance';
 import {
-  Box, Typography, Button, Chip, Stack, Paper, Alert,
-  Table, TableHead, TableBody, TableRow, TableCell, TableContainer,
-  CircularProgress, IconButton, Tooltip, Collapse,
-  Checkbox, Dialog, DialogTitle, DialogContent, DialogActions,
+    Alert,
+    Box,
+    Button,
+    Checkbox,
+    Chip,
+    CircularProgress,
+    Collapse,
+    Dialog,
+    DialogActions,
+    DialogContent,
+    DialogTitle,
+    IconButton,
+    Paper,
+    Stack,
+    Table,
+    TableBody,
+    TableCell, TableContainer,
+    TableHead,
+    TableRow,
+    Tooltip,
+    Typography,
 } from '@mui/material';
 import {
-  IconChevronDown, IconChevronUp,
-  IconAlertTriangle, IconCircleCheck, IconCircleX, IconTrash,
+    IconAlertTriangle,
+    IconChevronDown, IconChevronUp,
+    IconCircleCheck, IconCircleX, IconTrash,
 } from '@tabler/icons-react';
-import apiClient from '@/api/utils/axiosInstance';
-import type { PageAudit, AuditSummary } from './pageEditAuditTypes';
+import { useState } from 'react';
+import type { AuditSummary, PageAudit } from './pageEditAuditTypes';
 import { CLASSIFICATION_CONFIG } from './pageEditAuditTypes';
 
 // ── Detail Field (shared helper) ──────────────────────────────────────

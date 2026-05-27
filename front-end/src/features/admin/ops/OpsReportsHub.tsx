@@ -4,44 +4,41 @@
  * Browse and view OM-Ops artifacts (reports, logs, analysis) from the admin UI
  */
 
-import React, { useState, useEffect } from 'react';
 import { apiClient as axiosApiClient } from '@/api/utils/axiosInstance';
 import {
-  Box,
-  Card,
-  CardContent,
-  Typography,
-  TextField,
-  Select,
-  MenuItem,
-  FormControl,
-  InputLabel,
-  List,
-  ListItem,
-  ListItemText,
-  ListItemSecondaryAction,
-  IconButton,
-  Chip,
-  Button,
-  Paper,
-  Tabs,
-  Tab,
-  CircularProgress,
-  Alert,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-} from '@mui/material';
-import {
-  Search as SearchIcon,
-  OpenInNew as OpenInNewIcon,
-  FileDownload as DownloadIcon,
-  Code as CodeIcon,
-  Description as DescriptionIcon,
-  Assessment as AssessmentIcon,
+    Code as CodeIcon,
+    Description as DescriptionIcon,
+    OpenInNew as OpenInNewIcon,
+    Search as SearchIcon
 } from '@mui/icons-material';
-import { apiClient } from '@/shared/lib/apiClient';
+import {
+    Alert,
+    Box,
+    Button,
+    Card,
+    CardContent,
+    Chip,
+    CircularProgress,
+    Dialog,
+    DialogActions,
+    DialogContent,
+    DialogTitle,
+    FormControl,
+    IconButton,
+    InputLabel,
+    List,
+    ListItem,
+    ListItemSecondaryAction,
+    ListItemText,
+    MenuItem,
+    Paper,
+    Select,
+    Tab,
+    Tabs,
+    TextField,
+    Typography,
+} from '@mui/material';
+import React, { useEffect, useState } from 'react';
 
 interface ArtifactFile {
   name: string;
@@ -82,7 +79,7 @@ const ARTIFACT_TYPES = [
   { value: 'build', label: 'Build' },
 ];
 
-export default function OpsReportsHub() {
+const OpsReportsHub: React.FC = () => {
   const [artifacts, setArtifacts] = useState<Artifact[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -364,4 +361,6 @@ export default function OpsReportsHub() {
       </Dialog>
     </Box>
   );
-}
+};
+
+export default OpsReportsHub;

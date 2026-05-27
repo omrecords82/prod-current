@@ -76,7 +76,7 @@ function mapFuneralRecords(rows: any[], churchName: string): AnyRecord[] {
   }));
 }
 
-export default function RecordsManagement() {
+const RecordsManagement: React.FC = () => {
   const { churchMetadata, activeChurchId } = useChurch();
   const churchName = churchMetadata?.church_name_display || churchMetadata?.church_name || "St. Peter & Paul";
   const churchId = activeChurchId || churchMetadata?.church_id || 46;
@@ -284,4 +284,6 @@ export default function RecordsManagement() {
       </Snackbar>
     </div>
   );
-}
+};
+
+export default RecordsManagement;

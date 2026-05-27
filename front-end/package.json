@@ -17,6 +17,9 @@
     "build:dev": "vite build --mode development",
     "preview": "vite preview --port 5175 --host 0.0.0.0",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
+    "audit:graph": "dependency-cruiser src --include-only \"^src/\" --output-type dot | dot -T svg > dependency-graph.svg",
+    "audit:text": "dependency-cruiser src --include-only \"^src/\" --output-type text",
+    "audit:dup": "jscpd ./src --reporters console,html",
     "check-icons": "bash -c 'HITS=$(grep -rn \"from .lucide-react.\" src/features/ --include=\"*.tsx\" --include=\"*.ts\" 2>/dev/null || true); if [ -n \"$HITS\" ]; then echo \"❌ Direct lucide-react imports found in feature code:\"; echo \"$HITS\"; echo \"\"; echo \"Use @/ui/icons or @/shared/ui/icons instead.\"; exit 1; fi; echo \"✅ Icon imports OK\"'"
   },
   "dependencies": {
@@ -92,6 +95,7 @@
     "cytoscape-popper": "^2.0.0",
     "date-fns": "^2.30.0",
     "dayjs": "^1.11.13",
+    "dependency-cruiser": "^17.4.2",
     "emoji-picker-react": "^4.5.16",
     "formik": "^2.4.5",
     "framer-motion": "^12.23.9",

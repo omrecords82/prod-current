@@ -6,42 +6,41 @@
  * frontend rebuilds from the web UI.
  */
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import apiClient from '@/api/utils/axiosInstance';
+import Breadcrumb from '@/layouts/full/shared/breadcrumb/Breadcrumb';
+import PageContainer from '@/shared/ui/PageContainer';
 import {
-  Box,
-  Card,
-  CardContent,
-  Typography,
-  Button,
-  Alert,
-  CircularProgress,
-  Stack,
-  Chip,
-  Divider,
-  Paper,
-  LinearProgress,
-  Tooltip,
-  IconButton,
-  Collapse,
+    Alert,
+    Box,
+    Button,
+    Card,
+    CardContent,
+    Chip,
+    CircularProgress,
+    Collapse,
+    Divider,
+    IconButton,
+    LinearProgress,
+    Paper,
+    Stack,
+    Tooltip,
+    Typography,
 } from '@mui/material';
 import {
-  IconBuildingFactory2,
-  IconRefresh,
-  IconAlertTriangle,
-  IconCheck,
-  IconX,
-  IconClock,
-  IconCode,
-  IconFileText,
-  IconBell,
-  IconPlayerPlay,
-  IconChevronDown,
-  IconChevronUp,
-  IconTerminal2,
+    IconAlertTriangle,
+    IconBell,
+    IconBuildingFactory2,
+    IconCheck,
+    IconChevronUp,
+    IconClock,
+    IconCode,
+    IconFileText,
+    IconPlayerPlay,
+    IconRefresh,
+    IconTerminal2,
+    IconX
 } from '@tabler/icons-react';
-import apiClient from '@/api/utils/axiosInstance';
-import PageContainer from '@/shared/ui/PageContainer';
-import Breadcrumb from '@/layouts/full/shared/breadcrumb/Breadcrumb';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 
 // ── Types ──
 
@@ -95,7 +94,7 @@ function formatDuration(ms: number): string {
 
 // ── Main Component ──
 
-export default function CodeChangeDetection() {
+const CodeChangeDetection: React.FC = () => {
   const [changes, setChanges] = useState<ContentChange[]>([]);
   const [builds, setBuilds] = useState<BuildRecord[]>([]);
   const [buildStatus, setBuildStatus] = useState<BuildStatus>({ building: false });
@@ -463,4 +462,6 @@ function ChangeRow({ change }: { change: ContentChange }) {
       )}
     </Box>
   );
-}
+};
+
+export default CodeChangeDetection;

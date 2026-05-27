@@ -10,23 +10,23 @@
  */
 
 import {
-  Language as WebIcon,
-  Phone as PhoneIcon,
-  Place as PlaceIcon,
+    Phone as PhoneIcon,
+    Place as PlaceIcon,
+    Language as WebIcon,
 } from '@mui/icons-material';
 import {
-  alpha,
-  Box,
-  Chip,
-  Link,
-  Stack,
-  Typography,
-  useTheme,
+    alpha,
+    Box,
+    Chip,
+    Link,
+    Stack,
+    Typography,
+    useTheme,
 } from '@mui/material';
 import type { GeoJSONSource } from 'mapbox-gl';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import Map, { Layer, NavigationControl, Popup, Source } from 'react-map-gl';
 import type { MapRef } from 'react-map-gl';
+import Map, { Layer, NavigationControl, Popup, Source } from 'react-map-gl';
 
 import 'mapbox-gl/dist/mapbox-gl.css';
 
@@ -172,14 +172,14 @@ const STATUS_CONFIG: Record<string, { label: string; color: string }> = {
 
 // ─── Component ──────────────────────────────────────────────────
 
-export default function ParishDetailMap({
+const ParishDetailMap: React.FC<ParishDetailMapProps> = ({
   geoData,
   selectedParishId,
   affiliationFilter,
   statusFilter,
   onSelectParish,
   stateCode,
-}: ParishDetailMapProps) {
+}) => {
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
   const mapRef = useRef<MapRef>(null);
@@ -488,4 +488,6 @@ export default function ParishDetailMap({
       </Box>
     </Box>
   );
-}
+};
+
+export default ParishDetailMap;

@@ -4,21 +4,40 @@
  * CandidateDetail, and WireEditModePanel.
  * Extracted from PageEditAuditPage.tsx
  */
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import apiClient from '@/api/utils/axiosInstance';
 import {
-  Box, Typography, Button, Chip, Stack, Paper, Alert,
-  Table, TableHead, TableBody, TableRow, TableCell, TableContainer,
-  CircularProgress, IconButton, Tooltip, Collapse,
-  Dialog, DialogTitle, DialogContent, DialogActions,
+    Alert,
+    Box,
+    Button, Chip,
+    CircularProgress,
+    Collapse,
+    Dialog,
+    DialogActions,
+    DialogContent,
+    DialogTitle,
+    IconButton,
+    Paper,
+    Stack,
+    Table,
+    TableBody,
+    TableCell, TableContainer,
+    TableHead,
+    TableRow,
+    Tooltip,
+    Typography,
 } from '@mui/material';
 import {
-  IconRefresh, IconChevronDown, IconChevronUp,
-  IconCircleCheck, IconEye, IconPlayerPlay, IconCode,
+    IconChevronDown, IconChevronUp,
+    IconCircleCheck,
+    IconCode,
+    IconEye, IconPlayerPlay,
+    IconRefresh,
 } from '@tabler/icons-react';
-import apiClient from '@/api/utils/axiosInstance';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import type {
-  Candidate, CandidateResponse, CandidateSummary,
-  WirePreviewResult, WireApplyResult,
+    Candidate, CandidateResponse, CandidateSummary,
+    WireApplyResult,
+    WirePreviewResult,
 } from './pageEditAuditTypes';
 import { CANDIDATE_CLASS_CONFIG } from './pageEditAuditTypes';
 

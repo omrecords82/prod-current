@@ -1,8 +1,8 @@
-import { FC } from 'react';
-import { Box, Container, Typography, Button } from '@mui/material';
-import { Link } from 'react-router-dom';
 import ErrorImg from '@/assets/images/backgrounds/errorimg.svg';
 import { useLanguage } from '@/context/LanguageContext';
+import { Box, Button, Container, Typography } from '@mui/material';
+import { FC } from 'react';
+import { Link } from 'react-router-dom';
 
 const Error: FC = () => {
   const { t } = useLanguage();

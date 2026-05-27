@@ -1,8 +1,8 @@
-import React, { useEffect, useState } from 'react';
 import { apiClient } from '@/api/utils/axiosInstance';
-import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Alert, Button, Box, CircularProgress, Typography } from '@mui/material';
 import { Settings } from '@mui/icons-material';
+import { Alert, Box, Button, CircularProgress, Typography } from '@mui/material';
+import React, { useEffect, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 
 interface OcrSetupGateProps {
   children: React.ReactNode;
@@ -13,7 +13,7 @@ interface OcrSetupGateProps {
  * Shows setup CTA if setup is incomplete
  * Automatically extracts church_id from URL query params
  */
-export default function OcrSetupGate({ children }: OcrSetupGateProps) {
+const OcrSetupGate: React.FC<OcrSetupGateProps> = ({ children }) => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const churchId = parseInt(searchParams.get('church_id') || '46');
@@ -77,4 +77,6 @@ export default function OcrSetupGate({ children }: OcrSetupGateProps) {
   }
 
   return <>{children}</>;
-}
+};
+
+export default OcrSetupGate;

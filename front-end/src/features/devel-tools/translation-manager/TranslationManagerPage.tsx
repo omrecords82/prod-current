@@ -1,53 +1,52 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import apiClient from '@/api/utils/axiosInstance';
+import Breadcrumb from '@/layouts/full/shared/breadcrumb/Breadcrumb';
+import PageContainer from '@/shared/ui/PageContainer';
 import {
-  Alert,
-  Box,
-  Button,
-  Chip,
-  CircularProgress,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
-  FormControl,
-  InputAdornment,
-  InputLabel,
-  LinearProgress,
-  MenuItem,
-  Pagination,
-  Paper,
-  Select,
-  Snackbar,
-  Stack,
-  Tab,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Tabs,
-  TextField,
-  Tooltip,
-  Typography,
-  useTheme,
+    Alert,
+    Box,
+    Button,
+    Chip,
+    CircularProgress,
+    Dialog,
+    DialogActions,
+    DialogContent,
+    DialogTitle,
+    FormControl,
+    InputAdornment,
+    InputLabel,
+    LinearProgress,
+    MenuItem,
+    Pagination,
+    Paper,
+    Select,
+    Snackbar,
+    Stack,
+    Tab,
+    Table,
+    TableBody,
+    TableCell,
+    TableContainer,
+    TableHead,
+    TableRow,
+    Tabs,
+    TextField,
+    Tooltip,
+    Typography,
+    useTheme,
 } from '@mui/material';
 import {
-  IconCheck,
-  IconEdit,
-  IconEye,
-  IconLanguage,
-  IconRefresh,
-  IconSearch,
-  IconAlertTriangle,
-  IconCircleCheck,
-  IconClock,
-  IconQuestionMark,
-  IconFileText,
+    IconAlertTriangle,
+    IconCheck,
+    IconCircleCheck,
+    IconEdit,
+    IconEye,
+    IconFileText,
+    IconLanguage,
+    IconQuestionMark,
+    IconRefresh,
+    IconSearch
 } from '@tabler/icons-react';
-import PageContainer from '@/shared/ui/PageContainer';
-import Breadcrumb from '@/layouts/full/shared/breadcrumb/Breadcrumb';
-import apiClient from '@/api/utils/axiosInstance';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 // ─── Types ───────────────────────────────────────────────────────────
 
@@ -116,7 +115,7 @@ const PAGE_SIZE = 50;
 
 // ─── Component ───────────────────────────────────────────────────────
 
-export default function TranslationManagerPage() {
+const TranslationManagerPage: React.FC = () => {
   const theme = useTheme();
 
   // Data state
@@ -622,4 +621,6 @@ export default function TranslationManagerPage() {
       </Snackbar>
     </PageContainer>
   );
-}
+};
+
+export default TranslationManagerPage;

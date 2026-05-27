@@ -4,7 +4,7 @@ import { Download, Eye, FileText, History, MoreHorizontal, Pencil } from "@/ui/i
 import { Menu, MenuItem } from "@mui/material";
 import { ColDef, ICellRendererParams, themeQuartz } from "ag-grid-community";
 import { AgGridReact } from "ag-grid-react";
-import { createElement, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import React, { createElement, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import type { AnyRecord, Density, RecordType } from "../types";
 import { StatusBadge } from "./StatusBadge";
 

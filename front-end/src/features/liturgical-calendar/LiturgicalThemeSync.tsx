@@ -4,10 +4,13 @@
  */
 
 import { useAuth } from '@/context/AuthContext';
+import React from 'react';
 import { useLiturgicalAutoTheme } from './hooks/useLiturgicalAutoTheme';
 
-export function LiturgicalThemeSync() {
+const LiturgicalThemeSync: React.FC = () => {
   const { authenticated } = useAuth();
   useLiturgicalAutoTheme(authenticated);
   return null;
-}
+};
+
+export default LiturgicalThemeSync;
