@@ -1,8 +1,8 @@
 import {
-  IconHome,
-  IconPoint,
-  IconApps,
-  IconAppWindow,
+    IconApps,
+    IconAppWindow,
+    IconHome,
+    IconPoint,
 } from '@tabler/icons-react';
 import { uniqueId } from 'lodash';
 
@@ -20,12 +20,6 @@ const Menuitems = [
         href: '/dashboards/modern',
         chip: 'New',
         chipColor: 'secondary',
-      },
-      {
-        id: uniqueId(),
-        title: 'eCommerce',
-        icon: IconPoint,
-        href: '/dashboards/ecommerce',
       },
     ],
   },

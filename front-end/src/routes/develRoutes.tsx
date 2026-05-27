@@ -29,7 +29,6 @@ const RouterMenuStudio = Loadable(lazy(() => import('../features/devel-tools/Rou
 const DynamicRecordsInspector = Loadable(lazy(() => import('../features/records-centralized/components/dynamic/DynamicRecordsInspector')));
 const RefactorConsole = Loadable(lazy(() => import('../features/devel-tools/refactor-console/RefactorConsole')));
 const ButtonShowcase = Loadable(lazy(() => import('../features/devel-tools/button-showcase/ButtonShowcase')));
-const BasicRefactor = Loadable(lazy(() => import('../features/devel-tools/basic-refactor/BasicRefactor')));
 const OMMagicImage = Loadable(lazy(() => import('../features/devel-tools/om-magic-image/om-magic-image')));
 const USChurchMapPage = Loadable(lazy(() => import('../features/devel-tools/us-church-map/USChurchMapPage')));
 const RepoOpsPage = Loadable(lazy(() => import('../features/devel-tools/repo-ops/RepoOpsPage')));
@@ -75,7 +74,6 @@ export const develRoutes = [
   guardedRoute('/devel/dynamic-records', <DynamicRecordsInspector />, ROLE_SUPER_ADMIN),
   guardedRoute('/devel-tools/refactor-console', <RefactorConsole />, ROLE_SUPER_ADMIN),
   guardedRoute('/devel-tools/button-showcase', <ButtonShowcase />, ROLE_SUPER_ADMIN),
-  guardedRoute('/devel-tools/basic-refactor', <BasicRefactor />, ROLE_SUPER_ADMIN),
   guardedRoute('/devel-tools/om-magic-image', <OMMagicImage />, ROLE_SUPER_ADMIN),
   redirectRoute('/devel-tools/crm', '/admin/control-panel'),
   guardedRoute('/devel-tools/us-church-map', <USChurchMapPage />, ROLE_ADMIN_SUPER),
