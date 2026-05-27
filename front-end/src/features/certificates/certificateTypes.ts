@@ -117,6 +117,7 @@ export interface RecordData {
   parents?: string;
 }
 
+
 // Coerce date-ish input (Date, ISO string, YYYY-MM-DD, MySQL TIMESTAMP)
 // to a UTC Date so getUTCMonth/Date/FullYear match what the DB stored
 // regardless of browser timezone.
@@ -146,6 +147,7 @@ export function formatDateYY(raw: any): string {
   if (!d) return '';
   return String(d.getUTCFullYear()).slice(-2);
 }
+
 
 // Split a combined "A & B" / "A, B" / "A; B" string into [first, second].
 export function splitParents(combined: string | undefined | null): [string, string] {
