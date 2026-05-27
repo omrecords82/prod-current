@@ -3,46 +3,47 @@
  * Self-contained with own state, handlers, and dialogs.
  * Extracted from LogSearch.tsx
  */
-import React, { useState, useCallback, useEffect } from 'react';
-import {
-  Alert, alpha,
-  Box,
-  Button,
-  Card, CardContent,
-  Chip,
-  CircularProgress,
-  Dialog, DialogActions, DialogContent, DialogTitle,
-  FormControl,
-  Grid,
-  IconButton,
-  InputAdornment,
-  InputLabel,
-  MenuItem,
-  Pagination,
-  Paper,
-  Select,
-  Snackbar,
-  Stack,
-  Table, TableBody, TableCell, TableContainer,
-  TableHead, TableRow,
-  TextField,
-  Tooltip,
-  Typography,
-  useTheme,
-} from '@mui/material';
-import {
-  IconActivity,
-  IconCalendar,
-  IconEye,
-  IconFilter,
-  IconRefresh,
-  IconSearch,
-  IconTrash,
-  IconUser,
-} from '@tabler/icons-react';
-import dayjs from 'dayjs';
 import { adminAPI } from '@/api/admin.api';
 import { useAuth } from '@/context/AuthContext';
+import useDataTableState from '@/hooks/useDataTableState';
+import {
+    Alert, alpha,
+    Box,
+    Button,
+    Card, CardContent,
+    Chip,
+    CircularProgress,
+    Dialog, DialogActions, DialogContent, DialogTitle,
+    FormControl,
+    Grid,
+    IconButton,
+    InputAdornment,
+    InputLabel,
+    MenuItem,
+    Pagination,
+    Paper,
+    Select,
+    Snackbar,
+    Stack,
+    Table, TableBody, TableCell, TableContainer,
+    TableHead, TableRow,
+    TextField,
+    Tooltip,
+    Typography,
+    useTheme,
+} from '@mui/material';
+import {
+    IconActivity,
+    IconCalendar,
+    IconEye,
+    IconFilter,
+    IconRefresh,
+    IconSearch,
+    IconTrash,
+    IconUser,
+} from '@tabler/icons-react';
+import dayjs from 'dayjs';
+import React, { useCallback, useEffect, useState } from 'react';
 import type { ActivityLogData, ActivityLogStats } from './logSearchTypes';
 import { STAT_CARD } from './logSearchTypes';
 
@@ -72,16 +73,13 @@ const ActivityLogsTab: React.FC<ActivityLogsTabProps> = ({ active }) => {
   const theme = useTheme();
   const { hasRole } = useAuth();
 
+  const table = useDataTableState<ActivityLogData>({ pageSize: ACTIVITY_PER_PAGE });
   const [activities, setActivities] = useState<ActivityLogData[]>([]);
   const [activityStats, setActivityStats] = useState<ActivityLogStats | null>(null);
   const [topActions, setTopActions] = useState<Array<{ action: string; count: number }>>([]);
-  const [activityLoading, setActivityLoading] = useState(false);
-  const [activitySearch, setActivitySearch] = useState('');
   const [activityActionFilter, setActivityActionFilter] = useState('');
   const [activityDateFrom, setActivityDateFrom] = useState('');
   const [activityDateTo, setActivityDateTo] = useState('');
-  const [activityPage, setActivityPage] = useState(1);
-  const [activityTotalPages, setActivityTotalPages] = useState(1);
   const [selectedActivity, setSelectedActivity] = useState<ActivityLogData | null>(null);
   const [activityViewDialog, setActivityViewDialog] = useState(false);
   const [cleanupDialog, setCleanupDialog] = useState(false);
@@ -92,24 +90,24 @@ const ActivityLogsTab: React.FC<ActivityLogsTabProps> = ({ active }) => {
     setSnackbar({ open: true, message, severity });
 
   const fetchActivities = useCallback(async () => {
-    setActivityLoading(true);
+    table.setLoading(true);
     try {
       const filters: any = {
-        search: activitySearch || undefined,
+        search: table.searchTerm || undefined,
         action_filter: activityActionFilter || undefined,
         date_from: activityDateFrom || undefined,
         date_to: activityDateTo || undefined,
-        limit: ACTIVITY_PER_PAGE,
-        offset: (activityPage - 1) * ACTIVITY_PER_PAGE,
+        limit: table.pageSize,
+        offset: table.offset,
       };
       const response: any = await adminAPI.activityLogs.getAll(filters);
       setActivities(response.activities || []);
       setActivityStats(response.stats);
       setTopActions(response.topActions || []);
-      setActivityTotalPages(response.pagination?.pages || 1);
+      table.setTotalPages(response.pagination?.pages || 1);
     } catch (err) { console.error('Failed to fetch activities:', err); showSnack('Failed to load activity logs', 'error'); }
-    finally { setActivityLoading(false); }
-  }, [activitySearch, activityActionFilter, activityDateFrom, activityDateTo, activityPage]);
+    finally { table.setLoading(false); }
+  }, [table.searchTerm, activityActionFilter, activityDateFrom, activityDateTo, table.page, table.offset, table.pageSize]);
 
   const handleViewActivity = async (activity: ActivityLogData) => {
     try {
@@ -130,7 +128,7 @@ const ActivityLogsTab: React.FC<ActivityLogsTabProps> = ({ active }) => {
 
   useEffect(() => {
     if (active) fetchActivities();
-  }, [active, activityPage, activitySearch, activityActionFilter, activityDateFrom, activityDateTo]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [active, table.page, table.searchTerm, activityActionFilter, activityDateFrom, activityDateTo]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!active) return null;
 
@@ -182,7 +180,7 @@ const ActivityLogsTab: React.FC<ActivityLogsTabProps> = ({ active }) => {
           <Grid container spacing={2} alignItems="center">
             <Grid size={{ xs: 12, md: 3 }}>
               <TextField fullWidth size="small" label="Search" placeholder="Actions, users, changes..."
-                value={activitySearch} onChange={e => setActivitySearch(e.target.value)}
+                value={table.searchTerm} onChange={e => table.setSearchTerm(e.target.value)}
                 InputProps={{ startAdornment: <InputAdornment position="start"><IconSearch size={18} /></InputAdornment> }}
               />
             </Grid>
@@ -207,8 +205,8 @@ const ActivityLogsTab: React.FC<ActivityLogsTabProps> = ({ active }) => {
               <TextField fullWidth size="small" label="To" type="date" value={activityDateTo} onChange={e => setActivityDateTo(e.target.value)} InputLabelProps={{ shrink: true }} />
             </Grid>
             <Grid size={{ xs: 12, md: 3 }} sx={{ display: 'flex', gap: 1 }}>
-              <Button variant="outlined" startIcon={<IconRefresh size={18} />} onClick={fetchActivities} disabled={activityLoading}>Refresh</Button>
-              <Button variant="outlined" onClick={() => { setActivitySearch(''); setActivityActionFilter(''); setActivityDateFrom(''); setActivityDateTo(''); setActivityPage(1); }}>Clear</Button>
+              <Button variant="outlined" startIcon={<IconRefresh size={18} />} onClick={fetchActivities} disabled={table.loading}>Refresh</Button>
+              <Button variant="outlined" onClick={() => { table.setSearchTerm(''); setActivityActionFilter(''); setActivityDateFrom(''); setActivityDateTo(''); table.resetPage(); }}>Clear</Button>
               {hasRole(['super_admin']) && (
                 <Button variant="outlined" color="warning" startIcon={<IconTrash size={18} />} onClick={() => setCleanupDialog(true)}>Cleanup</Button>
               )}
@@ -232,7 +230,7 @@ const ActivityLogsTab: React.FC<ActivityLogsTabProps> = ({ active }) => {
               </TableRow>
             </TableHead>
             <TableBody>
-              {activityLoading ? (
+              {table.loading ? (
                 <TableRow><TableCell colSpan={6} align="center" sx={{ py: 6 }}><CircularProgress /><Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>Loading activities...</Typography></TableCell></TableRow>
               ) : !activities.length ? (
                 <TableRow><TableCell colSpan={6} align="center" sx={{ py: 6 }}><IconActivity size={40} style={{ opacity: 0.2 }} /><Typography color="text.secondary" sx={{ mt: 1 }}>No activity logs found</Typography></TableCell></TableRow>
@@ -261,9 +259,9 @@ const ActivityLogsTab: React.FC<ActivityLogsTabProps> = ({ active }) => {
             </TableBody>
           </Table>
         </TableContainer>
-        {activityTotalPages > 1 && (
+        {table.totalPages > 1 && (
           <Stack direction="row" justifyContent="center" sx={{ p: 2, borderTop: 1, borderColor: 'divider' }}>
-            <Pagination count={activityTotalPages} page={activityPage} onChange={(_, p) => setActivityPage(p)} color="primary" size="small" />
+            <Pagination count={table.totalPages} page={table.page} onChange={(_, p) => table.setPage(p)} color="primary" size="small" />
           </Stack>
         )}
       </Card>

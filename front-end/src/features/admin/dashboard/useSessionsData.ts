@@ -5,8 +5,9 @@
  * Owns 7 of the 16 useStates that previously lived in SessionsTab.tsx
  * (STATE_EXPLOSION refactor — OMD-838).
  */
-import { useCallback, useEffect, useState } from 'react';
 import { adminAPI } from '@/api/admin.api';
+import useDataTableState from '@/hooks/useDataTableState';
+import { useCallback, useEffect, useState } from 'react';
 import type { SessionData, SessionStats } from './logSearchTypes';
 
 const SESSION_PER_PAGE = 20;
@@ -33,22 +34,19 @@ interface UseSessionsDataOptions {
 }
 
 export function useSessionsData({ active, onError }: UseSessionsDataOptions): UseSessionsDataResult {
+  const table = useDataTableState<SessionData>({ pageSize: SESSION_PER_PAGE });
   const [sessions, setSessions] = useState<SessionData[]>([]);
   const [stats, setStats] = useState<SessionStats | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<SessionStatusFilter>('all');
-  const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
 
   const fetchSessions = useCallback(async () => {
-    setLoading(true);
+    table.setLoading(true);
     try {
       const filters: any = {
-        search: search || undefined,
+        search: table.searchTerm || undefined,
         status: statusFilter === 'all' ? undefined : statusFilter,
-        limit: SESSION_PER_PAGE,
-        offset: (page - 1) * SESSION_PER_PAGE,
+        limit: table.pageSize,
+        offset: table.offset,
       };
       const response = await adminAPI.sessions.getAll(filters);
       const transformed = (response.sessions || []).map((s: any) => {
@@ -70,13 +68,13 @@ export function useSessionsData({ active, onError }: UseSessionsDataOptions): Us
         };
       });
       setSessions(transformed);
-      setTotalPages(Math.ceil((response.total || transformed.length) / SESSION_PER_PAGE));
+      table.setTotalPages(Math.ceil((response.total || transformed.length) / SESSION_PER_PAGE));
     } catch (err) {
       onError?.('Failed to load sessions');
     } finally {
-      setLoading(false);
+      table.setLoading(false);
     }
-  }, [search, statusFilter, page, onError]);
+  }, [table.searchTerm, statusFilter, table.page, table.offset, table.pageSize, onError]);
 
   const fetchStats = useCallback(async () => {
     try {
@@ -107,19 +105,19 @@ export function useSessionsData({ active, onError }: UseSessionsDataOptions): Us
       fetchSessions();
       fetchStats();
     }
-  }, [active, search, statusFilter, page]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [active, table.searchTerm, statusFilter, table.page]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return {
     sessions,
     stats,
-    loading,
-    search,
-    setSearch,
+    loading: table.loading,
+    search: table.searchTerm,
+    setSearch: table.setSearchTerm,
     statusFilter,
     setStatusFilter,
-    page,
-    setPage,
-    totalPages,
+    page: table.page,
+    setPage: table.setPage,
+    totalPages: table.totalPages,
     refresh,
   };
 }
