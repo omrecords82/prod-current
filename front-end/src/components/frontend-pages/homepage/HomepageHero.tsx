@@ -1,9 +1,8 @@
+import { PUBLIC_ROUTES } from '@/config/publicRoutes';
+import { useLanguage } from '@/context/LanguageContext';
+import { ArrowRight } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight } from 'lucide-react';
-import { PUBLIC_ROUTES } from '@/config/publicRoutes';
-import EditableText from '@/components/frontend-pages/shared/EditableText';
-import { useLanguage } from '@/context/LanguageContext';
 
 const AMBIENT_KEYFRAMES = `
   @keyframes ambientTravelRight1 {
@@ -37,38 +36,38 @@ const HomepageHero = () => {
       <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden="true">
         {/* Warm golden light — left to right */}
         <div
-          className="absolute top-20 -left-40 w-[550px] h-[550px] rounded-full opacity-35"
+          className="absolute top-20 -left-40 w-[550px] h-[550px] rounded-full opacity-10"
           style={{
             background: 'radial-gradient(circle, rgba(218,165,32,0.9) 0%, rgba(218,165,32,0.4) 35%, transparent 65%)',
             filter: 'blur(50px)',
-            animation: 'ambientTravelRight1 22s ease-in-out infinite',
+            animation: 'ambientTravelRight1 60s ease-in-out infinite',
           }}
         />
         {/* Soft violet — right to left */}
         <div
-          className="absolute top-1/3 -right-60 w-[650px] h-[650px] rounded-full opacity-30"
+          className="absolute top-1/3 -right-60 w-[650px] h-[650px] rounded-full opacity-8"
           style={{
             background: 'radial-gradient(circle, rgba(180,140,220,1) 0%, rgba(180,140,220,0.5) 35%, transparent 65%)',
             filter: 'blur(55px)',
-            animation: 'ambientTravelLeft1 28s ease-in-out infinite',
+            animation: 'ambientTravelLeft1 75s ease-in-out infinite',
           }}
         />
         {/* Cool blue-white — left to right (slower) */}
         <div
-          className="absolute bottom-32 -left-40 w-[500px] h-[500px] rounded-full opacity-25"
+          className="absolute bottom-32 -left-40 w-[500px] h-[500px] rounded-full opacity-7"
           style={{
             background: 'radial-gradient(circle, rgba(230,240,250,0.85) 0%, rgba(230,240,250,0.4) 35%, transparent 65%)',
             filter: 'blur(60px)',
-            animation: 'ambientTravelRight2 32s ease-in-out infinite',
+            animation: 'ambientTravelRight2 90s ease-in-out infinite',
           }}
         />
         {/* Secondary golden accent — opposite direction */}
         <div
-          className="absolute top-2/3 -right-40 w-[400px] h-[400px] rounded-full opacity-20"
+          className="absolute top-2/3 -right-40 w-[400px] h-[400px] rounded-full opacity-6"
           style={{
             background: 'radial-gradient(circle, rgba(255,200,100,0.8) 0%, rgba(255,200,100,0.3) 40%, transparent 70%)',
             filter: 'blur(55px)',
-            animation: 'ambientTravelLeft2 38s ease-in-out infinite',
+            animation: 'ambientTravelLeft2 100s ease-in-out infinite',
           }}
         />
       </div>
@@ -77,20 +76,9 @@ const HomepageHero = () => {
 
       <div className="relative z-10 max-w-7xl mx-auto px-6 py-24 md:py-32">
         <div className="grid lg:grid-cols-2 gap-12 items-center">
-          <div>
-            <div className="inline-flex items-center gap-2 bg-[rgba(212,175,55,0.15)] dark:bg-[rgba(212,175,55,0.2)] px-4 py-2 rounded-full mb-6">
-              <span className="w-2 h-2 bg-[#d4af37] rounded-full"></span>
-              <EditableText contentKey="hero.badge" as="span" className="font-['Inter'] text-[14px] text-[#d4af37]">
-                {t('home.hero_badge')}
-              </EditableText>
-            </div>
-            <EditableText contentKey="hero.title" as="h1" className="font-['Georgia'] text-5xl md:text-6xl leading-tight mb-6">
-              {t('home.hero_title')}
-            </EditableText>
-            <EditableText contentKey="hero.subtitle" as="p" className="font-['Inter'] text-xl text-[rgba(255,255,255,0.9)] leading-relaxed mb-8" multiline>
-              {t('home.hero_subtitle')}
-            </EditableText>
-            <div className="flex flex-col sm:flex-row gap-4">
+          <div className="flex flex-col">
+            <WelcomeRotator />
+            <div className="flex flex-col sm:flex-row gap-4 mt-8">
               <Link
                 to={PUBLIC_ROUTES.TOUR}
                 className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-[#d4af37] text-[#2d1b4e] rounded-lg font-['Inter'] font-medium text-[16px] hover:bg-[#c29d2f] transition-colors no-underline"
@@ -111,6 +99,74 @@ const HomepageHero = () => {
         </div>
       </div>
     </section>
+  );
+};
+
+// Left-side welcome rotator: cycles through welcome messages
+const WELCOME_SLIDES = [
+  {
+    title: 'WELCOME TO ORTHODOX METRICS',
+    desc: 'Preserving Orthodox Christian records across languages, generations, and jurisdictions.',
+  },
+  {
+    title: 'YOUR PARISH HAS A UNIQUE HISTORY.',
+    desc: 'Orthodox Metrics helps keep that history alive, secure, and accessible. Parish priests and deacons can manage sacred records, generate certificates, and gain meaningful insights from parish data without relying on scattered spreadsheets or fragile paper archives.',
+  },
+  {
+    title: 'ONE SIGN-UP. LASTING VALUE.',
+    desc: 'When a parish joins Orthodox Metrics, it gains a secure records system, multilingual tools, searchable history, and analytics designed specifically for the Orthodox Church. These records are not just administrative data. They are part of the living memory of the parish.',
+  },
+  {
+    title: 'SECURE. AUDITABLE. BUILT FOR ORTHODOX PARISHES.',
+    desc: 'Parish records remain protected, organized, and traceable inside a governed system designed around the real needs of Orthodox communities.',
+  },
+];
+
+const WelcomeRotator = () => {
+  const [active, setActive] = useState(0);
+  const [prev, setPrev] = useState(-1);
+
+  const goTo = (i: number) => {
+    if (i === active) return;
+    setPrev(active);
+    setActive(i);
+  };
+
+  const slideClass = (i: number) => {
+    const base = 'absolute inset-0 flex flex-col justify-center transition-all duration-700 ease-out';
+    if (i === active) return `${base} translate-y-0 opacity-100`;
+    if (i === prev) return `${base} -translate-y-full opacity-0`;
+    return `${base} translate-y-full opacity-0`;
+  };
+
+  return (
+    <div className="relative h-[220px] md:h-[260px]">
+      {WELCOME_SLIDES.map((slide, i) => (
+        <div key={i} className={slideClass(i)}>
+          <h1 className="font-['Georgia'] text-3xl md:text-5xl leading-tight mb-4 text-white tracking-wide">
+            {slide.title}
+          </h1>
+          <p className="font-['Inter'] text-[16px] md:text-lg text-[rgba(255,255,255,0.85)] leading-relaxed">
+            {slide.desc}
+          </p>
+        </div>
+      ))}
+      <div className="absolute bottom-0 left-0 flex gap-2">
+        {WELCOME_SLIDES.map((_, i) => (
+          <button
+            key={i}
+            type="button"
+            aria-label={`Show slide ${i + 1}`}
+            onClick={() => goTo(i)}
+            className={`h-2 rounded-full transition-all ${
+              active === i
+                ? 'w-6 bg-[#d4af37]'
+                : 'w-2 bg-white/30 hover:bg-white/50'
+            }`}
+          />
+        ))}
+      </div>
+    </div>
   );
 };
 
@@ -153,59 +209,68 @@ const CanonicalDutyCarousel = () => {
       aria-label="Canonical duty rotating panel"
     >
       <div className={slideClass(0)} aria-hidden={active !== 0}>
-        <div className="flex h-full items-center">
+        <div className="flex h-full flex-col justify-center gap-6">
           <p className="font-['Georgia'] italic text-2xl md:text-3xl leading-snug text-[#f4d77a]">
-            “Fulfill your canonical duty with modern efficiency. From scanning existing paper records to managing your parish&apos;s digital footprint, ensure your Metrical Records are safe, searchable, and compliant with jurisdictional statutes.”
+            &ldquo;He shall personally maintain the metrical book for all marriages, baptisms, chrismations, and funerals that take place at the Parish.&rdquo;
+          </p>
+          <p className="font-['Inter'] text-[13px] text-white/60">
+            &mdash; <a href="https://www.oca.org" target="_blank" rel="noopener noreferrer" className="underline decoration-white/30 hover:text-white">Guidelines for Clergy</a>, Orthodox Church in America (2023)
           </p>
         </div>
       </div>
 
       <div className={slideClass(1)} aria-hidden={active !== 1}>
-        <p className="font-['Inter'] text-[15px] md:text-[16px] leading-relaxed text-white/90 mb-4">
-          Orthodox parishes are required by canon law and administrative tradition to keep accurate records, specifically Metrical Books (records of baptism, chrismation, marriage, and burial). While no single ancient, universally codified &ldquo;canon&rdquo; exists in the same way modern civil law works, these requirements are enforced through local synodical regulations, episcopal directives, and the general canonical obligation to maintain order in the Church.
-        </p>
-        <ul className="space-y-3 font-['Inter'] text-[14px] md:text-[15px] text-white/85">
-          <li className="flex gap-2">
-            <span className="text-[#d4af37] mt-1">•</span>
-            <span><strong className="text-white">Metrical Records:</strong> Priests are obliged to keep detailed records of all sacraments performed. These act as proof of membership and standing within the Church.</span>
-          </li>
-          <li className="flex gap-2">
-            <span className="text-[#d4af37] mt-1">•</span>
-            <span><strong className="text-white">Purpose:</strong> These registers are considered permanent, historical documents essential for verifying membership, sacramental life, and legal/pastoral accountability.</span>
-          </li>
-          <li className="flex gap-2">
-            <span className="text-[#d4af37] mt-1">•</span>
-            <span><strong className="text-white">Authority:</strong> While not always in the oldest ecumenical canons, maintaining accurate records is upheld by the authority of local bishops and synods to regulate parish life.</span>
-          </li>
-          <li className="flex gap-2">
-            <span className="text-[#d4af37] mt-1">•</span>
-            <span><strong className="text-white">Parish Responsibility:</strong> Each Orthodox parish is expected to maintain these, often in a safe, fire-proof location.</span>
-          </li>
-        </ul>
+        <div className="flex h-full flex-col">
+          <p className="font-['Inter'] text-[15px] md:text-[16px] leading-relaxed text-white/90 mb-4">
+            The parish priest is responsible for entering into the metrical book the required information for every sacrament served &mdash; an obligation set out across the OCA <em>Guidelines for Clergy</em>.
+          </p>
+          <ul className="space-y-3 font-['Inter'] text-[14px] md:text-[15px] text-white/85 flex-1">
+            <li className="flex gap-2">
+              <span className="text-[#d4af37] mt-1">•</span>
+              <span><strong className="text-white">Baptism:</strong> The priest must enter the required data in the parish metrical book after carefully ascertaining all necessary information, including facts and spellings. Certificates witnessing that data are available from oca.org.</span>
+            </li>
+            <li className="flex gap-2">
+              <span className="text-[#d4af37] mt-1">•</span>
+              <span><strong className="text-white">Reception of Converts:</strong> After performing the prescribed rites of reception, the priest must enter the required information in the parish metrical book and issue the appropriate certificate.</span>
+            </li>
+            <li className="flex gap-2">
+              <span className="text-[#d4af37] mt-1">•</span>
+              <span><strong className="text-white">Marriage:</strong> The priest is responsible for entering into the metrical book the required information for each marriage celebrated in the parish.</span>
+            </li>
+            <li className="flex gap-2">
+              <span className="text-[#d4af37] mt-1">•</span>
+              <span><strong className="text-white">Burial:</strong> The parish priest is responsible for entering into the metrical book the required information about each burial.</span>
+            </li>
+          </ul>
+          <p className="font-['Inter'] text-[12px] text-white/50 mt-4">
+            Source: <a href="https://www.oca.org" target="_blank" rel="noopener noreferrer" className="underline decoration-white/30 hover:text-white">Guidelines for Clergy</a>, Orthodox Church in America (2023).
+          </p>
+        </div>
       </div>
 
       <div className={slideClass(2)} aria-hidden={active !== 2}>
-        <p className="font-['Inter'] text-[15px] md:text-[16px] leading-relaxed text-white/90 mb-4">
-          Modern Orthodox jurisdictions, such as the Orthodox Church in America (OCA) and the Greek Orthodox Archdiocese of America, have explicit statutes requiring priests to &ldquo;personally maintain&rdquo; Metrical Records for every baptism, chrismation, marriage, and burial.
-        </p>
-        <ul className="space-y-3 font-['Inter'] text-[14px] md:text-[15px] text-white/85">
-          <li className="flex gap-2">
-            <span className="text-[#d4af37] mt-1">•</span>
-            <span><strong className="text-white">Canonical Custody:</strong> Under the OCA Statute (Article XII), the parish priest is legally &ldquo;entrusted with the care, custody, and maintenance&rdquo; of both sacramental and administrative records.</span>
-          </li>
-          <li className="flex gap-2">
-            <span className="text-[#d4af37] mt-1">•</span>
-            <span><strong className="text-white">Permanent Preservation:</strong> Because metrical registers are considered permanent, historical records, churches are increasingly encouraged to create digital duplicates to protect against physical loss from fire, age, or disaster.</span>
-          </li>
-          <li className="flex gap-2">
-            <span className="text-[#d4af37] mt-1">•</span>
-            <span><strong className="text-white">Accurate Reporting:</strong> Parishes must provide yearly sacramental statistics to their diocese. A digital tool like ours makes this metadata management significantly more efficient.</span>
-          </li>
-          <li className="flex gap-2">
-            <span className="text-[#d4af37] mt-1">•</span>
-            <span><strong className="text-white">Verification of Status:</strong> Since Ancient Canons (such as Apostolic Canons 17 &amp; 18) prohibit certain roles based on sacramental history, having searchable, accurate records is a theological necessity for ensuring the integrity of the Church&apos;s life.</span>
-          </li>
-        </ul>
+        <div className="flex h-full flex-col">
+          <p className="font-['Inter'] text-[15px] md:text-[16px] leading-relaxed text-white/90 mb-4">
+            <strong className="text-white">Metrical Records &amp; other Ecclesiastical Reports</strong> &mdash; the parish priest&apos;s explicit responsibility under the OCA <em>Guidelines for Clergy</em>.
+          </p>
+          <ul className="space-y-3 font-['Inter'] text-[14px] md:text-[15px] text-white/85 flex-1">
+            <li className="flex gap-2">
+              <span className="text-[#d4af37] mt-1">•</span>
+              <span><strong className="text-white">Timely Completion:</strong> It is the parish priest&apos;s responsibility to complete in a timely fashion the parish metrical records and all other ecclesiastical forms or reports required by the Central Church Administration and the diocesan chancery.</span>
+            </li>
+            <li className="flex gap-2">
+              <span className="text-[#d4af37] mt-1">•</span>
+              <span><strong className="text-white">Property of the Parish:</strong> All metrical records are the property of the parish and are not to be taken by the priest in the event he leaves the parish.</span>
+            </li>
+            <li className="flex gap-2">
+              <span className="text-[#d4af37] mt-1">•</span>
+              <span><strong className="text-white">Transfer of Custody:</strong> When a priest transfers from the parish, he turns the church seal and records over to the district dean, who entrusts them to the newly assigned parish priest.</span>
+            </li>
+          </ul>
+          <p className="font-['Inter'] text-[12px] text-white/50 mt-4">
+            Source: <a href="https://www.oca.org" target="_blank" rel="noopener noreferrer" className="underline decoration-white/30 hover:text-white">Guidelines for Clergy</a>, Orthodox Church in America (2023).
+          </p>
+        </div>
       </div>
 
       <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-2 z-10">

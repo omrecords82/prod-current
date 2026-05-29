@@ -27,11 +27,8 @@ export const PUBLIC_ROUTES = {
 /** Navigation links shown in the public header and mobile sidebar. */
 export const PUBLIC_NAV_LINKS = [
   { tKey: 'nav.home', to: PUBLIC_ROUTES.HOME },
-  { tKey: 'nav.about', to: PUBLIC_ROUTES.ABOUT },
   { tKey: 'nav.tour', to: PUBLIC_ROUTES.TOUR },
-  { tKey: 'nav.samples', to: PUBLIC_ROUTES.SAMPLES },
   { tKey: 'nav.pricing', to: PUBLIC_ROUTES.PRICING },
-  { tKey: 'nav.blog', to: PUBLIC_ROUTES.BLOG },
   { tKey: 'nav.contact', to: PUBLIC_ROUTES.CONTACT },
 ] as const;
 

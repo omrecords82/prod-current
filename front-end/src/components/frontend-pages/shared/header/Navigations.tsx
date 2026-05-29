@@ -1,9 +1,9 @@
+import { PUBLIC_NAV_LINKS } from '@/config/publicRoutes';
+import { useLanguage } from '@/context/LanguageContext';
 import { Chip } from '@mui/material';
 import Button from '@mui/material/Button';
 import { styled } from '@mui/material/styles';
 import { NavLink, useLocation } from 'react-router-dom';
-import { PUBLIC_NAV_LINKS } from '@/config/publicRoutes';
-import { useLanguage } from '@/context/LanguageContext';
 
 export const NavLinks = PUBLIC_NAV_LINKS.map((link) => ({
   tKey: link.tKey,

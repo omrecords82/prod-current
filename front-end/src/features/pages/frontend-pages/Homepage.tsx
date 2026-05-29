@@ -1,13 +1,12 @@
-import { Link } from 'react-router-dom';
-import { Globe, Calendar, BarChart3, Shield, BookOpen, Search, ArrowRight, CheckCircle2, type LucideIcon } from '@/ui/icons';
-import { PUBLIC_ROUTES } from '@/config/publicRoutes';
-import EditableText from '@/components/frontend-pages/shared/EditableText';
 import HomepageHero from '@/components/frontend-pages/homepage/HomepageHero';
-import WelcomeCarousel from '@/components/frontend-pages/homepage/WelcomeCarousel';
 import HomepageIntro from '@/components/frontend-pages/homepage/HomepageIntro';
 import HomepageRecordsTransformSection from '@/components/frontend-pages/homepage/records-transform/HomepageRecordsTransformSection';
+import EditableText from '@/components/frontend-pages/shared/EditableText';
 import PublicSeo from '@/components/seo/PublicSeo';
+import { PUBLIC_ROUTES } from '@/config/publicRoutes';
 import { useLanguage } from '@/context/LanguageContext';
+import { ArrowRight, BarChart3, BookOpen, Calendar, CheckCircle2, Globe, Search, Shield, type LucideIcon } from '@/ui/icons';
+import { Link } from 'react-router-dom';
 
 const Homepage = () => {
   const { t } = useLanguage();
@@ -21,7 +20,6 @@ const Homepage = () => {
         bare
       />
       <HomepageHero />
-      <WelcomeCarousel />
       <HomepageIntro />
 
       {/* How It Works */}

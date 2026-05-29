@@ -1,21 +1,18 @@
-import { Logo } from "../Logo";
-import { Button } from "../ui/button";
-import { Badge } from "../ui/badge";
-import { Card, CardContent } from "../ui/card";
-import { ThemeToggle } from "../ThemeToggle";
-import { PriorityBadge } from "../PriorityBadge";
 import {
-  ShieldCheck,
-  Lock,
-  ServerCog,
-  ArrowRight,
-  FileSignature,
-  UploadCloud,
-  Cpu,
-  ClipboardCheck,
-  Mail,
-  Phone,
+    ArrowRight,
+    ClipboardCheck,
+    Cpu,
+    FileSignature,
+    Lock,
+    Mail,
+    Phone,
+    ShieldCheck,
+    UploadCloud
 } from "lucide-react";
+import { ThemeToggle } from "../ThemeToggle";
+import { Badge } from "../ui/badge";
+import { Button } from "../ui/button";
+import { Card, CardContent } from "../ui/card";
 
 type Props = {
   onStart: () => void;
@@ -29,10 +26,9 @@ export function Landing({ onStart, onAdmin, theme, onToggleTheme }: Props) {
     <div className="min-h-screen bg-background text-foreground">
       <header className="border-b border-border bg-card/60 backdrop-blur sticky top-0 z-10">
         <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
-          <Logo size="md" />
+          <img src="/images/misc/enroll-header.png" alt="Orthodox Metrics" className="h-10 w-auto object-contain" />
           <div className="flex items-center gap-2">
-            <Button variant="ghost" onClick={onAdmin}>OM Staff Sign In</Button>
-            <Button variant="ghost">Sign In</Button>
+            <Button variant="ghost" onClick={() => { window.location.href = '/auth/login'; }}>Sign In</Button>
             <Button onClick={onStart} className="bg-[#3a1d6e] hover:bg-[#2a1450] text-white">
               Start Church Setup
             </Button>
@@ -55,7 +51,6 @@ export function Landing({ onStart, onAdmin, theme, onToggleTheme }: Props) {
               <Badge variant="outline" className="border-[#c9a14a]/40 text-[#5a4413] dark:text-[#e3c483]">
                 For Orthodox Parishes
               </Badge>
-              <PriorityBadge p="P0" />
             </div>
             <h1 className="text-4xl lg:text-5xl leading-[1.1]" style={{ fontWeight: 500 }}>
               Digitize and manage your{" "}
@@ -81,7 +76,6 @@ export function Landing({ onStart, onAdmin, theme, onToggleTheme }: Props) {
             <div className="flex flex-wrap gap-x-8 gap-y-3 text-sm text-muted-foreground pt-2">
               <TrustItem icon={ShieldCheck} text="Reviewed by Orthodox Metrics staff" />
               <TrustItem icon={Lock} text="Encrypted records storage" />
-              <TrustItem icon={ServerCog} text="Operated by humans, not just AI" />
             </div>
           </div>
 
@@ -152,9 +146,9 @@ export function Landing({ onStart, onAdmin, theme, onToggleTheme }: Props) {
       <footer className="border-t border-border bg-card/60">
         <div className="max-w-6xl mx-auto px-6 py-10 grid sm:grid-cols-2 lg:grid-cols-4 gap-6 text-sm">
           <div className="space-y-2">
-            <Logo size="sm" />
+            <img src="/images/misc/enroll-header.png" alt="Orthodox Metrics" className="h-8 w-auto object-contain" />
             <p className="text-muted-foreground">
-              OM-cornerstone — the church-facing platform of Orthodox Metrics.
+              The church-facing platform of Orthodox Metrics.
             </p>
           </div>
           <FooterCol title="Product" items={["Onboarding", "Records", "Pages", "Pricing"]} />

@@ -7,7 +7,6 @@ import { lazy, Suspense } from 'react';
 import { createBrowserRouter, Navigate, Outlet } from 'react-router-dom';
 import ProtectedRoute from '../components/auth/ProtectedRoute';
 import AdminErrorBoundary from '../components/ErrorBoundary/AdminErrorBoundary';
-import SmartRedirect from '../components/routing/SmartRedirect';
 import RootGate from '../components/routing/RootGate';
 import Loadable from '../layouts/full/shared/loadable/Loadable';
 
@@ -30,7 +29,6 @@ const ChurchPortalLayout = Loadable(lazy(() => import('../layouts/portal/ChurchP
 
 /* ****Pages***** */
 const ModernDash = Loadable(lazy(() => import('../features/dashboard/ModernDashboard')));
-const EcommerceDash = Loadable(lazy(() => import('../features/dashboard/Ecommerce')));
 
 /* ****Apps***** */
 const Contacts = Loadable(lazy(() => import('../features/apps/contacts/Contacts')));
@@ -247,15 +245,6 @@ const Router = [
             <AppErrorBoundary>
               <ModernDash />
             </AppErrorBoundary>
-          </ProtectedRoute>
-        )
-      },
-      {
-        path: '/dashboards/ecommerce',
-        exact: true,
-        element: (
-          <ProtectedRoute requiredPermission="view_dashboard">
-            <EcommerceDash />
           </ProtectedRoute>
         )
       },
