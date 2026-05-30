@@ -1,28 +1,49 @@
-import { Link } from 'react-router-dom';
-import { FOOTER_LINKS, PUBLIC_ROUTES } from '@/config/publicRoutes';
+import { FOOTER_LINKS } from '@/config/publicRoutes';
 import { useLanguage } from '@/context/LanguageContext';
+import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
+
+const SACRAMENT_IMAGES = [
+  '/images/logos/bap-small-bottom.png',
+  '/images/logos/wedding-small-bottom.png',
+  '/images/logos/funeral-small-bottom.png',
+];
 
 const SiteFooter = () => {
   const { t } = useLanguage();
   const copyrightText = t('footer.copyright').replace('{year}', String(new Date().getFullYear()));
+  const [sacramentIdx, setSacramentIdx] = useState(0);
+
+  useEffect(() => {
+    const id = setInterval(() => {
+      setSacramentIdx((i) => (i + 1) % SACRAMENT_IMAGES.length);
+    }, 5000);
+    return () => clearInterval(id);
+  }, []);
 
   return (
     <footer className="bg-[#2d1b4e] dark:bg-gray-950 text-white">
       <div className="max-w-7xl mx-auto px-6 py-16">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-12">
-          {/* Brand */}
+          {/* Brand — bottom logo with rotating sacrament image */}
           <div className="col-span-1">
-            <div className="flex items-center gap-2 mb-4">
-              <svg viewBox="0 0 40 40" fill="currentColor" className="w-10 h-10 text-[#d4af37]">
-                <rect x="18.75" y="0" width="2.5" height="40" rx="0.5" />
-                <rect x="13" y="5" width="14" height="2.2" rx="0.5" />
-                <rect x="8" y="14" width="24" height="2.5" rx="0.5" />
-                <rect x="12" y="30" width="16" height="2.2" rx="0.5" transform="rotate(-20 20 31)" />
-              </svg>
-              <div className="w-10 h-10 bg-[#d4af37] rounded-lg flex items-center justify-center">
-                <span className="text-[#2d1b4e] font-['Georgia'] text-xl">OM</span>
+            <div className="relative inline-flex items-center mb-4">
+              <img
+                src="/images/logos/bottom-logo.png"
+                alt="Orthodox Metrics"
+                className="h-20 w-auto object-contain"
+              />
+              <div className="relative -ml-2 h-[72px] w-[60px] flex-shrink-0">
+                {SACRAMENT_IMAGES.map((src, i) => (
+                  <img
+                    key={src}
+                    src={src}
+                    alt="Sacrament"
+                    className="absolute inset-0 h-full w-full object-contain transition-opacity duration-700"
+                    style={{ opacity: i === sacramentIdx ? 1 : 0 }}
+                  />
+                ))}
               </div>
-              <span className="font-['Georgia'] text-lg">{t('common.brand_name')}</span>
             </div>
             <p className="font-['Inter'] text-[14px] text-[rgba(255,255,255,0.7)] leading-relaxed">
               {t('footer.tagline')}

@@ -53,13 +53,18 @@ const HpHeader = () => {
   return (
     <nav className="bg-white dark:bg-gray-900 border-b border-[rgba(45,27,78,0.1)] dark:border-gray-800 sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-6">
-        <div className="flex items-center justify-between h-20">
+        <div className="flex items-center justify-between h-24">
           {/* Logo */}
           <a href="/frontend-pages/homepage" className="flex items-center no-underline">
             <img
-              src={activeMode === 'dark' ? '/images/logos/om-logo-dark.png' : '/images/logos/om-logo-light.png'}
+              src="/images/logos/top-logo.png"
               alt="Orthodox Metrics"
-              className="h-12 w-auto object-contain"
+              className="h-24 w-auto object-contain dark:hidden"
+            />
+            <img
+              src="/images/logos/top-logo-dark.png"
+              alt="Orthodox Metrics"
+              className="h-32 w-auto object-contain hidden dark:block"
             />
           </a>
 

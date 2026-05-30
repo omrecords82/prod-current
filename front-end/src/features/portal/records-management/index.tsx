@@ -1,8 +1,9 @@
 import { metricsAPI } from "@/api/metrics.api";
 import { apiClient } from "@/api/utils/axiosInstance";
 import { useChurch } from "@/context/ChurchContext";
+import { useParishSettings } from "@/features/account/parish-management/useParishSettings";
 import { Alert, Box, CircularProgress, Snackbar } from "@mui/material";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AddRecordModal } from "./components/AddRecordModal";
 import { AnalyticsView } from "./components/AnalyticsView";
 import { CardsView } from "./components/CardsView";
@@ -85,6 +86,7 @@ const RecordsManagement: React.FC = () => {
   const [recordType, setRecordType] = useState<RecordType>("baptism");
   const [view, setView] = useState<ViewMode>("table");
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [priest, setPriest] = useState("All priests");
   const [density] = useState<Density>("default");
   const [drawerIdx, setDrawerIdx] = useState<number | null>(null);
@@ -99,18 +101,45 @@ const RecordsManagement: React.FC = () => {
   const [records, setRecords] = useState<AnyRecord[]>([]);
   const [totalRecords, setTotalRecords] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [searchLoading, setSearchLoading] = useState(false);
   const [clergyList, setClergyList] = useState<string[]>([]);
+  const [sortField, setSortField] = useState<string>("id");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
+  const [useDefaultSort, setUseDefaultSort] = useState(true);
 
-  const loadRecords = useCallback(async (type: RecordType) => {
-    setLoading(true);
+  // Load the church's mapping config to get the user-defined default sort field
+  const { data: mappingSettings } = useParishSettings<{ config?: { defaultSort?: string } }>('mapping');
+  const configDefaultSort = mappingSettings?.config?.defaultSort || "id";
+
+  // When default sort is toggled ON, apply the config's sort field
+  useEffect(() => {
+    if (useDefaultSort && configDefaultSort) {
+      setSortField(configDefaultSort);
+      setSortDir("desc");
+    }
+  }, [useDefaultSort, configDefaultSort]);
+  const [page, setPage] = useState(0);
+  const [rowsPerPage] = useState(100);
+  const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const loadRecords = useCallback(async (type: RecordType, searchOverride?: string) => {
+    const isSearchFetch = (searchOverride ?? debouncedSearch) !== "";
+    if (isSearchFetch) setSearchLoading(true); else setLoading(true);
     try {
+      const queryParams: any = {
+        limit: rowsPerPage,
+        page: page + 1,
+        search: (searchOverride ?? debouncedSearch) || undefined,
+        sortField: sortField || undefined,
+        sortDirection: sortDir || undefined,
+      };
       let res: any;
       if (type === "baptism") {
-        res = await metricsAPI.records.getBaptismRecords({ limit: 100, search: search || undefined });
+        res = await metricsAPI.records.getBaptismRecords(queryParams);
       } else if (type === "marriage") {
-        res = await metricsAPI.records.getMarriageRecords({ limit: 100, search: search || undefined });
+        res = await metricsAPI.records.getMarriageRecords(queryParams);
       } else {
-        res = await metricsAPI.records.getFuneralRecords({ limit: 100, search: search || undefined });
+        res = await metricsAPI.records.getFuneralRecords(queryParams);
       }
 
       const data = res?.data ?? res;
@@ -138,10 +167,22 @@ const RecordsManagement: React.FC = () => {
       setTotalRecords(0);
     } finally {
       setLoading(false);
+      setSearchLoading(false);
     }
-  }, [churchName, search]);
+  }, [churchName, debouncedSearch, sortField, sortDir, page, rowsPerPage]);
 
   useEffect(() => { loadRecords(recordType); }, [recordType, loadRecords]);
+
+  // Debounce search: wait 300ms after typing stops before triggering API
+  useEffect(() => {
+    if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+    searchDebounceRef.current = setTimeout(() => {
+      setDebouncedSearch(search);
+    }, 300);
+    return () => {
+      if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+    };
+  }, [search]);
 
   const filtered = useMemo(() => {
     return records.filter((r) => {
@@ -186,20 +227,29 @@ const RecordsManagement: React.FC = () => {
           onView={setView}
           search={search}
           onSearch={setSearch}
+          searchLoading={searchLoading}
+          setDebouncedSearch={setDebouncedSearch}
+          searchDebounceRef={searchDebounceRef}
           priest={priest}
           onPriest={setPriest}
           recordType={recordType}
-          onRecordType={(t) => { setRecordType(t); setDrawerIdx(null); setSearch(""); }}
+          onRecordType={(t) => { setRecordType(t); setDrawerIdx(null); setSearch(""); setDebouncedSearch(""); }}
           totalShown={shown}
           totalAll={totalRecords}
           onAdd={() => setAddOpen(true)}
-          onClear={() => { setSearch(""); setPriest("All priests"); setDrawerIdx(null); setToast("Selection cleared"); }}
+          onClear={() => { setSearch(""); setDebouncedSearch(""); setPriest("All priests"); setDrawerIdx(null); setToast("Selection cleared"); }}
           onMore={(a: ToolbarMore) => {
             if (a === "standard") { setStandardTable((s) => !s); setToast(standardTable ? "Switched to enhanced table" : "Switched to standard table"); return; }
             setMoreAction(a);
           }}
           standardTable={standardTable}
           clergyList={clergyList}
+          sortField={sortField}
+          sortDir={sortDir}
+          onSort={(field: string, dir: "asc" | "desc") => { setUseDefaultSort(false); setSortField(field); setSortDir(dir); }}
+          useDefaultSort={useDefaultSort}
+          onToggleDefaultSort={() => setUseDefaultSort((v) => !v)}
+          defaultSortLabel={configDefaultSort}
         />
 
         {loading ? (
@@ -224,7 +274,7 @@ const RecordsManagement: React.FC = () => {
               />
             )}
             {view === "cards" && <CardsView records={filtered} highlight={search} density={density} onOpen={openRecord} />}
-            {view === "timeline" && <TimelineView records={filtered} highlight={search} density={density} onOpen={openRecord} />}
+            {view === "timeline" && <TimelineView records={filtered} recordType={recordType} highlight={search} density={density} loading={loading} sortField={sortField} sortDir={sortDir} onOpen={openRecord} />}
             {view === "analytics" && <AnalyticsView records={filtered} recordType={recordType} totalRecords={totalRecords} onOpen={openRecord} />}
           </div>
         )}
