@@ -57,14 +57,9 @@ const HpHeader = () => {
           {/* Logo */}
           <a href="/frontend-pages/homepage" className="flex items-center no-underline">
             <img
-              src="/images/logos/top-logo.png"
+              src="/images/logos/logo-top.svg"
               alt="Orthodox Metrics"
-              className="h-24 w-auto object-contain dark:hidden"
-            />
-            <img
-              src="/images/logos/top-logo-dark.png"
-              alt="Orthodox Metrics"
-              className="h-32 w-auto object-contain hidden dark:block"
+              className="h-24 w-auto object-contain"
             />
           </a>
 
