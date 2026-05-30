@@ -40,13 +40,34 @@ const LOGIN_SLIDES = [
 const HomepageHero = () => {
   const { t } = useLanguage();
   const [slideIdx, setSlideIdx] = useState(0);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [lightboxIdx, setLightboxIdx] = useState(0);
 
+  // Auto-advance the hero slideshow, paused while the lightbox is open.
   useEffect(() => {
+    if (lightboxOpen) return;
     const id = setInterval(() => {
       setSlideIdx((i) => (i + 1) % LOGIN_SLIDES.length);
     }, 5000);
     return () => clearInterval(id);
-  }, []);
+  }, [lightboxOpen]);
+
+  const openLightbox = useCallback((i: number) => { setLightboxIdx(i); setLightboxOpen(true); }, []);
+  const closeLightbox = useCallback(() => setLightboxOpen(false), []);
+  const lbPrev = useCallback(() => setLightboxIdx((i) => (i - 1 + LOGIN_SLIDES.length) % LOGIN_SLIDES.length), []);
+  const lbNext = useCallback(() => setLightboxIdx((i) => (i + 1) % LOGIN_SLIDES.length), []);
+
+  // Keyboard navigation while the lightbox is open.
+  useEffect(() => {
+    if (!lightboxOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') closeLightbox();
+      else if (e.key === 'ArrowLeft') lbPrev();
+      else if (e.key === 'ArrowRight') lbNext();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [lightboxOpen, closeLightbox, lbPrev, lbNext]);
 
   return (
     <>
@@ -115,7 +136,14 @@ const HomepageHero = () => {
           </div>
 
           <div className="flex items-center justify-center">
-            <div className="relative w-full max-w-[700px] aspect-[16/10]">
+            <div
+              className="relative w-full max-w-[700px] aspect-[16/10] cursor-zoom-in"
+              role="button"
+              tabIndex={0}
+              aria-label="Expand slideshow"
+              onClick={() => openLightbox(slideIdx)}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openLightbox(slideIdx); } }}
+            >
               {LOGIN_SLIDES.map((src, i) => (
                 <img
                   key={src}
