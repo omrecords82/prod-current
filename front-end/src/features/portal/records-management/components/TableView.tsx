@@ -32,12 +32,14 @@ interface Props {
   onCertificate?: (r: AnyRecord) => void;
 }
 
-const COL_DEFS: Record<RecordType, { field: string; headerName: string; valueGetter?: (r: any) => string }[]> = {
+type ColDefSpec = { field: string; headerName: string; valueGetter?: (r: any) => string; rawField?: string };
+
+const COL_DEFS: Record<RecordType, ColDefSpec[]> = {
   baptism: [
     { field: "name", headerName: "Name" },
     { field: "recordNo", headerName: "Record No." },
-    { field: "dob", headerName: "Date of Birth" },
-    { field: "baptismDate", headerName: "Baptism Date" },
+    { field: "dob", headerName: "Date of Birth", rawField: "dobRaw" },
+    { field: "baptismDate", headerName: "Baptism Date", rawField: "baptismDateRaw" },
     { field: "church", headerName: "Church" },
     { field: "birthplace", headerName: "Birthplace" },
     { field: "clergy", headerName: "Clergy" },
@@ -46,7 +48,7 @@ const COL_DEFS: Record<RecordType, { field: string; headerName: string; valueGet
     { field: "bride", headerName: "Bride" },
     { field: "groom", headerName: "Groom" },
     { field: "recordNo", headerName: "Record No." },
-    { field: "marriageDate", headerName: "Marriage Date" },
+    { field: "marriageDate", headerName: "Marriage Date", rawField: "marriageDateRaw" },
     { field: "church", headerName: "Church" },
     { field: "celebrant", headerName: "Celebrant" },
     { field: "witnesses", headerName: "Witnesses" },
@@ -54,13 +56,36 @@ const COL_DEFS: Record<RecordType, { field: string; headerName: string; valueGet
   funeral: [
     { field: "name", headerName: "Name" },
     { field: "recordNo", headerName: "Record No." },
-    { field: "dod", headerName: "Date of Death" },
-    { field: "funeralDate", headerName: "Funeral Date" },
+    { field: "dod", headerName: "Date of Death", rawField: "dodRaw" },
+    { field: "funeralDate", headerName: "Funeral Date", rawField: "funeralDateRaw" },
     { field: "church", headerName: "Church" },
     { field: "burialPlace", headerName: "Burial Place" },
     { field: "clergy", headerName: "Clergy" },
   ],
 };
+
+// Parse a raw date value to a timestamp; returns null for missing/unparseable.
+function parseTs(v: unknown): number | null {
+  if (v === null || v === undefined || v === "") return null;
+  const t = new Date(v as string).getTime();
+  return isNaN(t) ? null : t;
+}
+
+// AG Grid comparator that sorts a date column chronologically by its raw
+// value (not the formatted display string), and keeps records with no date
+// pinned to the very bottom regardless of sort direction. AG Grid inverts the
+// comparator's result for descending sorts, so blank handling uses
+// `isDescending` to counteract that and stay at the bottom either way.
+function makeDateComparator(rawField: string) {
+  return (_a: unknown, _b: unknown, nodeA: any, nodeB: any, isDescending: boolean): number => {
+    const ta = parseTs(nodeA?.data?.[rawField]);
+    const tb = parseTs(nodeB?.data?.[rawField]);
+    if (ta === null && tb === null) return 0;
+    if (ta === null) return isDescending ? -1 : 1;
+    if (tb === null) return isDescending ? 1 : -1;
+    return ta - tb;
+  };
+}
 
 export function TableView({ records, recordType, highlight, density, standard, visibleCols, onOpen, onEdit, onAudit, onExport, onCertificate }: Props) {
   const { activeTheme } = useContext(CustomizerContext);
@@ -135,6 +160,7 @@ export function TableView({ records, recordType, highlight, density, standard, v
         minWidth: 120,
         sortable: true,
         filter: false,
+        ...(d.rawField ? { comparator: makeDateComparator(d.rawField) } : {}),
       }));
 
     cols.push({

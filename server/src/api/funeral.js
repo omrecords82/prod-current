@@ -217,7 +217,9 @@ async function getChurchDatabaseName(churchId) {
             const finalSortDirection = validSortDirections.includes(sortDirection.toLowerCase()) ? sortDirection.toUpperCase() : 'DESC';
             // Sort age numerically (CAST handles string-stored numbers)
             const orderExpr = finalSortField === 'age' ? `CAST(${finalSortField} AS UNSIGNED)` : finalSortField;
-            query += ` ORDER BY ${orderExpr} ${finalSortDirection}`;
+            // Push NULL/blank values (e.g. records with no death or burial
+            // date) to the end regardless of sort direction.
+            query += ` ORDER BY (${finalSortField} IS NULL) ASC, ${orderExpr} ${finalSortDirection}`;
             query += ` LIMIT ? OFFSET ?`;
             mainQueryParams = [...queryParams, parseInt(limit), pageOffset];
         }

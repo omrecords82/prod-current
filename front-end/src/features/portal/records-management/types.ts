@@ -10,6 +10,10 @@ export interface BaptismRecord {
   name: string;
   dob: string;
   baptismDate: string;
+  // Raw (unformatted) date values used for correct chronological sorting in
+  // the table. `dob`/`baptismDate` carry the human-readable display strings.
+  dobRaw?: string | null;
+  baptismDateRaw?: string | null;
   church: string;
   birthplace: string;
   address: string;
@@ -24,6 +28,7 @@ export interface MarriageRecord {
   bride: string;
   groom: string;
   marriageDate: string;
+  marriageDateRaw?: string | null;
   church: string;
   celebrant: string;
   witnesses: string;
@@ -37,6 +42,8 @@ export interface FuneralRecord {
   name: string;
   dod: string;
   funeralDate: string;
+  dodRaw?: string | null;
+  funeralDateRaw?: string | null;
   church: string;
   burialPlace: string;
   clergy: string;

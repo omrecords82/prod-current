@@ -13,8 +13,17 @@
 const express = require('express');
 const router = express.Router({ mergeParams: true });
 const { getAppPool } = require('../config/db');
+const recordTableConfig = require('../services/recordTableConfig');
 
 const VALID_CATEGORIES = ['mapping', 'theme', 'ui', 'search', 'system', 'branding'];
+
+// Record type → physical table name. Restricting to this fixed set means the
+// columns endpoint can never be used to introspect arbitrary tables.
+const RECORD_TABLE_BY_TYPE = {
+  baptism: 'baptism_records',
+  marriage: 'marriage_records',
+  funeral: 'funeral_records',
+};
 
 // ── Helpers ────────────────────────────────────────────────
 
@@ -90,6 +99,35 @@ router.get('/:churchId/:category', async (req, res) => {
   } catch (err) {
     console.error(`[parish-settings] GET ${req.params.category} error:`, err);
     res.status(500).json({ error: 'Failed to fetch parish settings' });
+  }
+});
+
+// ── GET /api/parish-settings/:churchId/record-columns/:recordType ──
+// Returns the live column list for a church's record table so the Database
+// Mapping wizard can build its field list from the real schema instead of a
+// hardcoded one. recordType ∈ {baptism, marriage, funeral}.
+
+router.get('/:churchId/record-columns/:recordType', async (req, res) => {
+  try {
+    const churchId = parseChurchId(req.params.churchId);
+    if (!churchId) return res.status(400).json({ error: 'Invalid church_id' });
+
+    const tableName = RECORD_TABLE_BY_TYPE[req.params.recordType];
+    if (!tableName) {
+      return res.status(400).json({
+        error: `Invalid recordType. Must be one of: ${Object.keys(RECORD_TABLE_BY_TYPE).join(', ')}`,
+      });
+    }
+
+    const columns = await recordTableConfig.getTableColumns(churchId, tableName);
+    if (!columns) {
+      return res.status(404).json({ error: `Table ${tableName} not found for church ${churchId}` });
+    }
+
+    res.json({ church_id: churchId, recordType: req.params.recordType, table: tableName, columns });
+  } catch (err) {
+    console.error('[parish-settings] GET record-columns error:', err);
+    res.status(500).json({ error: 'Failed to fetch record columns' });
   }
 });
 

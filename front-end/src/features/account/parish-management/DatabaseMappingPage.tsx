@@ -29,8 +29,10 @@ import {
     Typography,
     useTheme,
 } from '@mui/material';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import apiClient from '@/api/utils/axiosInstance';
+import { useChurch } from '@/context/ChurchContext';
 import { useParishSettings } from './useParishSettings';
 
 const BASE = '/account/parish-management/database-mapping';
@@ -72,78 +74,154 @@ interface FieldDef {
   searchWeight: number;
 }
 
-// ── Per-type field defaults ──────────────────────────────────────
-// Each record type gets its own field set. maiden_name only appears on
-// marriage (the bride's). deacon was previously listed under Clergy
-// for every type — removed entirely; field is unused in the records
-// schema. Switching the record-type card resets `fields` to the
-// matching default below (see the click handler).
+// ── Field metadata (labels / grouping / sensible defaults) ───────
+// The set of columns shown is driven by the LIVE database schema (fetched
+// per church from /api/parish-settings/:churchId/record-columns/:type), so
+// this page can never drift from the real tables. This map only *decorates*
+// known columns with a friendly display name, a UI group, and sensible
+// default toggles. Any real column not listed here still appears — with a
+// humanized label in the "Other" group — so newly added DB columns surface
+// automatically.
 
-const baptismFields: FieldDef[] = [
-  { column: 'first_name', displayName: 'First Name', group: 'Personal Information', visible: true, sortable: true, searchWeight: 8 },
-  { column: 'last_name', displayName: 'Last Name', group: 'Personal Information', visible: true, sortable: true, searchWeight: 10 },
-  { column: 'middle_name', displayName: 'Middle Name', group: 'Personal Information', visible: false, sortable: false, searchWeight: 5 },
-  { column: 'date_of_birth', displayName: 'Date of Birth', group: 'Personal Information', visible: false, sortable: true, searchWeight: 3 },
-  { column: 'birthplace', displayName: 'Birthplace', group: 'Personal Information', visible: false, sortable: false, searchWeight: 4 },
-  { column: 'father_name', displayName: "Father's Name", group: 'Personal Information', visible: false, sortable: false, searchWeight: 5 },
-  { column: 'mother_name', displayName: "Mother's Name", group: 'Personal Information', visible: false, sortable: false, searchWeight: 5 },
-  { column: 'date_of_baptism', displayName: 'Date of Baptism', group: 'Sacrament Details', visible: true, sortable: true, searchWeight: 3 },
-  { column: 'place_of_baptism', displayName: 'Place of Baptism', group: 'Sacrament Details', visible: true, sortable: false, searchWeight: 4 },
-  { column: 'officiating_priest', displayName: 'Officiating Priest', group: 'Clergy', visible: true, sortable: false, searchWeight: 6 },
-  { column: 'godfather_name', displayName: "Godfather's Name", group: 'Sponsors', visible: false, sortable: false, searchWeight: 5 },
-  { column: 'godmother_name', displayName: "Godmother's Name", group: 'Sponsors', visible: false, sortable: false, searchWeight: 5 },
-  { column: 'notes', displayName: 'Notes', group: 'Additional', visible: false, sortable: false, searchWeight: 1 },
-];
+interface FieldMeta {
+  displayName?: string;
+  group?: string;
+  visible?: boolean;
+  sortable?: boolean;
+  searchWeight?: number;
+}
 
-const marriageFields: FieldDef[] = [
-  { column: 'groom_first_name', displayName: "Groom's First Name", group: 'Groom Information', visible: true, sortable: true, searchWeight: 8 },
-  { column: 'groom_last_name',  displayName: "Groom's Last Name",  group: 'Groom Information', visible: true, sortable: true, searchWeight: 10 },
-  { column: 'groom_parents',    displayName: "Groom's Parents",    group: 'Groom Information', visible: false, sortable: false, searchWeight: 4 },
-  { column: 'bride_first_name', displayName: "Bride's First Name", group: 'Bride Information', visible: true, sortable: true, searchWeight: 8 },
-  { column: 'bride_last_name',  displayName: "Bride's Last Name",  group: 'Bride Information', visible: true, sortable: true, searchWeight: 10 },
-  { column: 'maiden_name',      displayName: "Bride's Maiden Name", group: 'Bride Information', visible: false, sortable: false, searchWeight: 7 },
-  { column: 'bride_parents',    displayName: "Bride's Parents",    group: 'Bride Information', visible: false, sortable: false, searchWeight: 4 },
-  { column: 'marriage_date',    displayName: 'Marriage Date',      group: 'Sacrament Details', visible: true, sortable: true, searchWeight: 3 },
-  { column: 'marriage_location', displayName: 'Marriage Location', group: 'Sacrament Details', visible: false, sortable: false, searchWeight: 4 },
-  { column: 'officiating_priest', displayName: 'Officiating Priest', group: 'Clergy', visible: true, sortable: false, searchWeight: 6 },
-  { column: 'witness_1', displayName: 'Witness 1', group: 'Witnesses', visible: false, sortable: false, searchWeight: 5 },
-  { column: 'witness_2', displayName: 'Witness 2', group: 'Witnesses', visible: false, sortable: false, searchWeight: 5 },
-  { column: 'notes', displayName: 'Notes', group: 'Additional', visible: false, sortable: false, searchWeight: 1 },
-];
-
-const funeralFields: FieldDef[] = [
-  { column: 'first_name', displayName: "Deceased's First Name", group: 'Personal Information', visible: true, sortable: true, searchWeight: 8 },
-  { column: 'last_name',  displayName: "Deceased's Last Name",  group: 'Personal Information', visible: true, sortable: true, searchWeight: 10 },
-  { column: 'middle_name', displayName: 'Middle Name', group: 'Personal Information', visible: false, sortable: false, searchWeight: 5 },
-  { column: 'age_at_death', displayName: 'Age at Death', group: 'Personal Information', visible: false, sortable: true, searchWeight: 2 },
-  { column: 'date_of_death',   displayName: 'Date of Death',  group: 'Sacrament Details', visible: true, sortable: true, searchWeight: 4 },
-  { column: 'date_of_funeral', displayName: 'Funeral Date',   group: 'Sacrament Details', visible: true, sortable: true, searchWeight: 3 },
-  { column: 'burial_location', displayName: 'Burial Location', group: 'Sacrament Details', visible: false, sortable: false, searchWeight: 4 },
-  { column: 'officiating_priest', displayName: 'Officiating Priest', group: 'Clergy', visible: true, sortable: false, searchWeight: 6 },
-  { column: 'notes', displayName: 'Notes', group: 'Additional', visible: false, sortable: false, searchWeight: 1 },
-];
-
-const FIELDS_BY_TYPE: Record<string, FieldDef[]> = {
-  baptism: baptismFields,
-  marriage: marriageFields,
-  funeral: funeralFields,
+const FIELD_META: Record<string, Record<string, FieldMeta>> = {
+  baptism: {
+    first_name:     { displayName: 'First Name', group: 'Personal Information', visible: true, sortable: true, searchWeight: 8 },
+    last_name:      { displayName: 'Last Name', group: 'Personal Information', visible: true, sortable: true, searchWeight: 10 },
+    birth_date:     { displayName: 'Date of Birth', group: 'Personal Information', visible: false, sortable: true, searchWeight: 3 },
+    birthplace:     { displayName: 'Birthplace', group: 'Personal Information', visible: false, sortable: false, searchWeight: 4 },
+    reception_date: { displayName: 'Baptism Date', group: 'Sacrament Details', visible: true, sortable: true, searchWeight: 3 },
+    entry_type:     { displayName: 'Entry Type', group: 'Sacrament Details', visible: false, sortable: false, searchWeight: 2 },
+    clergy:         { displayName: 'Officiating Priest', group: 'Clergy', visible: true, sortable: false, searchWeight: 6 },
+    sponsors:       { displayName: 'Sponsors', group: 'Sponsors', visible: false, sortable: false, searchWeight: 5 },
+    parents:        { displayName: 'Parents', group: 'Family', visible: false, sortable: false, searchWeight: 5 },
+  },
+  marriage: {
+    fname_groom: { displayName: "Groom's First Name", group: 'Groom Information', visible: true, sortable: true, searchWeight: 8 },
+    lname_groom: { displayName: "Groom's Last Name", group: 'Groom Information', visible: true, sortable: true, searchWeight: 10 },
+    parentsg:    { displayName: "Groom's Parents", group: 'Groom Information', visible: false, sortable: false, searchWeight: 4 },
+    fname_bride: { displayName: "Bride's First Name", group: 'Bride Information', visible: true, sortable: true, searchWeight: 8 },
+    lname_bride: { displayName: "Bride's Last Name", group: 'Bride Information', visible: true, sortable: true, searchWeight: 10 },
+    parentsb:    { displayName: "Bride's Parents", group: 'Bride Information', visible: false, sortable: false, searchWeight: 4 },
+    mdate:       { displayName: 'Marriage Date', group: 'Sacrament Details', visible: true, sortable: true, searchWeight: 3 },
+    mlicense:    { displayName: 'Marriage License', group: 'Sacrament Details', visible: false, sortable: false, searchWeight: 2 },
+    clergy:      { displayName: 'Officiating Priest', group: 'Clergy', visible: true, sortable: false, searchWeight: 6 },
+    witness:     { displayName: 'Witnesses', group: 'Witnesses', visible: false, sortable: false, searchWeight: 5 },
+  },
+  funeral: {
+    name:            { displayName: "Deceased's First Name", group: 'Personal Information', visible: true, sortable: true, searchWeight: 8 },
+    lastname:        { displayName: "Deceased's Last Name", group: 'Personal Information', visible: true, sortable: true, searchWeight: 10 },
+    age:             { displayName: 'Age at Death', group: 'Personal Information', visible: false, sortable: true, searchWeight: 2 },
+    deceased_date:   { displayName: 'Date of Death', group: 'Sacrament Details', visible: true, sortable: true, searchWeight: 4 },
+    burial_date:     { displayName: 'Burial Date', group: 'Sacrament Details', visible: true, sortable: true, searchWeight: 3 },
+    burial_location: { displayName: 'Burial Location', group: 'Sacrament Details', visible: false, sortable: false, searchWeight: 4 },
+    clergy:          { displayName: 'Officiating Priest', group: 'Clergy', visible: true, sortable: false, searchWeight: 6 },
+  },
 };
 
-function defaultFieldsFor(recordType: string): FieldDef[] {
-  // Return a fresh clone so per-card state mutations don't bleed back
-  // into the constant.
-  return (FIELDS_BY_TYPE[recordType] || baptismFields).map((f) => ({ ...f }));
+// Internal/system columns — never shown as mappable record fields.
+const EXCLUDED_COLUMNS = new Set([
+  'id', 'source_scan_id', 'church_id', 'ocr_confidence',
+  'verified_by', 'verified_at', 'created_at', 'updated_at', 'deleted_at',
+]);
+
+interface ColumnInfo {
+  name: string;
+  type?: string;
+}
+
+/** snake_case → Title Case fallback label (e.g. burial_location → Burial Location). */
+function humanize(col: string): string {
+  return col
+    .split('_')
+    .filter(Boolean)
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+    .join(' ');
+}
+
+/** Build the field list for a record type from its REAL columns. */
+function buildFieldsFromColumns(recordType: string, columns: ColumnInfo[]): FieldDef[] {
+  const meta = FIELD_META[recordType] || {};
+  return columns
+    .filter((c) => !EXCLUDED_COLUMNS.has(c.name.toLowerCase()))
+    .map((c) => {
+      const m = meta[c.name] || {};
+      return {
+        column: c.name,
+        displayName: m.displayName || humanize(c.name),
+        group: m.group || 'Other',
+        visible: m.visible ?? false,
+        sortable: m.sortable ?? false,
+        searchWeight: m.searchWeight ?? 5,
+      };
+    });
+}
+
+/**
+ * Overlay a saved configuration onto the schema-derived field list. Real
+ * columns are the source of truth for *which* fields exist; the saved config
+ * supplies the user's per-field customizations. Saved entries for columns
+ * that no longer exist are dropped; brand-new columns keep their defaults.
+ */
+function mergeSavedFields(base: FieldDef[], saved?: FieldDef[]): FieldDef[] {
+  if (!Array.isArray(saved) || saved.length === 0) return base;
+  const savedByCol = new Map(saved.map((f) => [f.column, f]));
+  return base.map((f) => {
+    const s = savedByCol.get(f.column);
+    if (!s) return f;
+    return {
+      ...f,
+      displayName: typeof s.displayName === 'string' && s.displayName ? s.displayName : f.displayName,
+      visible: typeof s.visible === 'boolean' ? s.visible : f.visible,
+      sortable: typeof s.sortable === 'boolean' ? s.sortable : f.sortable,
+      searchWeight: typeof s.searchWeight === 'number' ? s.searchWeight : f.searchWeight,
+    };
+  });
+}
+
+/** First sortable column (fallback when choosing a default-sort column). */
+function firstSortableColumn(fields: FieldDef[]): string {
+  return fields.find((f) => f.sortable)?.column || fields[0]?.column || 'id';
 }
 
 // ── Mock preview data ───────────────────────────────────────────
+// The Step 4 preview renders one column per *visible* field (whatever
+// the user toggled on in Step 2), so sample cell values are resolved
+// per-column by `samplePreviewValue` rather than being a fixed shape.
 
-const previewRecords = [
-  { firstName: 'John', lastName: 'Smith', baptismDate: '01/15/2020', priest: 'Fr. Michael' },
-  { firstName: 'Sarah', lastName: 'Johnson', baptismDate: '03/22/2019', priest: 'Fr. Nicholas' },
-  { firstName: 'Michael', lastName: 'Roberts', baptismDate: '06/08/2021', priest: 'Fr. Michael' },
-  { firstName: 'Emily', lastName: 'Davis', baptismDate: '11/30/2020', priest: 'Fr. John' },
-  { firstName: 'David', lastName: 'Wilson', baptismDate: '09/12/2018', priest: 'Fr. Nicholas' },
-];
+const PREVIEW_ROW_COUNT = 5;
+
+const SAMPLE_FIRST_NAMES = ['John', 'Sarah', 'Michael', 'Emily', 'David'];
+const SAMPLE_LAST_NAMES = ['Smith', 'Johnson', 'Roberts', 'Davis', 'Wilson'];
+const SAMPLE_MIDDLE = ['A.', 'M.', 'J.', 'R.', 'P.'];
+const SAMPLE_DATES = ['01/15/2020', '03/22/2019', '06/08/2021', '11/30/2020', '09/12/2018'];
+const SAMPLE_PRIESTS = ['Fr. Michael', 'Fr. Nicholas', 'Fr. Michael', 'Fr. John', 'Fr. Nicholas'];
+const SAMPLE_PLACES = ['Holy Trinity', 'St. Nicholas', 'St. George', 'Annunciation', 'St. Demetrios'];
+const SAMPLE_PEOPLE = ['Maria Smith', 'Peter Johnson', 'Anna Roberts', 'George Davis', 'Helen Wilson'];
+const SAMPLE_AGES = ['72', '85', '64', '91', '78'];
+const SAMPLE_NOTES = ['—', 'Convert', '—', 'Transferred', '—'];
+
+function samplePreviewValue(field: FieldDef, row: number): string {
+  const c = field.column.toLowerCase();
+  const i = row % PREVIEW_ROW_COUNT;
+  if (c.includes('age')) return SAMPLE_AGES[i];
+  if (c.includes('place') || c.includes('location') || c.includes('burial')) return SAMPLE_PLACES[i];
+  if (c.includes('date') || c.includes('death')) return SAMPLE_DATES[i];
+  if (c.includes('first_name')) return SAMPLE_FIRST_NAMES[i];
+  if (c.includes('last_name') || c === 'maiden_name') return SAMPLE_LAST_NAMES[i];
+  if (c.includes('middle')) return SAMPLE_MIDDLE[i];
+  if (c.includes('priest') || c.includes('deacon') || c.includes('clergy') || c.includes('celebrant')) return SAMPLE_PRIESTS[i];
+  if (c.includes('notes')) return SAMPLE_NOTES[i];
+  // parents, father/mother, godparents, witnesses, generic people fields
+  return SAMPLE_PEOPLE[i];
+}
 
 // ── Component ───────────────────────────────────────────────────
 
@@ -169,30 +247,67 @@ const DatabaseMappingPage: React.FC = () => {
     return idx >= 0 ? idx : 0;
   }, [step]);
 
+  const { activeChurchId } = useChurch();
+  const churchId = activeChurchId;
+
   const [selectedRecord, setSelectedRecord] = useState('baptism');
-  const [fields, setFields] = useState<FieldDef[]>(() => defaultFieldsFor('baptism'));
+  const [fields, setFields] = useState<FieldDef[]>([]);
   const [defaultSort, setDefaultSort] = useState('last_name');
   const [dirty, setDirty] = useState(false);
+  const [columnsLoading, setColumnsLoading] = useState(true);
+  const [columnsError, setColumnsError] = useState<string | null>(null);
   const { snackbar, showSnackbar, closeSnackbar } = useSnackbar();
 
-  // Load saved config on mount. Saved settings store one snapshot
-  // (selectedRecord + fields). If the saved type doesn't match the
-  // canonical type defaults — or if no config has ever been saved —
-  // fall back to the type's defaults so a stale config can't surface
-  // baptism fields under marriage / funeral.
+  // Cache live columns per record type, plus a one-shot guard so the saved
+  // config is merged on first load only (not on every settings refresh).
+  const columnsCache = useRef<Record<string, ColumnInfo[]>>({});
+  const initializedRef = useRef(false);
+
+  // Fetch the real column list for a record type (cached after first fetch).
+  const fetchColumns = useCallback(async (type: string): Promise<ColumnInfo[]> => {
+    if (columnsCache.current[type]) return columnsCache.current[type];
+    if (!churchId) return [];
+    const res = await apiClient.get<{ columns: ColumnInfo[] }>(
+      `/api/parish-settings/${churchId}/record-columns/${type}`,
+    );
+    const cols = ((res as any)?.columns ?? []) as ColumnInfo[];
+    columnsCache.current[type] = cols;
+    return cols;
+  }, [churchId]);
+
+  // First load: discover the live columns for the saved (or default) record
+  // type, build the field list from the real schema, and overlay any saved
+  // customizations. Runs once — later type switches go through
+  // handleSelectRecord.
   useEffect(() => {
-    if (settingsLoading) return;
-    const cfg = savedSettings?.config;
-    if (cfg) {
-      const type = cfg.selectedRecord || 'baptism';
-      setSelectedRecord(type);
-      const validKeys = new Set(defaultFieldsFor(type).map((f) => f.column));
-      const savedMatchesType = Array.isArray(cfg.fields) && cfg.fields.length > 0
-        && cfg.fields.every((f) => validKeys.has(f.column));
-      setFields(savedMatchesType ? cfg.fields! : defaultFieldsFor(type));
-      if (cfg.defaultSort) setDefaultSort(cfg.defaultSort);
-    }
-  }, [savedSettings, settingsLoading]);
+    if (settingsLoading || !churchId || initializedRef.current) return;
+    let cancelled = false;
+    (async () => {
+      setColumnsLoading(true);
+      setColumnsError(null);
+      try {
+        const cfg = savedSettings?.config;
+        const type = cfg?.selectedRecord || 'baptism';
+        const cols = await fetchColumns(type);
+        if (cancelled) return;
+        const merged = mergeSavedFields(buildFieldsFromColumns(type, cols), cfg?.fields);
+        const validCols = new Set(merged.map((f) => f.column));
+        initializedRef.current = true;
+        setSelectedRecord(type);
+        setFields(merged);
+        setDefaultSort(
+          cfg?.defaultSort && validCols.has(cfg.defaultSort)
+            ? cfg.defaultSort
+            : firstSortableColumn(merged),
+        );
+      } catch (err: any) {
+        if (!cancelled) setColumnsError(err?.message || 'Failed to load database columns');
+      } finally {
+        if (!cancelled) setColumnsLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [settingsLoading, savedSettings, churchId, fetchColumns]);
 
   const goTo = (idx: number) => {
     if (idx === 0) navigate(BASE);
@@ -201,22 +316,29 @@ const DatabaseMappingPage: React.FC = () => {
 
   const markDirty = useCallback(() => setDirty(true), []);
 
-  // Switching the record type resets the field list to that type's
-  // defaults — otherwise users would see baptism fields under
-  // marriage / funeral. The dirty flag fires so saving captures the
-  // new type's state.
-  const handleSelectRecord = useCallback((newType: string) => {
+  // Switching record type loads that type's real columns and rebuilds the
+  // field list. If the saved config is for the newly selected type, its
+  // customizations are reapplied; otherwise the schema defaults are used.
+  const handleSelectRecord = useCallback(async (newType: string) => {
     if (newType === selectedRecord) return;
     setSelectedRecord(newType);
-    setFields(defaultFieldsFor(newType));
-    // Also reset defaultSort to a sensible per-type column if the
-    // current one isn't valid for this type.
-    const validCols = new Set(defaultFieldsFor(newType).map((f) => f.column));
-    if (!validCols.has(defaultSort)) {
-      setDefaultSort(defaultFieldsFor(newType).find((f) => f.sortable)?.column || 'last_name');
+    setColumnsLoading(true);
+    setColumnsError(null);
+    try {
+      const cols = await fetchColumns(newType);
+      const cfg = savedSettings?.config;
+      const base = buildFieldsFromColumns(newType, cols);
+      const merged = cfg?.selectedRecord === newType ? mergeSavedFields(base, cfg?.fields) : base;
+      const validCols = new Set(merged.map((f) => f.column));
+      setFields(merged);
+      setDefaultSort((prev) => (validCols.has(prev) ? prev : firstSortableColumn(merged)));
+      markDirty();
+    } catch (err: any) {
+      setColumnsError(err?.message || 'Failed to load database columns');
+    } finally {
+      setColumnsLoading(false);
     }
-    markDirty();
-  }, [selectedRecord, defaultSort, markDirty]);
+  }, [selectedRecord, savedSettings, fetchColumns, markDirty]);
 
   const updateField = (column: string, key: keyof FieldDef, value: any) => {
     setFields((prev) => prev.map((f) => (f.column === column ? { ...f, [key]: value } : f)));
@@ -554,6 +676,8 @@ const DatabaseMappingPage: React.FC = () => {
   // ── Step 4: Preview & Validation ──────────────────────────────
 
   const hiddenRequired = fields.filter((f) => !f.visible && f.searchWeight > 6);
+  // The preview table shows exactly the columns marked visible in Step 2.
+  const visibleFields = fields.filter((f) => f.visible);
 
   const StepPreview = (
     <Box>
@@ -604,9 +728,8 @@ const DatabaseMappingPage: React.FC = () => {
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ borderBottom: `1px solid ${isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)'}` }}>
-                {['First Name', 'Last Name', 'Date of Baptism', 'Officiating Priest'].map((col) => (
+                {visibleFields.length === 0 ? (
                   <th
-                    key={col}
                     style={{
                       padding: '10px 20px',
                       textAlign: 'left',
@@ -618,28 +741,65 @@ const DatabaseMappingPage: React.FC = () => {
                       color: isDark ? '#9ca3af' : '#6b7280',
                     }}
                   >
-                    {col}
-                    {col === 'Last Name' && (
-                      <Chip label="Default" size="small" sx={{ ml: 1, height: 18, fontSize: '0.625rem', bgcolor: isDark ? 'rgba(45,27,78,0.3)' : 'rgba(45,27,78,0.08)', color: isDark ? '#d4af37' : '#2d1b4e' }} />
-                    )}
+                    No visible columns
                   </th>
-                ))}
+                ) : (
+                  visibleFields.map((f) => (
+                    <th
+                      key={f.column}
+                      style={{
+                        padding: '10px 20px',
+                        textAlign: 'left',
+                        fontFamily: "'Inter', sans-serif",
+                        fontSize: '0.6875rem',
+                        fontWeight: 600,
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.05em',
+                        color: isDark ? '#9ca3af' : '#6b7280',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {f.displayName}
+                      {f.column === defaultSort && (
+                        <Chip label="Default" size="small" sx={{ ml: 1, height: 18, fontSize: '0.625rem', bgcolor: isDark ? 'rgba(45,27,78,0.3)' : 'rgba(45,27,78,0.08)', color: isDark ? '#d4af37' : '#2d1b4e' }} />
+                      )}
+                    </th>
+                  ))
+                )}
               </tr>
             </thead>
             <tbody>
-              {previewRecords.map((r, i) => (
-                <tr
-                  key={i}
-                  style={{
-                    borderBottom: i < previewRecords.length - 1 ? `1px solid ${isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)'}` : 'none',
-                  }}
-                >
-                  <td style={{ padding: '10px 20px', fontFamily: "'Inter'", fontSize: '0.8125rem', color: isDark ? '#f3f4f6' : '#111827' }}>{r.firstName}</td>
-                  <td style={{ padding: '10px 20px', fontFamily: "'Inter'", fontSize: '0.8125rem', color: isDark ? '#f3f4f6' : '#111827' }}>{r.lastName}</td>
-                  <td style={{ padding: '10px 20px', fontFamily: "'Inter'", fontSize: '0.8125rem', color: isDark ? '#9ca3af' : '#6b7280' }}>{r.baptismDate}</td>
-                  <td style={{ padding: '10px 20px', fontFamily: "'Inter'", fontSize: '0.8125rem', color: isDark ? '#9ca3af' : '#6b7280' }}>{r.priest}</td>
+              {visibleFields.length === 0 ? (
+                <tr>
+                  <td style={{ padding: '14px 20px', fontFamily: "'Inter'", fontSize: '0.8125rem', color: isDark ? '#9ca3af' : '#6b7280' }}>
+                    Enable at least one column in the Field Mapping step to preview it here.
+                  </td>
                 </tr>
-              ))}
+              ) : (
+                Array.from({ length: PREVIEW_ROW_COUNT }).map((_, i) => (
+                  <tr
+                    key={i}
+                    style={{
+                      borderBottom: i < PREVIEW_ROW_COUNT - 1 ? `1px solid ${isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)'}` : 'none',
+                    }}
+                  >
+                    {visibleFields.map((f, ci) => (
+                      <td
+                        key={f.column}
+                        style={{
+                          padding: '10px 20px',
+                          fontFamily: "'Inter'",
+                          fontSize: '0.8125rem',
+                          whiteSpace: 'nowrap',
+                          color: ci < 2 ? (isDark ? '#f3f4f6' : '#111827') : (isDark ? '#9ca3af' : '#6b7280'),
+                        }}
+                      >
+                        {samplePreviewValue(f, i)}
+                      </td>
+                    ))}
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </Box>
@@ -850,9 +1010,18 @@ const DatabaseMappingPage: React.FC = () => {
           You have unsaved changes
         </Alert>
       )}
+      {columnsError && (
+        <Alert severity="error" sx={{ mb: 2, borderRadius: 1.5, fontFamily: "'Inter'", fontSize: '0.75rem' }}>
+          {columnsError}
+        </Alert>
+      )}
 
       {Stepper}
-      {stepContent}
+      {columnsLoading && fields.length === 0 ? (
+        <Box sx={{ display: 'flex', justifyContent: 'center', py: 6 }}>
+          <CircularProgress size={32} />
+        </Box>
+      ) : stepContent}
 
       {/* Navigation Footer */}
       <Box

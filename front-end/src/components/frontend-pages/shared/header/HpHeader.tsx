@@ -59,7 +59,7 @@ const HpHeader = () => {
             <img
               src="/images/logos/logo-top.svg"
               alt="Orthodox Metrics"
-              className="h-24 w-auto object-contain"
+              className="h-12 w-auto object-contain"
             />
           </a>
 

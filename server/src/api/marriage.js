@@ -299,7 +299,9 @@ router.get('/', requireAuth, async (req, res) => {
             }
             const finalSortField = validSortFields.includes(sortField) ? sortField : 'id';
             const finalSortDirection = validSortDirections.includes(sortDirection.toLowerCase()) ? sortDirection.toUpperCase() : 'DESC';
-            query += ` ORDER BY ${finalSortField} ${finalSortDirection}`;
+            // Push NULL/blank values (e.g. records with no marriage date) to
+            // the end regardless of sort direction.
+            query += ` ORDER BY (${finalSortField} IS NULL) ASC, ${finalSortField} ${finalSortDirection}`;
             query += ` LIMIT ? OFFSET ?`;
             mainQueryParams = [...queryParams, parseInt(limit), pageOffset];
         }

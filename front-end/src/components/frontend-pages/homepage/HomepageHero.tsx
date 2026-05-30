@@ -27,8 +27,26 @@ const AMBIENT_KEYFRAMES = `
   }
 `;
 
+const LOGIN_SLIDES = [
+  '/images/misc/login-slide-1.png',
+  '/images/misc/login-slide-2.png',
+  '/images/misc/login-slide-3.png',
+  '/images/misc/login-slide-4.png',
+  '/images/misc/login-slide-5.png',
+  '/images/misc/login-slide-6.png',
+  '/images/misc/login-slide-7.png',
+];
+
 const HomepageHero = () => {
   const { t } = useLanguage();
+  const [slideIdx, setSlideIdx] = useState(0);
+
+  useEffect(() => {
+    const id = setInterval(() => {
+      setSlideIdx((i) => (i + 1) % LOGIN_SLIDES.length);
+    }, 5000);
+    return () => clearInterval(id);
+  }, []);
 
   return (
     <section className="relative overflow-hidden bg-gradient-to-br from-[#2d1b4e] via-[#3a2461] to-[#4a2f74] dark:from-gray-950 dark:via-gray-900 dark:to-gray-800 text-white">
@@ -95,7 +113,19 @@ const HomepageHero = () => {
             </div>
           </div>
 
-          <CanonicalDutyCarousel />
+          <div className="flex items-center justify-center">
+            <div className="relative w-full max-w-[700px] aspect-[16/10]">
+              {LOGIN_SLIDES.map((src, i) => (
+                <img
+                  key={src}
+                  src={src}
+                  alt={`Slide ${i + 1}`}
+                  className="absolute inset-0 w-full h-full object-contain transition-opacity duration-700"
+                  style={{ opacity: i === slideIdx ? 1 : 0 }}
+                />
+              ))}
+            </div>
+          </div>
         </div>
       </div>
     </section>
@@ -162,129 +192,6 @@ const WelcomeRotator = () => {
               active === i
                 ? 'w-6 bg-[#d4af37]'
                 : 'w-2 bg-white/30 hover:bg-white/50'
-            }`}
-          />
-        ))}
-      </div>
-    </div>
-  );
-};
-
-// Right-side rotating panel: cycles a pull-quote → canonical-duty
-// background → modern-jurisdiction guidance, then loops. Each
-// transition slides the active slide out the top while the next
-// one slides up from below — including the wrap-around from the
-// last slide back to the first, which is why we track `prev`
-// rather than relying on a simple key remount.
-const SLIDE_DURATIONS_MS = [9000, 18000, 18000];
-
-const CanonicalDutyCarousel = () => {
-  const [active, setActive] = useState(0);
-  const [prev, setPrev] = useState(-1);
-  const [paused, setPaused] = useState(false);
-
-  useEffect(() => {
-    if (paused) return;
-    const id = window.setTimeout(() => {
-      setPrev(active);
-      setActive((a) => (a + 1) % 3);
-    }, SLIDE_DURATIONS_MS[active]);
-    return () => window.clearTimeout(id);
-  }, [active, paused]);
-
-  const slideClass = (i: number) => {
-    const base =
-      'absolute inset-0 p-6 md:p-8 overflow-y-auto transition-all duration-700 ease-out';
-    if (i === active) return `${base} translate-y-0 opacity-100`;
-    if (i === prev) return `${base} -translate-y-full opacity-0`;
-    return `${base} translate-y-full opacity-0`;
-  };
-
-  return (
-    <div
-      className="relative h-[480px] md:h-[540px] rounded-2xl bg-white/5 backdrop-blur-sm border border-white/10 overflow-hidden"
-      onMouseEnter={() => setPaused(true)}
-      onMouseLeave={() => setPaused(false)}
-      aria-roledescription="carousel"
-      aria-label="Canonical duty rotating panel"
-    >
-      <div className={slideClass(0)} aria-hidden={active !== 0}>
-        <div className="flex h-full flex-col justify-center gap-6">
-          <p className="font-['Georgia'] italic text-2xl md:text-3xl leading-snug text-[#f4d77a]">
-            &ldquo;He shall personally maintain the metrical book for all marriages, baptisms, chrismations, and funerals that take place at the Parish.&rdquo;
-          </p>
-          <p className="font-['Inter'] text-[13px] text-white/60">
-            &mdash; <a href="https://www.oca.org" target="_blank" rel="noopener noreferrer" className="underline decoration-white/30 hover:text-white">Guidelines for Clergy</a>, Orthodox Church in America (2023)
-          </p>
-        </div>
-      </div>
-
-      <div className={slideClass(1)} aria-hidden={active !== 1}>
-        <div className="flex h-full flex-col">
-          <p className="font-['Inter'] text-[15px] md:text-[16px] leading-relaxed text-white/90 mb-4">
-            The parish priest is responsible for entering into the metrical book the required information for every sacrament served &mdash; an obligation set out across the OCA <em>Guidelines for Clergy</em>.
-          </p>
-          <ul className="space-y-3 font-['Inter'] text-[14px] md:text-[15px] text-white/85 flex-1">
-            <li className="flex gap-2">
-              <span className="text-[#d4af37] mt-1">•</span>
-              <span><strong className="text-white">Baptism:</strong> The priest must enter the required data in the parish metrical book after carefully ascertaining all necessary information, including facts and spellings. Certificates witnessing that data are available from oca.org.</span>
-            </li>
-            <li className="flex gap-2">
-              <span className="text-[#d4af37] mt-1">•</span>
-              <span><strong className="text-white">Reception of Converts:</strong> After performing the prescribed rites of reception, the priest must enter the required information in the parish metrical book and issue the appropriate certificate.</span>
-            </li>
-            <li className="flex gap-2">
-              <span className="text-[#d4af37] mt-1">•</span>
-              <span><strong className="text-white">Marriage:</strong> The priest is responsible for entering into the metrical book the required information for each marriage celebrated in the parish.</span>
-            </li>
-            <li className="flex gap-2">
-              <span className="text-[#d4af37] mt-1">•</span>
-              <span><strong className="text-white">Burial:</strong> The parish priest is responsible for entering into the metrical book the required information about each burial.</span>
-            </li>
-          </ul>
-          <p className="font-['Inter'] text-[12px] text-white/50 mt-4">
-            Source: <a href="https://www.oca.org" target="_blank" rel="noopener noreferrer" className="underline decoration-white/30 hover:text-white">Guidelines for Clergy</a>, Orthodox Church in America (2023).
-          </p>
-        </div>
-      </div>
-
-      <div className={slideClass(2)} aria-hidden={active !== 2}>
-        <div className="flex h-full flex-col">
-          <p className="font-['Inter'] text-[15px] md:text-[16px] leading-relaxed text-white/90 mb-4">
-            <strong className="text-white">Metrical Records &amp; other Ecclesiastical Reports</strong> &mdash; the parish priest&apos;s explicit responsibility under the OCA <em>Guidelines for Clergy</em>.
-          </p>
-          <ul className="space-y-3 font-['Inter'] text-[14px] md:text-[15px] text-white/85 flex-1">
-            <li className="flex gap-2">
-              <span className="text-[#d4af37] mt-1">•</span>
-              <span><strong className="text-white">Timely Completion:</strong> It is the parish priest&apos;s responsibility to complete in a timely fashion the parish metrical records and all other ecclesiastical forms or reports required by the Central Church Administration and the diocesan chancery.</span>
-            </li>
-            <li className="flex gap-2">
-              <span className="text-[#d4af37] mt-1">•</span>
-              <span><strong className="text-white">Property of the Parish:</strong> All metrical records are the property of the parish and are not to be taken by the priest in the event he leaves the parish.</span>
-            </li>
-            <li className="flex gap-2">
-              <span className="text-[#d4af37] mt-1">•</span>
-              <span><strong className="text-white">Transfer of Custody:</strong> When a priest transfers from the parish, he turns the church seal and records over to the district dean, who entrusts them to the newly assigned parish priest.</span>
-            </li>
-          </ul>
-          <p className="font-['Inter'] text-[12px] text-white/50 mt-4">
-            Source: <a href="https://www.oca.org" target="_blank" rel="noopener noreferrer" className="underline decoration-white/30 hover:text-white">Guidelines for Clergy</a>, Orthodox Church in America (2023).
-          </p>
-        </div>
-      </div>
-
-      <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-2 z-10">
-        {[0, 1, 2].map((i) => (
-          <button
-            key={i}
-            type="button"
-            aria-label={`Show slide ${i + 1}`}
-            onClick={() => {
-              setPrev(active);
-              setActive(i);
-            }}
-            className={`h-2 rounded-full transition-all ${
-              active === i ? 'w-6 bg-[#d4af37]' : 'w-2 bg-white/30 hover:bg-white/50'
             }`}
           />
         ))}
