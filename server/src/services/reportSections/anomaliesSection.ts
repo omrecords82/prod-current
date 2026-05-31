@@ -91,9 +91,8 @@ export async function generate(userId: number, periodStart: string, periodEnd: s
     return {
       html: `
         <div style="margin-bottom: 24px;">
-          <h2 style="color: #2d1b4e; margin: 0 0 16px 0; font-size: 20px; border-bottom: 2px solid #8c249d; padding-bottom: 8px;">
-            Anomalies
-          </h2>
+          <h2 style="color: #2d1b4e; margin: 0 0 0 0; font-size: 22px; font-weight: 700;">Anomalies</h2>
+          <div style="height: 3px; background: linear-gradient(90deg, #0369a1, #8c249d); margin: 6px 0 16px 0; border-radius: 2px;"></div>
           <p style="color: #10b981; font-size: 14px;">No anomalies detected. All sessions look clean.</p>
         </div>`,
       data: { anomalies: [] }
@@ -114,9 +113,8 @@ export async function generate(userId: number, periodStart: string, periodEnd: s
 
   let html = `
     <div style="margin-bottom: 24px;">
-      <h2 style="color: #2d1b4e; margin: 0 0 16px 0; font-size: 20px; border-bottom: 2px solid #8c249d; padding-bottom: 8px;">
-        Anomalies <span style="font-size: 14px; font-weight: 400; color: #6b7280;">(${anomalies.length})</span>
-      </h2>`;
+      <h2 style="color: #2d1b4e; margin: 0 0 0 0; font-size: 22px; font-weight: 700;">Anomalies <span style="font-size: 14px; font-weight: 400; color: #6b7280;">(${anomalies.length})</span></h2>
+      <div style="height: 3px; background: linear-gradient(90deg, #0369a1, #8c249d); margin: 6px 0 16px 0; border-radius: 2px;"></div>`;
 
   for (const a of anomalies) {
     const color = severityColors[a.severity] || '#6b7280';

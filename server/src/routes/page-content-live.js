@@ -14,7 +14,10 @@
 const express = require('express');
 const { requireAuth, requireRole } = require('../middleware/auth');
 const { getAppPool } = require('../config/db');
+const { sanitizeHtml } = require('../utils/htmlSanitizer');
 const router = express.Router();
+
+const VALID_CONTENT_TYPES = ['text', 'rich_text'];
 
 const TRANSLATION_LANGS = ['el', 'ru', 'ro', 'ka'];
 const LANG_LABELS = { el: 'Greek', ru: 'Russian', ro: 'Romanian', ka: 'Georgian' };
@@ -135,21 +138,27 @@ router.put('/translation-status/resolve', requireAuth, requireRole(['super_admin
 
 // PUT / — upsert a content override (super_admin only)
 // Side effect: flags all non-English translations as needing update
+// Accepts optional contentType: 'text' (default) or 'rich_text'
 router.put('/', requireAuth, requireRole(['super_admin']), async (req, res) => {
   try {
-    const { pageKey, contentKey, contentValue } = req.body;
+    const { pageKey, contentKey, contentValue, contentType } = req.body;
     if (!pageKey || !contentKey || contentValue == null) {
       return res.status(400).json({ success: false, error: 'pageKey, contentKey, and contentValue are required' });
     }
+
+    const resolvedType = contentType && VALID_CONTENT_TYPES.includes(contentType) ? contentType : 'text';
     const userId = req.session?.user?.id || null;
     const pool = getAppPool();
 
-    // Save the English content override
+    // Sanitize rich_text content before persisting
+    const safeValue = resolvedType === 'rich_text' ? sanitizeHtml(contentValue) : contentValue;
+
+    // Save the content override with its type
     await pool.query(
       `INSERT INTO page_content (page_key, content_key, content_value, content_type, updated_by)
-       VALUES (?, ?, ?, 'text', ?)
-       ON DUPLICATE KEY UPDATE content_value = VALUES(content_value), updated_by = VALUES(updated_by)`,
-      [pageKey, contentKey, contentValue, userId]
+       VALUES (?, ?, ?, ?, ?)
+       ON DUPLICATE KEY UPDATE content_value = VALUES(content_value), content_type = VALUES(content_type), updated_by = VALUES(updated_by)`,
+      [pageKey, contentKey, safeValue, resolvedType, userId]
     );
 
     // Flag translations as needing update
@@ -179,18 +188,23 @@ router.delete('/:pageKey/:contentKey', requireAuth, requireRole(['super_admin'])
 });
 
 // GET /:pageKey — fetch all overrides for a page (public) — MUST be last (catch-all param)
+// Returns contentTypes map for keys that are rich_text (text is the default, omitted for brevity)
 router.get('/:pageKey', async (req, res) => {
   try {
     const { pageKey } = req.params;
     const [rows] = await getAppPool().query(
-      'SELECT content_key, content_value FROM page_content WHERE page_key = ?',
+      'SELECT content_key, content_value, content_type FROM page_content WHERE page_key = ?',
       [pageKey]
     );
     const overrides = {};
+    const contentTypes = {};
     for (const row of rows) {
       overrides[row.content_key] = row.content_value;
+      if (row.content_type && row.content_type !== 'text') {
+        contentTypes[row.content_key] = row.content_type;
+      }
     }
-    res.json({ success: true, overrides });
+    res.json({ success: true, overrides, contentTypes });
   } catch (err) {
     console.error('[page-content-live] GET error:', err.message);
     res.status(500).json({ success: false, error: 'Failed to fetch overrides' });

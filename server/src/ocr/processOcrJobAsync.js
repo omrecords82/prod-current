@@ -277,7 +277,7 @@ async function processOcrJobAsync(db, jobId, imagePath, options = {}) {
         // Always try these columns
         if (columnNames.has('status')) {
           updateParts.push('status = ?');
-          updateValues.push('completed');
+          updateValues.push('complete');
         }
         if (columnNames.has('file_path')) {
           updateParts.push('file_path = ?');
@@ -317,7 +317,7 @@ async function processOcrJobAsync(db, jobId, imagePath, options = {}) {
         try {
           await db.query(`
             UPDATE ocr_jobs SET 
-              status = 'completed',
+              status = 'complete',
               file_path = ?,
               confidence_score = ?,
               updated_at = NOW()
@@ -326,21 +326,7 @@ async function processOcrJobAsync(db, jobId, imagePath, options = {}) {
           dbUpdateSuccess = true;
           console.log(`[OCR Processing] Minimal DB update succeeded for job ${jobId}`);
         } catch (dbError2) {
-          // Try with 'complete' status if 'completed' fails (for older schemas)
-          try {
-            await db.query(`
-              UPDATE ocr_jobs SET 
-                status = 'complete',
-                file_path = ?,
-                confidence_score = ?,
-                updated_at = NOW()
-              WHERE id = ?
-            `, [processedImagePath, confidence, jobId]);
-            dbUpdateSuccess = true;
-            console.log(`[OCR Processing] DB updated with 'complete' status for job ${jobId}`);
-          } catch (dbError3) {
-            console.warn(`[OCR Processing] All DB update attempts failed (non-blocking):`, dbError3.message);
-          }
+          console.warn(`[OCR Processing] All DB update attempts failed (non-blocking):`, dbError2.message);
         }
       }
       
@@ -373,9 +359,9 @@ async function processOcrJobAsync(db, jobId, imagePath, options = {}) {
         if (jobBundleModule && jobBundleModule.writeManifest) {
           const { writeManifest } = jobBundleModule;
           await writeManifest(options.churchId || 46, String(jobId), {
-            status: 'completed',
+            status: 'complete',
           });
-          console.log(`[JobBundle] ✅ Updated manifest status to 'completed' for job ${jobId}`);
+          console.log(`[JobBundle] ✅ Updated manifest status to 'complete' for job ${jobId}`);
         } else {
           // JobBundle module is optional - not all deployments have it
           console.log(`[JobBundle] Module not available (optional) - using DB status only for job ${jobId}`);
@@ -397,8 +383,8 @@ async function processOcrJobAsync(db, jobId, imagePath, options = {}) {
     } else {
       // For other engines (tesseract, etc.), mark as completed with placeholder
       // TODO: Implement other OCR engines if needed
-      console.log(`⚠️ OCR engine "${engine}" not yet implemented, marking as completed`);
-      await db.query('UPDATE ocr_jobs SET status = ? WHERE id = ?', ['completed', jobId]);
+      console.log(`⚠️ OCR engine "${engine}" not yet implemented, marking as complete`);
+      await db.query('UPDATE ocr_jobs SET status = ? WHERE id = ?', ['complete', jobId]);
       return { success: true, jobId, message: `Engine ${engine} not implemented` };
     }
     
@@ -411,7 +397,7 @@ async function processOcrJobAsync(db, jobId, imagePath, options = {}) {
     try {
       await db.query(`
         UPDATE ocr_jobs SET 
-          status = 'failed',
+          status = 'error',
           error = ?,
           updated_at = NOW()
         WHERE id = ?
@@ -422,7 +408,7 @@ async function processOcrJobAsync(db, jobId, imagePath, options = {}) {
     } catch (updateError) {
       // If error column doesn't exist, try without it
       try {
-        await db.query('UPDATE ocr_jobs SET status = ? WHERE id = ?', ['failed', jobId]);
+        await db.query('UPDATE ocr_jobs SET status = ? WHERE id = ?', ['error', jobId]);
       } catch (dbError2) {
         console.warn(`[OCR Processing] DB error update failed (non-blocking):`, dbError2.message);
       }
@@ -444,9 +430,9 @@ async function processOcrJobAsync(db, jobId, imagePath, options = {}) {
       if (jobBundleModule) {
         const { writeManifest } = jobBundleModule;
         await writeManifest(options.churchId || 46, String(jobId), {
-          status: 'failed',
+          status: 'error',
         });
-        console.log(`[JobBundle] Updated manifest status to 'failed' for job ${jobId}`);
+        console.log(`[JobBundle] Updated manifest status to 'error' for job ${jobId}`);
       }
     } catch (bundleError) {
       console.warn(`[JobBundle] Could not update manifest for job ${jobId} (non-blocking):`, bundleError.message);

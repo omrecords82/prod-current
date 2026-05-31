@@ -52,6 +52,7 @@ import {
     IconPlayerPlay,
     IconRefresh,
     IconReport,
+    IconRobot,
     IconSend,
     IconSettings,
 } from '@tabler/icons-react';
@@ -115,7 +116,8 @@ function formatDateTime(iso: string | null): string {
 }
 
 function formatDate(iso: string): string {
-  return new Date(iso + 'T12:00:00').toLocaleDateString('en-US', {
+  const dateOnly = iso.includes('T') ? iso.split('T')[0] : iso;
+  return new Date(dateOnly + 'T12:00:00').toLocaleDateString('en-US', {
     month: 'short', day: 'numeric', year: 'numeric',
   });
 }
@@ -560,9 +562,8 @@ function GenerateTab() {
         period_start: periodStart,
         period_end: periodEnd,
       });
-      const data = res.data || res;
-      setResult(data);
-      setPreviewHtml(data.html || null);
+      setResult(res);
+      setPreviewHtml((res as any).html || null);
     } catch (err) {
       console.error('Failed to generate:', err);
     } finally {
@@ -617,6 +618,218 @@ function GenerateTab() {
 }
 
 // ============================================================================
+// Agent Reports Tab
+// ============================================================================
+
+interface AgentReport {
+  id: number;
+  report_date: string;
+  agent_name: string;
+  host: string;
+  host_role: string | null;
+  submitted_at: string;
+  drift_count: number;
+  failed_service_count: number;
+  has_dirty_repos: number;
+}
+
+interface AgentReportDetail extends AgentReport {
+  rendered_markdown: string;
+  raw_json: string;
+}
+
+function AgentReportsTab() {
+  const theme = useTheme();
+  const [reports, setReports] = useState<AgentReport[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [dateFilter, setDateFilter] = useState(new Date().toISOString().substring(0, 10));
+  const [sending, setSending] = useState(false);
+  const [sendResult, setSendResult] = useState<string | null>(null);
+  const [viewReport, setViewReport] = useState<AgentReportDetail | null>(null);
+  const [viewOpen, setViewOpen] = useState(false);
+
+  const fetchReports = useCallback(async () => {
+    setLoading(true);
+    setSendResult(null);
+    try {
+      const params = new URLSearchParams({ limit: '100' });
+      if (dateFilter) params.set('date', dateFilter);
+      const res = await apiClient.get(`/agent-reports?${params}`);
+      const data = res.data || res;
+      setReports(data.reports || []);
+    } catch (err) {
+      console.error('Failed to fetch agent reports:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, [dateFilter]);
+
+  useEffect(() => { fetchReports(); }, [fetchReports]);
+
+  const handleViewReport = async (id: number) => {
+    try {
+      const res = await apiClient.get(`/agent-reports/${id}`);
+      const data = res.data || res;
+      setViewReport(data.report);
+      setViewOpen(true);
+    } catch (err) {
+      console.error('Failed to fetch report detail:', err);
+    }
+  };
+
+  const handleSendDigest = async () => {
+    setSending(true);
+    setSendResult(null);
+    try {
+      const res = await apiClient.post('/agent-reports/digest/send', { date: dateFilter });
+      const data = res.data || res;
+      setSendResult(
+        data.sent
+          ? `✓ Digest sent to ${(data.recipients || []).join(', ')} — ${data.report_count} report(s) included`
+          : `No reports found for ${dateFilter} — digest not sent`
+      );
+    } catch (err: any) {
+      setSendResult(`Error: ${err?.response?.data?.error || err?.message || 'Unknown error'}`);
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const totalDrift = reports.reduce((s, r) => s + (r.drift_count || 0), 0);
+  const totalFailed = reports.reduce((s, r) => s + (r.failed_service_count || 0), 0);
+
+  return (
+    <Box>
+      <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 3 }} flexWrap="wrap">
+        <TextField
+          type="date"
+          size="small"
+          label="Date"
+          value={dateFilter}
+          onChange={(e) => setDateFilter(e.target.value)}
+          InputLabelProps={{ shrink: true }}
+        />
+        <IconButton onClick={fetchReports} size="small"><IconRefresh size={18} /></IconButton>
+        <Button
+          variant="contained"
+          onClick={handleSendDigest}
+          disabled={sending || reports.length === 0}
+          startIcon={sending ? <CircularProgress size={16} color="inherit" /> : <IconSend size={16} />}
+          sx={{ bgcolor: '#2d1b4e', '&:hover': { bgcolor: '#1e1638' }, textTransform: 'none' }}
+        >
+          Send Digest Now
+        </Button>
+      </Stack>
+
+      {sendResult && (
+        <Alert severity={sendResult.startsWith('✓') ? 'success' : sendResult.startsWith('No') ? 'info' : 'error'} sx={{ mb: 2 }}>
+          {sendResult}
+        </Alert>
+      )}
+
+      {reports.length > 0 && (
+        <Stack direction="row" spacing={2} sx={{ mb: 2 }}>
+          <Chip label={`${reports.length} report${reports.length !== 1 ? 's' : ''}`} size="small" />
+          {totalDrift > 0 && <Chip label={`${totalDrift} drift item${totalDrift !== 1 ? 's' : ''}`} size="small" color="warning" />}
+          {totalFailed > 0 && <Chip label={`${totalFailed} failed unit${totalFailed !== 1 ? 's' : ''}`} size="small" color="error" />}
+        </Stack>
+      )}
+
+      <TableContainer component={Paper} variant="outlined">
+        <Table size="small">
+          <TableHead>
+            <TableRow>
+              <TableCell>Agent</TableCell>
+              <TableCell>Host</TableCell>
+              <TableCell>Role</TableCell>
+              <TableCell>Submitted</TableCell>
+              <TableCell align="center">Drift</TableCell>
+              <TableCell align="center">Failed Units</TableCell>
+              <TableCell align="center">Dirty Repos</TableCell>
+              <TableCell align="center">View</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {loading ? (
+              <TableRow><TableCell colSpan={8} align="center"><CircularProgress size={20} /></TableCell></TableRow>
+            ) : reports.length === 0 ? (
+              <TableRow><TableCell colSpan={8} align="center" sx={{ color: 'text.secondary', py: 4 }}>No agent reports found for {dateFilter}</TableCell></TableRow>
+            ) : reports.map((r) => (
+              <TableRow key={r.id} hover>
+                <TableCell>
+                  <Typography variant="body2" sx={{ fontWeight: 600, fontFamily: 'monospace' }}>{r.agent_name}</Typography>
+                </TableCell>
+                <TableCell sx={{ fontFamily: 'monospace', fontSize: 12 }}>{r.host}</TableCell>
+                <TableCell sx={{ fontSize: 12, color: 'text.secondary' }}>{r.host_role || '—'}</TableCell>
+                <TableCell sx={{ fontSize: 12 }}>{formatDateTime(r.submitted_at)}</TableCell>
+                <TableCell align="center">
+                  {r.drift_count > 0
+                    ? <Chip label={r.drift_count} size="small" color="warning" />
+                    : <Chip label="0" size="small" variant="outlined" />}
+                </TableCell>
+                <TableCell align="center">
+                  {r.failed_service_count > 0
+                    ? <Chip label={r.failed_service_count} size="small" color="error" />
+                    : <Chip label="0" size="small" variant="outlined" />}
+                </TableCell>
+                <TableCell align="center">
+                  {r.has_dirty_repos
+                    ? <Chip label="dirty" size="small" color="warning" variant="outlined" />
+                    : <Chip label="clean" size="small" color="success" variant="outlined" />}
+                </TableCell>
+                <TableCell align="center">
+                  <Tooltip title="View Markdown report">
+                    <IconButton size="small" onClick={() => handleViewReport(r.id)}>
+                      <IconEye size={16} />
+                    </IconButton>
+                  </Tooltip>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </TableContainer>
+
+      {/* Report markdown viewer */}
+      <Dialog open={viewOpen} onClose={() => setViewOpen(false)} maxWidth="md" fullWidth>
+        <DialogTitle>
+          Agent Report — {viewReport?.agent_name} @ {viewReport?.host}
+          <Typography variant="caption" sx={{ ml: 1, color: 'text.secondary' }}>
+            {viewReport ? formatDateTime(viewReport.submitted_at) : ''}
+          </Typography>
+        </DialogTitle>
+        <DialogContent dividers>
+          {viewReport && (
+            <Box
+              component="pre"
+              sx={{
+                fontFamily: 'monospace',
+                fontSize: 12,
+                whiteSpace: 'pre-wrap',
+                wordBreak: 'break-word',
+                bgcolor: theme.palette.mode === 'dark' ? '#0d1117' : '#f9fafb',
+                border: '1px solid',
+                borderColor: 'divider',
+                borderRadius: 1,
+                p: 2,
+                m: 0,
+                maxHeight: '60vh',
+                overflow: 'auto',
+              }}
+            >
+              {viewReport.rendered_markdown}
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setViewOpen(false)} sx={{ textTransform: 'none' }}>Close</Button>
+        </DialogActions>
+      </Dialog>
+    </Box>
+  );
+}
+
+// ============================================================================
 // Main Page
 // ============================================================================
 
@@ -642,12 +855,14 @@ const WorkSessionAdminPage: React.FC = () => {
         <Tab icon={<IconSettings size={16} />} iconPosition="start" label="Report Config" sx={{ textTransform: 'none', fontWeight: 600, minHeight: 42 }} />
         <Tab icon={<IconReport size={16} />} iconPosition="start" label="Report History" sx={{ textTransform: 'none', fontWeight: 600, minHeight: 42 }} />
         <Tab icon={<IconCalendar size={16} />} iconPosition="start" label="Generate Now" sx={{ textTransform: 'none', fontWeight: 600, minHeight: 42 }} />
+        <Tab icon={<IconRobot size={16} />} iconPosition="start" label="AI Agent Reports" sx={{ textTransform: 'none', fontWeight: 600, minHeight: 42 }} />
       </Tabs>
 
       {tab === 0 && <SessionsTab />}
       {tab === 1 && <ReportConfigTab />}
       {tab === 2 && <ReportHistoryTab />}
       {tab === 3 && <GenerateTab />}
+      {tab === 4 && <AgentReportsTab />}
     </Box>
   );
 };

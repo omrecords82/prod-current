@@ -1,42 +1,37 @@
+import {
+    ArrowLeft,
+    ArrowRight,
+    Building2,
+    Check,
+    CircleAlert,
+    Copy,
+    Droplets,
+    Flame,
+    HeartHandshake,
+    Loader2,
+    Mail,
+    MapPin,
+    PartyPopper,
+    Save,
+    Search,
+    ShieldCheck,
+    X
+} from "lucide-react";
 import { useEffect, useState } from "react";
+import { ThemeToggle } from "../ThemeToggle";
+import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
+import { Card, CardContent } from "../ui/card";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
-import { Card, CardContent } from "../ui/card";
-import { Badge } from "../ui/badge";
-import { Switch } from "../ui/switch";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
 } from "../ui/select";
-import { Textarea } from "../ui/textarea";
-import { Logo } from "../Logo";
-import { PriorityBadge } from "../PriorityBadge";
-import { ThemeToggle } from "../ThemeToggle";
-import {
-  ArrowLeft,
-  ArrowRight,
-  Check,
-  Save,
-  Droplets,
-  HeartHandshake,
-  Flame,
-  ShieldCheck,
-  Building2,
-  Mail,
-  Phone,
-  Globe,
-  X,
-  CircleAlert,
-  PartyPopper,
-  Copy,
-  MapPin,
-  Search,
-  Loader2,
-} from "lucide-react";
+import { Switch } from "../ui/switch";
 
 const steps = [
   { key: "find-parish", label: "Find Your Parish", n: 1 },
@@ -239,7 +234,10 @@ export function Onboarding({ onCancel, onComplete, theme, onToggleTheme }: Props
     <div className="min-h-screen bg-background text-foreground">
       <header className="border-b border-border bg-card">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-          <Logo size="sm" />
+          <a href="/frontend-pages/homepage" className="flex items-center no-underline">
+            <img src="/images/logos/logo-top.svg" alt="Orthodox Metrics" className="h-10 w-auto object-contain dark:hidden" />
+            <img src="/images/logos/logo-top-dark.svg" alt="Orthodox Metrics" className="h-10 w-auto object-contain hidden dark:block" />
+          </a>
           <div className="flex items-center gap-3">
             <Badge variant="outline" className="hidden md:inline-flex">
               <Save className="h-3 w-3 mr-1" /> Draft saved · 2 min ago
@@ -267,25 +265,25 @@ export function Onboarding({ onCancel, onComplete, theme, onToggleTheme }: Props
                     onClick={() => { if (i <= stepIndex) { setTriedNext(false); setStep(s.key); } }}
                     className={`w-full flex items-center gap-3 px-3 py-3 rounded-md text-left transition-colors ${
                       active
-                        ? "bg-[#3a1d6e] text-white"
+                        ? "bg-[#2d1b4e] dark:bg-[#1e2a3a] dark:border-l-2 dark:border-l-[#d4af37] text-white"
                         : done
-                          ? "text-foreground hover:bg-muted"
+                          ? "text-foreground hover:bg-muted dark:hover:bg-[#1e2a3a]/60"
                           : "text-muted-foreground"
                     }`}
                   >
                     <span
                       className={`h-6 w-6 rounded-full flex items-center justify-center text-xs shrink-0 ${
                         active
-                          ? "bg-[#c9a14a] text-[#2a1450]"
+                          ? "bg-[#d4af37] text-[#2d1b4e]"
                           : done
-                            ? "bg-[#c9a14a]/30 text-[#5a4413] dark:text-[#e3c483]"
+                            ? "bg-[#d4af37]/30 text-[#2d1b4e] dark:text-[#d4af37]"
                             : "border border-border"
                       }`}
                     >
                       {done ? <Check className="h-3.5 w-3.5" /> : s.n}
                     </span>
                     <div>
-                      <div className="text-xs opacity-70">Frame {s.n}</div>
+                      <div className="text-xs opacity-70">Step {s.n}</div>
                       <div className="text-sm">{s.label}</div>
                     </div>
                   </button>
@@ -293,9 +291,6 @@ export function Onboarding({ onCancel, onComplete, theme, onToggleTheme }: Props
               );
             })}
           </ol>
-          <div className="mt-6">
-            <PriorityBadge p="P0" />
-          </div>
         </aside>
 
         <div className="space-y-6">
@@ -349,7 +344,7 @@ export function Onboarding({ onCancel, onComplete, theme, onToggleTheme }: Props
                 <Button
                   onClick={goNext}
                   disabled={!canProceed}
-                  className="bg-[#3a1d6e] hover:bg-[#2a1450] text-white"
+                  className="bg-[#d4af37] hover:bg-[#c29d2f] text-[#2d1b4e] font-medium px-6"
                 >
                   {step === "review" ? "Submit Provision Request" : "Next"}{" "}
                   <ArrowRight className="h-4 w-4 ml-2" />
@@ -379,9 +374,9 @@ function SectionCard({
       <CardContent className="p-6 space-y-6">
         <div className="space-y-1 border-b border-border pb-4">
           <div className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
-            Frame {number}
+            Step {number}
           </div>
-          <h2 className="text-xl">{title}</h2>
+          <h2 className="font-['Georgia'] text-xl text-[#2d1b4e] dark:text-[#d4af37]" style={{ fontWeight: 400 }}>{title}</h2>
           {description && <p className="text-sm text-muted-foreground">{description}</p>}
         </div>
         {children}
@@ -600,8 +595,8 @@ function FindParishStep({
         )}
       </div>
 
-      <div className="flex items-start gap-3 p-4 rounded-md bg-[#f6efdb]/60 dark:bg-[#3a1d6e]/30 border border-[#c9a14a]/30 text-sm">
-        <MapPin className="h-4 w-4 mt-0.5 text-[#5a4413] dark:text-[#e3c483] shrink-0" />
+      <div className="flex items-start gap-3 p-4 rounded-lg bg-[rgba(212,175,55,0.08)] dark:bg-[rgba(30,42,58,0.8)] border border-[#d4af37]/25 dark:border-white/8 text-sm">
+        <MapPin className="h-4 w-4 mt-0.5 text-[#2d1b4e] dark:text-[#d4af37] shrink-0" />
         <div>
           We pull from the Orthodox Metrics parish directory. If your church
           isn't there yet, choose <em>I don't see my church</em> — we'll add it.
@@ -704,8 +699,8 @@ function ProfileStep({ profile, setProfile, errors = {}, showErrors = false }: a
         </Field>
       </div>
 
-      <div className="flex items-start gap-3 p-4 rounded-md bg-[#f6efdb]/60 dark:bg-[#3a1d6e]/30 border border-[#c9a14a]/30 text-sm">
-        <CircleAlert className="h-4 w-4 mt-0.5 text-[#5a4413] dark:text-[#e3c483] shrink-0" />
+      <div className="flex items-start gap-3 p-4 rounded-lg bg-[rgba(212,175,55,0.08)] dark:bg-[rgba(30,42,58,0.8)] border border-[#d4af37]/25 dark:border-white/8 text-sm">
+        <CircleAlert className="h-4 w-4 mt-0.5 text-[#2d1b4e] dark:text-[#d4af37] shrink-0" />
         <div>
           Required fields are marked with <Req />. Your draft is saved automatically every minute.
         </div>
@@ -755,16 +750,16 @@ function ModulesStep({ modules, setModules }: any) {
               onClick={() => setModules({ ...modules, [c.key]: !selected })}
               className={`text-left rounded-lg border p-5 transition-all ${
                 selected
-                  ? "border-[#3a1d6e] dark:border-[#c9a14a] ring-2 ring-[#3a1d6e]/20 dark:ring-[#c9a14a]/30 bg-[#f1ecf7] dark:bg-[#3a1d6e]/30"
-                  : "border-border hover:border-[#3a1d6e]/40"
+                  ? "border-[#2d1b4e] dark:border-[#d4af37] ring-2 ring-[#2d1b4e]/15 dark:ring-[#d4af37]/20 bg-[rgba(45,27,78,0.05)] dark:bg-[rgba(212,175,55,0.06)]"
+                  : "border-border hover:border-[#2d1b4e]/30"
               }`}
             >
               <div className="flex items-start justify-between mb-4">
-                <div className="h-10 w-10 rounded-md bg-[#3a1d6e] text-[#c9a14a] flex items-center justify-center">
+                <div className="h-10 w-10 rounded-md bg-[#2d1b4e] dark:bg-[#1e2a3a] text-[#d4af37] flex items-center justify-center">
                   <Icon className="h-5 w-5" />
                 </div>
                 {c.recommended && (
-                  <Badge className="bg-[#c9a14a] text-[#2a1450] border-transparent">
+                  <Badge className="bg-[#d4af37] text-[#2d1b4e] border-transparent">
                     Recommended
                   </Badge>
                 )}
@@ -780,7 +775,7 @@ function ModulesStep({ modules, setModules }: any) {
                 <span
                   className={`h-5 w-5 rounded-full border flex items-center justify-center ${
                     selected
-                      ? "bg-[#3a1d6e] border-[#3a1d6e] text-white"
+                      ? "bg-[#2d1b4e] dark:bg-[#d4af37] border-[#2d1b4e] dark:border-[#d4af37] text-white dark:text-[#2d1b4e]"
                       : "border-border"
                   }`}
                 >
@@ -867,8 +862,8 @@ function AdminStep({ admin, setAdmin, errors = {}, showErrors = false }: any) {
         />
       </div>
 
-      <div className="flex items-start gap-3 p-4 rounded-md bg-[#f6efdb]/60 dark:bg-[#3a1d6e]/30 border border-[#c9a14a]/30 text-sm">
-        <ShieldCheck className="h-4 w-4 mt-0.5 text-[#5a4413] dark:text-[#e3c483] shrink-0" />
+      <div className="flex items-start gap-3 p-4 rounded-lg bg-[rgba(212,175,55,0.08)] dark:bg-[rgba(30,42,58,0.8)] border border-[#d4af37]/25 dark:border-white/8 text-sm">
+        <ShieldCheck className="h-4 w-4 mt-0.5 text-[#2d1b4e] dark:text-[#d4af37] shrink-0" />
         <div>
           Your password is hashed and stored securely. Orthodox Metrics staff cannot read your
           password. You can change it at any time from Settings.
@@ -921,7 +916,7 @@ function ReviewStep({ profile, modules, admin }: any) {
         </SummaryCard>
       </div>
 
-      <div className="p-4 rounded-md bg-[#f1ecf7] dark:bg-[#3a1d6e]/40 border border-[#3a1d6e]/30 text-sm">
+      <div className="p-4 rounded-lg bg-[rgba(45,27,78,0.05)] dark:bg-[rgba(30,42,58,0.8)] border border-[#2d1b4e]/20 dark:border-white/8 text-sm">
         <div className="mb-1">What happens next</div>
         <div className="text-muted-foreground">
           Orthodox Metrics staff will review your request within 1–2 business days. You'll get an
@@ -941,7 +936,7 @@ function ConfirmStep({ profile, modules, admin, onDashboard, onHome }: any) {
       description="Your provision request has been received."
     >
       <div className="flex flex-col items-center text-center py-6 space-y-4">
-        <div className="h-16 w-16 rounded-full bg-[#3a1d6e] text-[#c9a14a] flex items-center justify-center">
+        <div className="h-16 w-16 rounded-full bg-[#2d1b4e] dark:bg-[#1e2a3a] dark:ring-2 dark:ring-[#d4af37]/40 text-[#d4af37] flex items-center justify-center">
           <PartyPopper className="h-7 w-7" />
         </div>
         <h2 className="text-2xl">Thank you, {profile.firstName}.</h2>
@@ -976,7 +971,7 @@ function ConfirmStep({ profile, modules, admin, onDashboard, onHome }: any) {
 
       <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
         <Button variant="outline" onClick={onHome}>Return Home</Button>
-        <Button onClick={onDashboard} className="bg-[#3a1d6e] hover:bg-[#2a1450] text-white">
+        <Button onClick={onDashboard} className="bg-[#d4af37] hover:bg-[#c29d2f] text-[#2d1b4e] font-medium">
           Go to Dashboard <ArrowRight className="ml-2 h-4 w-4" />
         </Button>
       </div>
@@ -996,7 +991,7 @@ function SummaryCard({
   return (
     <div className="rounded-md border border-border p-4 space-y-3">
       <div className="flex items-center gap-2 text-sm">
-        <Icon className="h-4 w-4 text-[#3a1d6e] dark:text-[#c9a14a]" />
+        <Icon className="h-4 w-4 text-[#2d1b4e] dark:text-[#d4af37]" />
         <span>{title}</span>
       </div>
       <div className="space-y-1.5">{children}</div>

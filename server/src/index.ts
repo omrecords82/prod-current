@@ -907,6 +907,11 @@ app.use('/api/user/sessions', userSessionsRouter);
 const workSessionsRouter = require('./routes/work-sessions');
 app.use('/api/work-sessions', workSessionsRouter);
 
+// AI Agent Checkpoint Reports
+const agentReportsRouter = require('./routes/agent-reports');
+app.use('/api/agent-reports', agentReportsRouter);
+console.log('✅ [Server] Mounted /api/agent-reports (AI agent checkpoint submissions + digest)');
+
 // CS-OMSTUDIO-PLATFORM-PROVIDERS-V1 — read-only platform-provider
 // feeds for OMStudio (church-summary, resource-usage). Authenticates
 // via X-Service-Token. Mounts BEFORE the session-cookie auth so its
@@ -1574,6 +1579,22 @@ cron.schedule('*/5 * * * *', async () => {
 console.log('Email queue processor started (runs every 5 minutes)');
 
 // --- WORK SESSION CRONS ---------------------------------------------
+// AI Agent daily digest — every day at 11:00 UTC (7 AM ET)
+cron.schedule('0 11 * * *', async () => {
+  try {
+    const today = new Date().toISOString().substring(0, 10);
+    const { generateAndSendAgentDigest } = require('./services/agentReportDigestService');
+    const result = await generateAndSendAgentDigest(today);
+    if (result.sent) {
+      console.log(`[AgentDigest] Daily digest sent for ${today} to ${result.recipients?.join(', ')}`);
+    } else {
+      console.log(`[AgentDigest] No reports for ${today} — digest skipped (${result.reason})`);
+    }
+  } catch (error) {
+    console.error('[AgentDigest] Error sending daily digest:', error);
+  }
+});
+
 // Weekly report generation — every Monday at 12:00 UTC (8 AM ET)
 cron.schedule('0 12 * * 1', async () => {
   try {
@@ -1599,6 +1620,7 @@ console.log('Work session crons started (weekly reports Mon 8AM ET, stale sessio
 // These crons now run from the OMAI server
 
 // Weekly OCR artifact cleanup (Sunday 3 AM) — deletes feeder artifacts for completed jobs older than 90 days
+// Guardrail: skips jobs that still have drafts in 'draft' or 'in_review' workflow_status
 cron.schedule('0 3 * * 0', async () => {
   try {
     const fsP = require('fs');
@@ -1607,15 +1629,40 @@ cron.schedule('0 3 * * 0', async () => {
     if (!fsP.existsSync(feederDir)) return;
 
     const pool = db.getAppPool ? db.getAppPool() : db.promisePool;
-    // Find completed jobs older than 90 days
+    // Find completed jobs older than 90 days (include church_id for tenant lookup)
     const [oldJobs] = await pool.query(
-      `SELECT id FROM ocr_jobs
+      `SELECT id, church_id FROM ocr_jobs
        WHERE status IN ('complete','completed')
          AND completed_at < DATE_SUB(NOW(), INTERVAL 90 DAY)`
     );
 
     let cleaned = 0;
+    let skipped = 0;
     for (const job of (oldJobs as any[])) {
+      // Guardrail: check if any fusion drafts are still in active review
+      if (job.church_id) {
+        try {
+          const tenantPool = db.getTenantPool(job.church_id);
+          const [drafts] = await tenantPool.query(
+            `SELECT COUNT(*) AS cnt FROM ocr_fused_drafts
+             WHERE ocr_job_id = ? AND workflow_status IN ('draft', 'in_review')`,
+            [job.id]
+          );
+          if (drafts[0]?.cnt > 0) {
+            console.warn(`[OCR Cleanup] SKIPPED job ${job.id} (church ${job.church_id}): ${drafts[0].cnt} draft(s) still in draft/in_review`);
+            skipped++;
+            continue;
+          }
+        } catch (tenantErr: any) {
+          // If tenant DB or table doesn't exist, safe to proceed with cleanup
+          if (!tenantErr.message?.includes('doesn\'t exist')) {
+            console.warn(`[OCR Cleanup] SKIPPED job ${job.id}: tenant check failed: ${tenantErr.message}`);
+            skipped++;
+            continue;
+          }
+        }
+      }
+
       const jobDir = pathP.join(feederDir, `job_${job.id}`);
       if (fsP.existsSync(jobDir)) {
         try {
@@ -1624,12 +1671,14 @@ cron.schedule('0 3 * * 0', async () => {
         } catch (_) { /* skip inaccessible dirs */ }
       }
     }
-    if (cleaned > 0) console.log(`[OCR Cleanup] Removed artifacts for ${cleaned} completed jobs (>90 days)`);
+    if (cleaned > 0 || skipped > 0) {
+      console.log(`[OCR Cleanup] Removed artifacts for ${cleaned} completed jobs (>90 days), skipped ${skipped} with active drafts`);
+    }
   } catch (err: any) {
     console.error('[OCR Cleanup] Cron error:', err.message);
   }
 });
-console.log('OCR artifact cleanup cron scheduled (Sunday 3 AM, 90-day retention)');
+console.log('OCR artifact cleanup cron scheduled (Sunday 3 AM, 90-day retention, draft-aware)');
 
 // --- WEBSOCKET INTEGRATION -----------------------------------------
 const websocketService = require('./services/websocketService');

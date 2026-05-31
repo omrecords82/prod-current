@@ -3,47 +3,42 @@ import { useLanguage } from '@/context/LanguageContext';
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 
-const SACRAMENT_IMAGES = [
-  '/images/logos/bap-small-bottom.png',
-  '/images/logos/wedding-small-bottom.png',
-  '/images/logos/funeral-small-bottom.png',
+const FOOTER_SACRAMENT_IMAGES = [
+  { src: '/images/home/baptism-small-footer.png', delay: 3000 },
+  { src: '/images/home/wedding-small-footer.png', delay: 4000 },
+  { src: '/images/home/funeral-small-footer.png', delay: 5000 },
 ];
 
 const SiteFooter = () => {
   const { t } = useLanguage();
   const copyrightText = t('footer.copyright').replace('{year}', String(new Date().getFullYear()));
-  const [sacramentIdx, setSacramentIdx] = useState(0);
+
+  const [activeIndex, setActiveIndex] = useState(0);
 
   useEffect(() => {
-    const id = setInterval(() => {
-      setSacramentIdx((i) => (i + 1) % SACRAMENT_IMAGES.length);
-    }, 5000);
-    return () => clearInterval(id);
-  }, []);
+    const timer = setTimeout(() => {
+      setActiveIndex((prev) => (prev + 1) % FOOTER_SACRAMENT_IMAGES.length);
+    }, FOOTER_SACRAMENT_IMAGES[activeIndex].delay);
+    return () => clearTimeout(timer);
+  }, [activeIndex]);
 
   return (
     <footer className="bg-[#2d1b4e] dark:bg-gray-950 text-white">
       <div className="max-w-7xl mx-auto px-6 py-16">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-12">
-          {/* Brand — bottom logo with rotating sacrament image */}
+          {/* Brand — SVG logo with sacrament images */}
           <div className="col-span-1">
-            <div className="relative inline-flex items-center mb-4">
+            <div className="inline-flex items-center gap-3 mb-4">
               <img
-                src="/images/logos/bottom-logo.png"
+                src="/images/logos/logo-top-dark.svg"
                 alt="Orthodox Metrics"
-                className="h-20 w-auto object-contain"
+                className="h-10 w-auto object-contain"
               />
-              <div className="relative -ml-2 h-[72px] w-[60px] flex-shrink-0">
-                {SACRAMENT_IMAGES.map((src, i) => (
-                  <img
-                    key={src}
-                    src={src}
-                    alt="Sacrament"
-                    className="absolute inset-0 h-full w-full object-contain transition-opacity duration-700"
-                    style={{ opacity: i === sacramentIdx ? 1 : 0 }}
-                  />
-                ))}
-              </div>
+              <img
+                src={FOOTER_SACRAMENT_IMAGES[activeIndex].src}
+                alt="Sacrament"
+                className="h-16 w-auto object-contain transition-opacity duration-500"
+              />
             </div>
             <p className="font-['Inter'] text-[14px] text-[rgba(255,255,255,0.7)] leading-relaxed">
               {t('footer.tagline')}

@@ -2,6 +2,7 @@ import HomepageHero from '@/components/frontend-pages/homepage/HomepageHero';
 import HomepageIntro from '@/components/frontend-pages/homepage/HomepageIntro';
 import HomepageRecordsTransformSection from '@/components/frontend-pages/homepage/records-transform/HomepageRecordsTransformSection';
 import EditableText from '@/components/frontend-pages/shared/EditableText';
+import RichEditableText from '@/components/frontend-pages/shared/RichEditableText';
 import PublicSeo from '@/components/seo/PublicSeo';
 import { PUBLIC_ROUTES } from '@/config/publicRoutes';
 import { useLanguage } from '@/context/LanguageContext';
@@ -31,9 +32,9 @@ const Homepage = () => {
                 {t('home.steps_badge')}
               </EditableText>
             </div>
-            <EditableText contentKey="steps.title" as="h2" className="font-['Georgia'] text-4xl md:text-5xl text-[#2d1b4e] dark:text-white mb-4">
+            <RichEditableText contentKey="steps.title" as="h2" className="font-['Georgia'] text-4xl md:text-5xl text-[#2d1b4e] dark:text-white mb-4">
               {t('home.steps_title')}
-            </EditableText>
+            </RichEditableText>
           </div>
 
           <div className="grid md:grid-cols-3 gap-12">
@@ -53,9 +54,9 @@ const Homepage = () => {
                 {t('home.features_badge')}
               </EditableText>
             </div>
-            <EditableText contentKey="features.title" as="h2" className="font-['Georgia'] text-4xl md:text-5xl text-[#2d1b4e] dark:text-white mb-4">
+            <RichEditableText contentKey="features.title" as="h2" className="font-['Georgia'] text-4xl md:text-5xl text-[#2d1b4e] dark:text-white mb-4">
               {t('home.features_title')}
-            </EditableText>
+            </RichEditableText>
           </div>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -67,9 +68,9 @@ const Homepage = () => {
                 <EditableText contentKey={`features.card${i + 1}.title`} as="h3" className="font-['Inter'] font-medium text-xl text-[#2d1b4e] dark:text-white mb-2">
                   {t(`home.features_feat${i + 1}_title`)}
                 </EditableText>
-                <EditableText contentKey={`features.card${i + 1}.desc`} as="p" className="font-['Inter'] text-[15px] text-[#4a5565] dark:text-gray-400 leading-relaxed" multiline>
+                <RichEditableText contentKey={`features.card${i + 1}.desc`} as="p" className="font-['Inter'] text-[15px] text-[#4a5565] dark:text-gray-400 leading-relaxed">
                   {t(`home.features_feat${i + 1}_desc`)}
-                </EditableText>
+                </RichEditableText>
               </div>
             ))}
           </div>
@@ -89,12 +90,12 @@ const Homepage = () => {
                   {t('home.why_badge')}
                 </EditableText>
               </div>
-              <EditableText contentKey="why.title" as="h2" className="font-['Georgia'] text-4xl md:text-5xl text-[#2d1b4e] dark:text-white mb-6">
+              <RichEditableText contentKey="why.title" as="h2" className="font-['Georgia'] text-4xl md:text-5xl text-[#2d1b4e] dark:text-white mb-6">
                 {t('home.why_title')}
-              </EditableText>
-              <EditableText contentKey="why.description" as="p" className="font-['Inter'] text-lg text-[#4a5565] dark:text-gray-400 leading-relaxed mb-8" multiline>
+              </RichEditableText>
+              <RichEditableText contentKey="why.description" as="p" className="font-['Inter'] text-lg text-[#4a5565] dark:text-gray-400 leading-relaxed mb-8">
                 {t('home.why_desc')}
-              </EditableText>
+              </RichEditableText>
               <div className="space-y-4">
                 {[1, 2, 3, 4].map((i) => (
                   <div key={i} className="flex items-start gap-3">
@@ -142,12 +143,12 @@ const Homepage = () => {
       {/* CTA */}
       <section className="py-20 bg-gradient-to-br from-[#2d1b4e] via-[#3a2461] to-[#4a2f74] dark:from-gray-950 dark:via-gray-900 dark:to-gray-800 text-white">
         <div className="max-w-4xl mx-auto px-6 text-center">
-          <EditableText contentKey="cta.title" as="h2" className="font-['Georgia'] text-4xl md:text-5xl mb-6">
+          <RichEditableText contentKey="cta.title" as="h2" className="font-['Georgia'] text-4xl md:text-5xl mb-6">
             {t('home.cta_title')}
-          </EditableText>
-          <EditableText contentKey="cta.subtitle" as="p" className="font-['Inter'] text-xl text-[rgba(255,255,255,0.9)] mb-8" multiline>
+          </RichEditableText>
+          <RichEditableText contentKey="cta.subtitle" as="p" className="font-['Inter'] text-xl text-[rgba(255,255,255,0.9)] mb-8">
             {t('home.cta_subtitle')}
-          </EditableText>
+          </RichEditableText>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link
               to={PUBLIC_ROUTES.CONTACT}
@@ -188,9 +189,9 @@ function StepItem({ number, titleKey, descKey, title, description, variant }: { 
           <EditableText contentKey={titleKey} as="h3" className="font-['Inter'] font-medium text-xl text-[#2d1b4e] dark:text-white mb-2">
             {title}
           </EditableText>
-          <EditableText contentKey={descKey} as="p" className="font-['Inter'] text-[16px] text-[#4a5565] dark:text-gray-400 leading-relaxed" multiline>
+          <RichEditableText contentKey={descKey} as="p" className="font-['Inter'] text-[16px] text-[#4a5565] dark:text-gray-400 leading-relaxed">
             {description}
-          </EditableText>
+          </RichEditableText>
         </div>
       </div>
     </div>

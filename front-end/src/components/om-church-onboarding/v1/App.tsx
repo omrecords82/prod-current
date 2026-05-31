@@ -38,7 +38,7 @@ export default function App() {
       {view === "complete" && (
         <div className="min-h-screen flex items-center justify-center bg-background text-foreground px-6">
           <div className="max-w-xl text-center space-y-4">
-            <h1 className="font-['Georgia'] text-3xl text-[#2a1450] dark:text-[#c9a14a]">
+            <h1 className="font-['Georgia'] text-3xl text-[#2d1b4e] dark:text-[#d4af37]">
               Thank you — your provision request is in.
             </h1>
             <p className="text-muted-foreground">
@@ -48,7 +48,7 @@ export default function App() {
             <div className="pt-2">
               <a
                 href="/frontend-pages/homepage"
-                className="inline-flex items-center gap-2 px-6 py-3 rounded-md bg-[#3a1d6e] hover:bg-[#2a1450] text-white text-sm font-medium no-underline transition-colors"
+                className="inline-flex items-center gap-2 px-8 py-4 rounded-lg bg-[#d4af37] hover:bg-[#c29d2f] text-[#2d1b4e] font-medium no-underline transition-colors"
               >
                 Back to homepage
               </a>

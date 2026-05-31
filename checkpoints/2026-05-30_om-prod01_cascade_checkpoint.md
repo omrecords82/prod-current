@@ -1,0 +1,211 @@
+# Session checkpoint — 2026-05-30
+
+## Metadata
+
+- Agent: `cascade`
+- Host: `om-prod01`
+- FQDN: `om-prod01`
+- Host role: `.239 OM authoring — orthodoxmetrics/prod`
+- Generated: `2026-05-30T22:21:37-04:00`
+- OS: `Linux-7.0.0-15-generic-x86_64-with-glibc2.43`
+
+## Work accomplished
+
+- [x] Reworked dark mode theme across all public pages — replaced purple-dominant palette with deep navy/charcoal base (theme.css CSS vars, Onboarding.tsx, Landing.tsx, HomepageRecordsTransformSection)
+- [x] Added logo-top-dark.svg dark mode logo swap across HpHeader, SiteFooter, Landing, Onboarding headers
+- [x] Built AI Agent Checkpoint Reporting system: DB table (agent_checkpoint_reports), POST /api/agent-reports/daily endpoint with bearer-token auth, agentReportDigestService.js, daily cron at 7AM ET, Python script --submit flags
+- [x] Added AgentReports tab (tab 4) to WorkSessionAdminPage.tsx with date filter, drift/failed/dirty summary chips, Send Digest Now button, and Markdown viewer dialog
+- [x] Fixed weekly report section headers (workSessionsSection, tasksCompletedSection, highlightsSection, anomaliesSection) with gradient underline bar styling
+- [x] `prod` recent commits:
+- [x]   - 9fb29e79 (HEAD -> main) feat(records): make the Database Mapping field config actually drive the records table (#961)
+- [x]   - c61f4784 chore(records): remove the unused "record number" field from all record types (#960)
+- [x]   - d3faf63f fix(homepage): define lightbox state/handlers in HomepageHero (fixes "lightboxOpen is not defined") (#959)
+- [x]   - 9e6a0fa7 fe updates (#958)
+- [x]   - 43ec633e Records overhaul (search/audit/status), enrollment, DB mapping & nav cleanup (#957)
+- [x]   - ab12b3fc fe updates (#956)
+- [x]   - 0c87bd7e fe updates (#955)
+- [x]   - d2b035a1 fe updates (#954)
+
+## Current state
+
+### Repositories
+
+| Repo | Branch | HEAD | Upstream | Ahead/Behind | Working Tree |
+|---|---:|---:|---:|---:|---|
+| `/var/www/orthodoxmetrics/prod` | `main` | `9fb29e79` | `origin/main` | ahead 0 / behind 1 | dirty; 9 untracked; 25 changed |
+
+### Services
+
+| Service | Active | Enabled | Failed |
+|---|---:|---:|---:|
+| `orthodox-backend` | active | enabled | no |
+| `nginx` | active | enabled | no |
+| **systemctl --failed** | - | - | **21 failed unit(s)** |
+
+## Pending drift items
+
+- [ ] `/var/www/orthodoxmetrics/prod` has untracked files/dirs: ai_agent_daily_checkpoint.py, checkpoints/, front-end/public/images/logos/logo-top-dark.svg, front-end/public/images/work-report-email-header.png, front-end/src/components/frontend-pages/shared/RichEditableText.tsx, +4 more
+- [ ] `/var/www/orthodoxmetrics/prod` has modified/staged changes: M .gitignore,  M front-end/public/version.json,  M front-end/src/components/frontend-pages/homepage/HomepageHero.tsx,  M front-end/src/components/frontend-pages/homepage/records-transform/HomepageRecordsTransformSection.tsx,  M front-end/src/components/frontend-pages/shared/footer/SiteFooter.tsx, +20 more
+- [ ] `/var/www/orthodoxmetrics/prod` is ahead 0 / behind 1 versus `origin/main`
+- [ ] systemd failed unit: `snap-core-17284.mount`
+- [ ] systemd failed unit: `snap-core-17292.mount`
+- [ ] systemd failed unit: `snap-core20-2769.mount`
+- [ ] systemd failed unit: `snap-core20-2866.mount`
+- [ ] systemd failed unit: `snap-core22-2339.mount`
+- [ ] systemd failed unit: `snap-core22-2411.mount`
+- [ ] systemd failed unit: `snap-doctl-2406.mount`
+- [ ] systemd failed unit: `snap-doctl-2419.mount`
+- [ ] systemd failed unit: `snap-lxd-38469.mount`
+- [ ] systemd failed unit: `snap-lxd-38800.mount`
+- [ ] systemd failed unit: `snap-postgresql10-47.mount`
+- [ ] systemd failed unit: `snap-prometheus-86.mount`
+- [ ] systemd failed unit: `snap-snapd-26382.mount`
+- [ ] systemd failed unit: `snap-snapd-26865.mount`
+- [ ] systemd failed unit: `aide-scan.service`
+- [ ] systemd failed unit: `dailyaidecheck.service`
+- [ ] systemd failed unit: `fail2ban.service`
+- [ ] systemd failed unit: `svnserve.service`
+- [ ] systemd failed unit: `sssd-nss.socket`
+- [ ] systemd failed unit: `sssd-pac.socket`
+- [ ] systemd failed unit: `sssd-pam.socket`
+
+## Next session suggestions
+
+1. Deploy frontend changes via om-deploy.sh fe once approved
+2. Distribute AGENT_SUBMIT_TOKEN to other agent hosts (.242, .243, .254) so they can submit checkpoints
+3. Consider adding a recipient configuration UI to the Agent Reports tab (currently inherits from weekly_report_configs)
+4. Review snap mount unit failures — these are stale snap revisions, likely safe to purge with snap remove --revision
+
+## Raw machine summary
+
+```json
+{
+  "agent": "cascade",
+  "drift_items": [
+    "`/var/www/orthodoxmetrics/prod` has untracked files/dirs: ai_agent_daily_checkpoint.py, checkpoints/, front-end/public/images/logos/logo-top-dark.svg, front-end/public/images/work-report-email-header.png, front-end/src/components/frontend-pages/shared/RichEditableText.tsx, +4 more",
+    "`/var/www/orthodoxmetrics/prod` has modified/staged changes: M .gitignore,  M front-end/public/version.json,  M front-end/src/components/frontend-pages/homepage/HomepageHero.tsx,  M front-end/src/components/frontend-pages/homepage/records-transform/HomepageRecordsTransformSection.tsx,  M front-end/src/components/frontend-pages/shared/footer/SiteFooter.tsx, +20 more",
+    "`/var/www/orthodoxmetrics/prod` is ahead 0 / behind 1 versus `origin/main`",
+    "systemd failed unit: `snap-core-17284.mount`",
+    "systemd failed unit: `snap-core-17292.mount`",
+    "systemd failed unit: `snap-core20-2769.mount`",
+    "systemd failed unit: `snap-core20-2866.mount`",
+    "systemd failed unit: `snap-core22-2339.mount`",
+    "systemd failed unit: `snap-core22-2411.mount`",
+    "systemd failed unit: `snap-doctl-2406.mount`",
+    "systemd failed unit: `snap-doctl-2419.mount`",
+    "systemd failed unit: `snap-lxd-38469.mount`",
+    "systemd failed unit: `snap-lxd-38800.mount`",
+    "systemd failed unit: `snap-postgresql10-47.mount`",
+    "systemd failed unit: `snap-prometheus-86.mount`",
+    "systemd failed unit: `snap-snapd-26382.mount`",
+    "systemd failed unit: `snap-snapd-26865.mount`",
+    "systemd failed unit: `aide-scan.service`",
+    "systemd failed unit: `dailyaidecheck.service`",
+    "systemd failed unit: `fail2ban.service`",
+    "systemd failed unit: `svnserve.service`",
+    "systemd failed unit: `sssd-nss.socket`",
+    "systemd failed unit: `sssd-pac.socket`",
+    "systemd failed unit: `sssd-pam.socket`"
+  ],
+  "failed_units": [
+    "snap-core-17284.mount",
+    "snap-core-17292.mount",
+    "snap-core20-2769.mount",
+    "snap-core20-2866.mount",
+    "snap-core22-2339.mount",
+    "snap-core22-2411.mount",
+    "snap-doctl-2406.mount",
+    "snap-doctl-2419.mount",
+    "snap-lxd-38469.mount",
+    "snap-lxd-38800.mount",
+    "snap-postgresql10-47.mount",
+    "snap-prometheus-86.mount",
+    "snap-snapd-26382.mount",
+    "snap-snapd-26865.mount",
+    "aide-scan.service",
+    "dailyaidecheck.service",
+    "fail2ban.service",
+    "svnserve.service",
+    "sssd-nss.socket",
+    "sssd-pac.socket",
+    "sssd-pam.socket"
+  ],
+  "fqdn": "om-prod01",
+  "generated_at": "2026-05-30T22:21:37.738461-04:00",
+  "host": "om-prod01",
+  "host_role": ".239 OM authoring \u2014 orthodoxmetrics/prod",
+  "next_session_suggestions": [
+    "Deploy frontend changes via om-deploy.sh fe once approved",
+    "Distribute AGENT_SUBMIT_TOKEN to other agent hosts (.242, .243, .254) so they can submit checkpoints",
+    "Consider adding a recipient configuration UI to the Agent Reports tab (currently inherits from weekly_report_configs)",
+    "Review snap mount unit failures \u2014 these are stale snap revisions, likely safe to purge with snap remove --revision"
+  ],
+  "repos": [
+    {
+      "ahead_behind": "ahead 0 / behind 1",
+      "branch": "main",
+      "changed": [
+        "M .gitignore",
+        " M front-end/public/version.json",
+        " M front-end/src/components/frontend-pages/homepage/HomepageHero.tsx",
+        " M front-end/src/components/frontend-pages/homepage/records-transform/HomepageRecordsTransformSection.tsx",
+        " M front-end/src/components/frontend-pages/shared/footer/SiteFooter.tsx",
+        " M front-end/src/components/frontend-pages/shared/header/HpHeader.tsx",
+        " M front-end/src/components/om-church-onboarding/v1/App.tsx",
+        " M front-end/src/components/om-church-onboarding/v1/components/PriorityBadge.tsx",
+        " M front-end/src/components/om-church-onboarding/v1/components/ui/input.tsx",
+        " M front-end/src/components/om-church-onboarding/v1/components/views/Landing.tsx",
+        " M front-end/src/components/om-church-onboarding/v1/components/views/Onboarding.tsx",
+        " M front-end/src/components/om-church-onboarding/v1/styles/theme.css",
+        " M front-end/src/context/EditModeContext.tsx",
+        " M front-end/src/features/devel-tools/work-sessions/WorkSessionAdminPage.tsx",
+        " M front-end/src/features/pages/frontend-pages/Homepage.tsx",
+        " M server/src/index.ts",
+        " M server/src/ocr/processOcrJobAsync.js",
+        " M server/src/routes/page-content-live.js",
+        " M server/src/services/frontendPageEditAuditService.js",
+        " M server/src/services/reportSections/anomaliesSection.ts",
+        " M server/src/services/reportSections/highlightsSection.ts",
+        " M server/src/services/reportSections/tasksCompletedSection.ts",
+        " M server/src/services/reportSections/workSessionsSection.ts",
+        " M server/src/services/weeklyReportService.ts",
+        " M server/src/workers/ocrFeederWorker.ts"
+      ],
+      "dirty": true,
+      "error": null,
+      "exists": true,
+      "head": "9fb29e79",
+      "head_subject": "feat(records): make the Database Mapping field config actually drive the records table (#961)",
+      "path": "/var/www/orthodoxmetrics/prod",
+      "untracked": [
+        "ai_agent_daily_checkpoint.py",
+        "checkpoints/",
+        "front-end/public/images/logos/logo-top-dark.svg",
+        "front-end/public/images/work-report-email-header.png",
+        "front-end/src/components/frontend-pages/shared/RichEditableText.tsx",
+        "server/database/migrations/2026_05_30_agent_checkpoint_reports.sql",
+        "server/src/routes/agent-reports.js",
+        "server/src/services/agentReportDigestService.js",
+        "server/src/utils/htmlSanitizer.js"
+      ],
+      "upstream": "origin/main"
+    }
+  ],
+  "services": [
+    {
+      "active": "active",
+      "enabled": "enabled",
+      "error": null,
+      "failed": false,
+      "name": "orthodox-backend"
+    },
+    {
+      "active": "active",
+      "enabled": "enabled",
+      "error": null,
+      "failed": false,
+      "name": "nginx"
+    }
+  ]
+}
+```

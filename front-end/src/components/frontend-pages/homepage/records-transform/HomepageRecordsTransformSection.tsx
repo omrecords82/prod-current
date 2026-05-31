@@ -6,8 +6,8 @@
  */
 
 import EditableText from '@/components/frontend-pages/shared/EditableText';
-import { useLanguage } from '@/context/LanguageContext';
 import WrittenToDigitalShowcase from '@/components/showcase/WrittenToDigitalShowcase';
+import { useLanguage } from '@/context/LanguageContext';
 
 export default function HomepageRecordsTransformSection() {
   const { t } = useLanguage();
@@ -20,7 +20,7 @@ export default function HomepageRecordsTransformSection() {
           <EditableText contentKey="records.title" as="h2" className="font-['Georgia'] text-3xl md:text-4xl lg:text-5xl mb-3">
             {t('home.records_title')}
           </EditableText>
-          <EditableText contentKey="records.subtitle" as="p" className="font-['Inter'] text-purple-200/70 max-w-2xl mx-auto text-base md:text-lg" multiline>
+          <EditableText contentKey="records.subtitle" as="p" className="font-['Inter'] text-white/70 dark:text-white/55 max-w-2xl mx-auto text-base md:text-lg" multiline>
             {t('home.records_subtitle')}
           </EditableText>
         </div>

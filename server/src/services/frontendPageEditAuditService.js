@@ -240,7 +240,7 @@ function collectPageSources(absolutePath, visited = new Set()) {
 }
 
 /**
- * Scan source files for EditableText usage.
+ * Scan source files for EditableText and RichEditableText usage.
  * Returns { count, contentKeys } where contentKeys are the literal string values found.
  */
 function scanEditableText(sources) {
@@ -248,18 +248,18 @@ function scanEditableText(sources) {
   const contentKeys = [];
 
   for (const { source } of sources) {
-    // Direct <EditableText contentKey="..." usage
-    const directRe = /<EditableText[^>]*contentKey=["']([^"']+)["']/g;
+    // Direct <EditableText or <RichEditableText contentKey="..." usage
+    const directRe = /<(?:Editable|RichEditable)Text[^>]*contentKey=["']([^"']+)["']/g;
     let m;
     while ((m = directRe.exec(source)) !== null) {
       count++;
       contentKeys.push(m[1]);
     }
 
-    // Template literal contentKey={`${prefix}.field`} inside EditableText
+    // Template literal contentKey={`${prefix}.field`} inside EditableText or RichEditableText
     // These are in shared sections, captured separately via shared section scan.
     // Count inline template usages that aren't inside shared section definitions:
-    const templateRe = /<EditableText[^>]*contentKey=\{`\$\{(\w+)\}\.(\w+)`\}/g;
+    const templateRe = /<(?:Editable|RichEditable)Text[^>]*contentKey=\{`\$\{(\w+)\}\.(\w+)`\}/g;
     while ((m = templateRe.exec(source)) !== null) {
       count++;
       // Can't resolve the runtime value, but we track the pattern

@@ -33,8 +33,17 @@ function formatTime(date: Date): string {
 }
 
 function formatDate(dateStr: string): string {
-  const d = new Date(dateStr + 'T12:00:00');
+  const clean = typeof dateStr === 'string' && dateStr.includes('T') ? dateStr.split('T')[0] : String(dateStr).substring(0, 10);
+  const d = new Date(clean + 'T12:00:00');
   return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+}
+
+function formatPeriodDate(dateStr: string, includeYear = false): string {
+  const clean = typeof dateStr === 'string' && dateStr.includes('T') ? dateStr.split('T')[0] : dateStr;
+  const d = new Date(clean + 'T12:00:00');
+  const opts: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric' };
+  if (includeYear) opts.year = 'numeric';
+  return d.toLocaleDateString('en-US', opts);
 }
 
 export async function generate(userId: number, periodStart: string, periodEnd: string) {
@@ -79,19 +88,30 @@ export async function generate(userId: number, periodStart: string, periodEnd: s
   // Build HTML
   let html = `
     <div style="margin-bottom: 24px;">
-      <h2 style="color: #2d1b4e; margin: 0 0 16px 0; font-size: 20px; border-bottom: 2px solid #8c249d; padding-bottom: 8px;">
+      <h2 style="color: #2d1b4e; margin: 0 0 0 0; font-size: 22px; font-weight: 700;">
         Work Sessions Summary
       </h2>
-      <div style="display: flex; gap: 24px; margin-bottom: 16px;">
-        <div style="background: #f3e8ff; padding: 16px 24px; border-radius: 8px; text-align: center;">
-          <div style="font-size: 28px; font-weight: 700; color: #8c249d;">${totalFormatted}</div>
-          <div style="font-size: 12px; color: #666; text-transform: uppercase; letter-spacing: 1px;">Total Time</div>
-        </div>
-        <div style="background: #e8f4f8; padding: 16px 24px; border-radius: 8px; text-align: center;">
-          <div style="font-size: 28px; font-weight: 700; color: #0369a1;">${stats.session_count}</div>
-          <div style="font-size: 12px; color: #666; text-transform: uppercase; letter-spacing: 1px;">Sessions</div>
-        </div>
-      </div>`;
+      <div style="height: 3px; background: linear-gradient(90deg, #0369a1, #8c249d); margin: 6px 0 20px 0; border-radius: 2px;"></div>
+
+      <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom: 20px;"><tr>
+        <td style="vertical-align: middle; width: auto;">
+          <table cellpadding="0" cellspacing="0"><tr>
+            <td style="background: #f3e8ff; padding: 14px 22px; border-radius: 8px; text-align: center; vertical-align: middle;">
+              <div style="font-size: 28px; font-weight: 700; color: #8c249d;">${totalFormatted}</div>
+              <div style="font-size: 11px; color: #666; text-transform: uppercase; letter-spacing: 1px;">Total Time</div>
+            </td>
+            <td style="width: 16px;"></td>
+            <td style="background: #e8f4f8; padding: 14px 22px; border-radius: 8px; text-align: center; vertical-align: middle;">
+              <div style="font-size: 28px; font-weight: 700; color: #0369a1;">${stats.session_count}</div>
+              <div style="font-size: 11px; color: #666; text-transform: uppercase; letter-spacing: 1px;">Sessions</div>
+            </td>
+          </tr></table>
+        </td>
+        <td style="vertical-align: middle; text-align: right; padding-left: 20px;">
+          <div style="font-size: 20px; font-weight: 400; color: #6b7280;">Weekly Work Report</div>
+          <div style="font-size: 14px; color: #9ca3af;">${formatPeriodDate(periodStart)} — ${formatPeriodDate(periodEnd, true)}</div>
+        </td>
+      </tr></table>`;
 
   // Daily breakdown table
   if (daily.length > 0) {

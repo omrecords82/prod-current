@@ -27,14 +27,49 @@ const AMBIENT_KEYFRAMES = `
   }
 `;
 
-const LOGIN_SLIDES = [
-  '/images/misc/login-slide-1.png',
-  '/images/misc/login-slide-2.png',
-  '/images/misc/login-slide-3.png',
-  '/images/misc/login-slide-4.png',
-  '/images/misc/login-slide-5.png',
-  '/images/misc/login-slide-6.png',
-  '/images/misc/login-slide-7.png',
+const heroSlides = [
+  {
+    image: "/images/home/table-view-records.png",
+    title: "Table view for fast record management.",
+    description:
+      "Search, filter, review, and manage sacramental records from a structured table designed for parish recordkeeping workflows.",
+  },
+  {
+    image: "/images/home/cards-view-records.png",
+    title: "Cards view for focused review.",
+    description:
+      "Review individual records in a clean card layout that makes names, dates, clergy, status, and record details easier to scan.",
+  },
+  {
+    image: "/images/home/timeline-view-records.png",
+    title: "Timeline view for historical context.",
+    description:
+      "See parish records in chronological order so sacramental history becomes easier to trace, review, and understand over time.",
+  },
+  {
+    image: "/images/home/analytics-view-records.png",
+    title: "Analytics built from parish records.",
+    description:
+      "Turn sacramental record data into meaningful parish insights, including trends, completeness, clergy activity, and historical patterns.",
+  },
+  {
+    image: "/images/home/baptism-certificate.png",
+    title: "Certificates generated from verified records.",
+    description:
+      "Generate polished certificates directly from reviewed parish records, reducing duplicate work and helping clergy respond quickly to requests.",
+  },
+  {
+    image: "/images/home/original-baptism-records.png",
+    title: "From paper archives to searchable records.",
+    description:
+      "Preserve original parish record images while converting their contents into structured, searchable data for long-term use.",
+  },
+  {
+    image: "/images/home/processed-metrical-records.png",
+    title: "Real records, carefully processed.",
+    description:
+      "Actual scanned parish records are processed into Orthodox Metrics so your parish can preserve, verify, and access its sacramental history.",
+  },
 ];
 
 const HomepageHero = () => {
@@ -47,15 +82,15 @@ const HomepageHero = () => {
   useEffect(() => {
     if (lightboxOpen) return;
     const id = setInterval(() => {
-      setSlideIdx((i) => (i + 1) % LOGIN_SLIDES.length);
-    }, 5000);
+      setSlideIdx((i) => (i + 1) % heroSlides.length);
+    }, 8000);
     return () => clearInterval(id);
-  }, [lightboxOpen]);
+  }, [lightboxOpen, slideIdx]);
 
   const openLightbox = useCallback((i: number) => { setLightboxIdx(i); setLightboxOpen(true); }, []);
   const closeLightbox = useCallback(() => setLightboxOpen(false), []);
-  const lbPrev = useCallback(() => setLightboxIdx((i) => (i - 1 + LOGIN_SLIDES.length) % LOGIN_SLIDES.length), []);
-  const lbNext = useCallback(() => setLightboxIdx((i) => (i + 1) % LOGIN_SLIDES.length), []);
+  const lbPrev = useCallback(() => setLightboxIdx((i) => (i - 1 + heroSlides.length) % heroSlides.length), []);
+  const lbNext = useCallback(() => setLightboxIdx((i) => (i + 1) % heroSlides.length), []);
 
   // Keyboard navigation while the lightbox is open.
   useEffect(() => {
@@ -117,7 +152,25 @@ const HomepageHero = () => {
       <div className="relative z-10 max-w-7xl mx-auto px-6 py-24 md:py-32">
         <div className="grid lg:grid-cols-2 gap-12 items-center">
           <div className="flex flex-col">
-            <WelcomeRotator />
+            <div className="relative h-[180px] md:h-[220px]">
+              {heroSlides.map((slide, i) => (
+                <div
+                  key={i}
+                  className="absolute inset-0 flex flex-col justify-center transition-all duration-700 ease-out"
+                  style={{
+                    opacity: i === slideIdx ? 1 : 0,
+                    transform: i === slideIdx ? 'translateY(0)' : 'translateY(20px)',
+                  }}
+                >
+                  <h1 className="font-['Georgia'] text-2xl md:text-4xl leading-tight mb-4 text-white tracking-wide">
+                    {slide.title}
+                  </h1>
+                  <p className="font-['Inter'] text-[15px] md:text-[17px] text-[rgba(255,255,255,0.85)] leading-relaxed">
+                    {slide.description}
+                  </p>
+                </div>
+              ))}
+            </div>
             <div className="relative z-10 flex flex-col sm:flex-row gap-4 mt-8">
               <Link
                 to={PUBLIC_ROUTES.TOUR}
@@ -144,11 +197,11 @@ const HomepageHero = () => {
               onClick={() => openLightbox(slideIdx)}
               onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openLightbox(slideIdx); } }}
             >
-              {LOGIN_SLIDES.map((src, i) => (
+              {heroSlides.map((slide, i) => (
                 <img
-                  key={src}
-                  src={src}
-                  alt={`Slide ${i + 1}`}
+                  key={slide.image}
+                  src={slide.image}
+                  alt={slide.title}
                   className="absolute inset-0 w-full h-full object-contain transition-opacity duration-700"
                   style={{ opacity: i === slideIdx ? 1 : 0 }}
                 />
@@ -189,8 +242,8 @@ const HomepageHero = () => {
           onClick={(e) => e.stopPropagation()}
         >
           <img
-            src={LOGIN_SLIDES[lightboxIdx]}
-            alt={`Slide ${lightboxIdx + 1}`}
+            src={heroSlides[lightboxIdx].image}
+            alt={heroSlides[lightboxIdx].title}
             className="max-w-full max-h-[85vh] object-contain rounded-lg shadow-2xl"
           />
         </div>
@@ -207,10 +260,10 @@ const HomepageHero = () => {
         {/* Dot indicators + counter */}
         <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-3 z-10">
           <span className="font-['Inter'] text-white/60 text-sm">
-            {lightboxIdx + 1} / {LOGIN_SLIDES.length}
+            {lightboxIdx + 1} / {heroSlides.length}
           </span>
           <div className="flex gap-2">
-            {LOGIN_SLIDES.map((_, i) => (
+            {heroSlides.map((_, i) => (
               <button
                 key={i}
                 type="button"
@@ -231,80 +284,5 @@ const HomepageHero = () => {
   );
 };
 
-// Left-side welcome rotator: cycles through welcome messages
-const WELCOME_SLIDES = [
-  {
-    title: 'WELCOME TO ORTHODOX METRICS',
-    desc: 'Preserving Orthodox Christian records across languages, generations, and jurisdictions.',
-  },
-  {
-    title: 'YOUR PARISH HAS A UNIQUE HISTORY.',
-    desc: 'Orthodox Metrics helps keep that history alive, secure, and accessible. Parish priests and deacons can manage sacred records, generate certificates, and gain meaningful insights from parish data without relying on scattered spreadsheets or fragile paper archives.',
-  },
-  {
-    title: 'ONE SIGN-UP. LASTING VALUE.',
-    desc: 'When a parish joins Orthodox Metrics, it gains a secure records system, multilingual tools, searchable history, and analytics designed specifically for the Orthodox Church. These records are not just administrative data. They are part of the living memory of the parish.',
-  },
-  {
-    title: 'SECURE. AUDITABLE. BUILT FOR ORTHODOX PARISHES.',
-    desc: 'Parish records remain protected, organized, and traceable inside a governed system designed around the real needs of Orthodox communities.',
-  },
-];
-
-const WelcomeRotator = () => {
-  const [active, setActive] = useState(0);
-  const [prev, setPrev] = useState(-1);
-
-  useEffect(() => {
-    const id = setInterval(() => {
-      setPrev(active);
-      setActive((a) => (a + 1) % WELCOME_SLIDES.length);
-    }, 7000);
-    return () => clearInterval(id);
-  }, [active]);
-
-  const goTo = (i: number) => {
-    if (i === active) return;
-    setPrev(active);
-    setActive(i);
-  };
-
-  const slideClass = (i: number) => {
-    const base = 'absolute inset-0 flex flex-col justify-center transition-all duration-700 ease-out';
-    if (i === active) return `${base} translate-y-0 opacity-100`;
-    if (i === prev) return `${base} -translate-y-full opacity-0`;
-    return `${base} translate-y-full opacity-0`;
-  };
-
-  return (
-    <div className="relative h-[220px] md:h-[260px] pointer-events-none">
-      {WELCOME_SLIDES.map((slide, i) => (
-        <div key={i} className={slideClass(i)}>
-          <h1 className="font-['Georgia'] text-3xl md:text-5xl leading-tight mb-4 text-white tracking-wide">
-            {slide.title}
-          </h1>
-          <p className="font-['Inter'] text-[16px] md:text-lg text-[rgba(255,255,255,0.85)] leading-relaxed">
-            {slide.desc}
-          </p>
-        </div>
-      ))}
-      <div className="absolute bottom-0 left-0 flex gap-2 pointer-events-auto">
-        {WELCOME_SLIDES.map((_, i) => (
-          <button
-            key={i}
-            type="button"
-            aria-label={`Show slide ${i + 1}`}
-            onClick={() => goTo(i)}
-            className={`h-2 rounded-full transition-all ${
-              active === i
-                ? 'w-6 bg-[#d4af37]'
-                : 'w-2 bg-white/30 hover:bg-white/50'
-            }`}
-          />
-        ))}
-      </div>
-    </div>
-  );
-};
 
 export default HomepageHero;

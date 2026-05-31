@@ -7,29 +7,29 @@
 
 .om-cornerstone-scope {
   --font-size: 15px;
-  --brand-purple: #3a1d6e;
-  --brand-purple-deep: #2a1450;
-  --brand-gold: #c9a14a;
-  --brand-gold-soft: #e3c483;
-  --background: #fbfaf7;
-  --foreground: #1a1226;
+  --brand-purple: #2d1b4e;
+  --brand-purple-deep: #2d1b4e;
+  --brand-gold: #d4af37;
+  --brand-gold-soft: #e8cc6e;
+  --background: #ffffff;
+  --foreground: #1f2937;
   --card: #ffffff;
-  --card-foreground: #1a1226;
+  --card-foreground: #1f2937;
   --popover: #ffffff;
-  --popover-foreground: #1a1226;
-  --primary: #3a1d6e;
-  --primary-foreground: #fbfaf7;
-  --secondary: #f1ecf7;
-  --secondary-foreground: #2a1450;
-  --muted: #f3f0ec;
-  --muted-foreground: #6b6177;
-  --accent: #f6efdb;
-  --accent-foreground: #5a4413;
+  --popover-foreground: #1f2937;
+  --primary: #2d1b4e;
+  --primary-foreground: #ffffff;
+  --secondary: #f3f4f6;
+  --secondary-foreground: #2d1b4e;
+  --muted: #f9fafb;
+  --muted-foreground: #4a5565;
+  --accent: rgba(212, 175, 55, 0.12);
+  --accent-foreground: #2d1b4e;
   --destructive: #b3261e;
   --destructive-foreground: #ffffff;
-  --border: rgba(58, 29, 110, 0.12);
+  --border: rgba(45, 27, 78, 0.10);
   --input: transparent;
-  --input-background: #f5f2ee;
+  --input-background: #ffffff;
   --switch-background: #cbced4;
   --font-weight-medium: 500;
   --font-weight-normal: 400;
@@ -39,51 +39,58 @@
   --chart-3: oklch(0.398 0.07 227.392);
   --chart-4: oklch(0.828 0.189 84.429);
   --chart-5: oklch(0.769 0.188 70.08);
-  --radius: 0.625rem;
-  --sidebar: #2a1450;
+  --radius: 0.5rem;
+  --sidebar: #2d1b4e;
   --sidebar-foreground: #ede7f5;
-  --sidebar-primary: #c9a14a;
-  --sidebar-primary-foreground: #2a1450;
-  --sidebar-accent: #3a1d6e;
+  --sidebar-primary: #d4af37;
+  --sidebar-primary-foreground: #2d1b4e;
+  --sidebar-accent: #3a2461;
   --sidebar-accent-foreground: #ffffff;
   --sidebar-border: rgba(255, 255, 255, 0.08);
-  --sidebar-ring: #c9a14a;
+  --sidebar-ring: #d4af37;
 
-  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   font-size: var(--font-size);
   background: var(--background);
   color: var(--foreground);
 }
 
 .om-cornerstone-scope.dark {
-  --background: #14091f;
-  --foreground: #ede7f5;
-  --card: #1d0f30;
-  --card-foreground: #ede7f5;
-  --popover: #1d0f30;
-  --popover-foreground: #ede7f5;
-  --primary: #c9a14a;
-  --primary-foreground: #1a1226;
-  --secondary: #2a1450;
-  --secondary-foreground: #ede7f5;
-  --muted: #241638;
-  --muted-foreground: #9b8fb0;
-  --accent: #3a1d6e;
-  --accent-foreground: #f6efdb;
+  /* Deep navy/charcoal base — ecclesiastical, not purple-saturated */
+  --background: #0d1117;
+  --foreground: #e8e6e1;
+  --card: #161b22;
+  --card-foreground: #e8e6e1;
+  --popover: #1c2230;
+  --popover-foreground: #e8e6e1;
+  /* Gold as primary action — clear hierarchy */
+  --primary: #d4af37;
+  --primary-foreground: #0d1117;
+  /* Navy surface for secondary elements */
+  --secondary: #1e2a3a;
+  --secondary-foreground: #c8c4bc;
+  --muted: #161b22;
+  --muted-foreground: #8b8680;
+  /* Gold-tinted accent, not purple tinted */
+  --accent: rgba(212, 175, 55, 0.10);
+  --accent-foreground: #d4af37;
   --destructive: #d44a40;
   --destructive-foreground: #ffffff;
-  --border: rgba(201, 161, 74, 0.18);
-  --input: rgba(255, 255, 255, 0.06);
-  --input-background: #1d0f30;
-  --ring: oklch(0.439 0 0);
-  --sidebar: #0e0518;
-  --sidebar-foreground: #ede7f5;
-  --sidebar-primary: #c9a14a;
-  --sidebar-primary-foreground: #1a1226;
-  --sidebar-accent: #2a1450;
-  --sidebar-accent-foreground: #f6efdb;
-  --sidebar-border: rgba(201, 161, 74, 0.14);
-  --sidebar-ring: #c9a14a;
+  /* Subtle warm-neutral border — not gold-dominant */
+  --border: rgba(255, 255, 255, 0.08);
+  --input: rgba(255, 255, 255, 0.05);
+  --input-background: #1e2a3a;
+  --ring: rgba(212, 175, 55, 0.5);
+  --sidebar: #090d14;
+  --sidebar-foreground: #e8e6e1;
+  --sidebar-primary: #d4af37;
+  --sidebar-primary-foreground: #0d1117;
+  --sidebar-accent: #1e2a3a;
+  --sidebar-accent-foreground: #d4af37;
+  --sidebar-border: rgba(255, 255, 255, 0.06);
+  --sidebar-ring: #d4af37;
+  /* Purple reserved as a selective accent only */
+  --brand-purple: #2d1b4e;
 }
 
 @theme inline {
@@ -132,10 +139,19 @@
   color: var(--accent-foreground);
 }
 
-.om-cornerstone-scope h1 { font-size: 1.5rem; font-weight: var(--font-weight-medium); line-height: 1.5; }
-.om-cornerstone-scope h2 { font-size: 1.25rem; font-weight: var(--font-weight-medium); line-height: 1.5; }
-.om-cornerstone-scope h3 { font-size: 1.125rem; font-weight: var(--font-weight-medium); line-height: 1.5; }
-.om-cornerstone-scope h4 { font-size: 1rem; font-weight: var(--font-weight-medium); line-height: 1.5; }
-.om-cornerstone-scope label { font-weight: var(--font-weight-medium); line-height: 1.5; }
+.om-cornerstone-scope h1 { font-family: 'Georgia', serif; font-size: 2rem; font-weight: 400; line-height: 1.2; color: var(--brand-purple); }
+.om-cornerstone-scope h2 { font-family: 'Georgia', serif; font-size: 1.375rem; font-weight: 400; line-height: 1.3; color: var(--brand-purple); }
+.om-cornerstone-scope h3 { font-size: 1.125rem; font-weight: var(--font-weight-medium); line-height: 1.4; }
+.om-cornerstone-scope h4 { font-size: 1rem; font-weight: var(--font-weight-medium); line-height: 1.4; }
+.om-cornerstone-scope label { font-weight: var(--font-weight-medium); font-size: 0.875rem; line-height: 1.5; color: var(--foreground); }
 .om-cornerstone-scope button { font-weight: var(--font-weight-medium); line-height: 1.5; }
-.om-cornerstone-scope input { font-weight: var(--font-weight-normal); line-height: 1.5; }
+.om-cornerstone-scope input { font-weight: var(--font-weight-normal); line-height: 1.5; font-size: 0.9375rem; }
+/* Dark mode: headings shift to warm off-white; purple is an accent not a base */
+.om-cornerstone-scope.dark h1,
+.om-cornerstone-scope.dark h2 { color: var(--foreground); }
+/* Dark inputs — visible border on navy surface */
+.om-cornerstone-scope.dark [data-slot="input"] { border-color: rgba(255, 255, 255, 0.12); }
+.om-cornerstone-scope.dark [data-slot="input"]:focus-visible { border-color: #d4af37; box-shadow: 0 0 0 3px rgba(212,175,55,0.15); }
+/* Dark select dropdown */
+.om-cornerstone-scope.dark [data-slot="select-content"] { background-color: #1c2230; border-color: rgba(255,255,255,0.10); box-shadow: 0 8px 24px rgba(0,0,0,0.4); }
+.om-cornerstone-scope.dark [data-slot="select-item"]:focus { background-color: rgba(212,175,55,0.12); color: #d4af37; }

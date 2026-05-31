@@ -207,3 +207,13 @@ front-end/node_modules
 # Anchored with leading slash so server/tmp / front-end/public/tmp etc.
 # stay tracked if they ever appear.
 /tmp/
+front-end/public/images/home/analytics-view-records.png
+front-end/public/images/home/baptism-certificate.png
+front-end/public/images/home/baptism-small-footer.png
+front-end/public/images/home/cards-view-records.png
+front-end/public/images/home/funeral-small-footer.png
+front-end/public/images/home/original-baptism-records.png
+front-end/public/images/home/processed-metrical-records.png
+front-end/public/images/home/table-view-records.png
+front-end/public/images/home/timeline-view-records.png
+front-end/public/images/home/wedding-small-footer.png

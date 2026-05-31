@@ -10,10 +10,10 @@
  *   When English content is saved, the backend auto-flags translations as needing update.
  */
 
-import React, { createContext, useContext, useState, useEffect, useCallback, useRef, type ReactNode } from 'react';
-import { useLocation } from 'react-router-dom';
-import { useAuth } from '@/hooks/useAuth';
 import { apiClient } from '@/api/utils/axiosInstance';
+import { useAuth } from '@/hooks/useAuth';
+import React, { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
+import { useLocation } from 'react-router-dom';
 
 /** Per-language translation status for a single content key */
 export interface LangTranslationStatus {
@@ -40,11 +40,15 @@ interface EditModeContextType {
   pendingChanges: Record<string, string>;
   getContent: (key: string, fallback: string) => string;
   updateContent: (key: string, value: string) => void;
+  /** Stage a rich-text change (HTML). Tracked separately so save sends contentType='rich_text'. */
+  updateRichContent: (key: string, value: string) => void;
   saveAllChanges: () => Promise<void>;
   discardChanges: () => void;
   resetToDefault: (key: string) => Promise<void>;
   isSaving: boolean;
   currentPageKey: string;
+  /** Content types from DB — only keys with non-default types (e.g. 'rich_text') are listed. */
+  contentTypes: Record<string, string>;
   /** Per-key translation statuses for the current page */
   translationStatuses: TranslationStatuses;
   /** Summary counts for translation flags on the current page */
@@ -71,6 +75,9 @@ export const EditModeProvider: React.FC<{ children: ReactNode }> = ({ children }
   const [isEditMode, setIsEditMode] = useState(false);
   const [overrides, setOverrides] = useState<Record<string, string>>({});
   const [pendingChanges, setPendingChanges] = useState<Record<string, string>>({});
+  /** Tracks which pending keys are rich_text (key → true). Plain-text keys are absent. */
+  const [pendingRichKeys, setPendingRichKeys] = useState<Record<string, boolean>>({});
+  const [contentTypes, setContentTypes] = useState<Record<string, string>>({});
   const [isSaving, setIsSaving] = useState(false);
   const [translationStatuses, setTranslationStatuses] = useState<TranslationStatuses>({});
   const [translationSummary, setTranslationSummary] = useState<TranslationSummary | null>(null);
@@ -83,18 +90,20 @@ export const EditModeProvider: React.FC<{ children: ReactNode }> = ({ children }
     // Discard pending changes on page navigation
     if (prevPageKey.current !== currentPageKey) {
       setPendingChanges({});
+      setPendingRichKeys({});
       prevPageKey.current = currentPageKey;
     }
 
     let cancelled = false;
     (async () => {
       try {
-        const res = await apiClient.get<{ success: boolean; overrides: Record<string, string> }>(
+        const res = await apiClient.get<{ success: boolean; overrides: Record<string, string>; contentTypes?: Record<string, string> }>(
           `/page-content-live/${encodeURIComponent(currentPageKey)}`
         );
         // apiClient.get() returns response.data directly, not the axios response
         if (!cancelled && res?.success) {
           setOverrides(res.overrides || {});
+          setContentTypes(res.contentTypes || {});
         }
       } catch {
         // Silent fail — page renders with defaults
@@ -142,21 +151,37 @@ export const EditModeProvider: React.FC<{ children: ReactNode }> = ({ children }
     setPendingChanges(prev => ({ ...prev, [key]: value }));
   }, []);
 
+  const updateRichContent = useCallback((key: string, value: string) => {
+    setPendingChanges(prev => ({ ...prev, [key]: value }));
+    setPendingRichKeys(prev => ({ ...prev, [key]: true }));
+  }, []);
+
   const saveAllChanges = useCallback(async () => {
     if (isSaving) return;
     setIsSaving(true);
     try {
       const entries = Object.entries(pendingChanges);
       for (const [contentKey, contentValue] of entries) {
+        const isRich = pendingRichKeys[contentKey] || contentTypes[contentKey] === 'rich_text';
         await apiClient.put('/page-content-live', {
           pageKey: currentPageKey,
           contentKey,
           contentValue,
+          ...(isRich ? { contentType: 'rich_text' } : {}),
         });
       }
       // Merge pending into overrides and clear pending
       setOverrides(prev => ({ ...prev, ...pendingChanges }));
+      // Merge rich key types into contentTypes
+      setContentTypes(prev => {
+        const next = { ...prev };
+        for (const key of Object.keys(pendingRichKeys)) {
+          next[key] = 'rich_text';
+        }
+        return next;
+      });
       setPendingChanges({});
+      setPendingRichKeys({});
       // Refresh translation statuses (English edits flag translations)
       fetchTranslationStatuses();
     } catch (err) {
@@ -164,10 +189,11 @@ export const EditModeProvider: React.FC<{ children: ReactNode }> = ({ children }
     } finally {
       setIsSaving(false);
     }
-  }, [pendingChanges, currentPageKey, isSaving, fetchTranslationStatuses]);
+  }, [pendingChanges, pendingRichKeys, contentTypes, currentPageKey, isSaving, fetchTranslationStatuses]);
 
   const discardChanges = useCallback(() => {
     setPendingChanges({});
+    setPendingRichKeys({});
   }, []);
 
   const resolveTranslation = useCallback(async (contentKey: string, langCode: string) => {
@@ -209,11 +235,13 @@ export const EditModeProvider: React.FC<{ children: ReactNode }> = ({ children }
       pendingChanges,
       getContent,
       updateContent,
+      updateRichContent,
       saveAllChanges,
       discardChanges,
       resetToDefault,
       isSaving,
       currentPageKey,
+      contentTypes,
       translationStatuses,
       translationSummary,
       resolveTranslation,

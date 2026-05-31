@@ -21,9 +21,8 @@ export async function generate(userId: number, periodStart: string, periodEnd: s
     return {
       html: `
         <div style="margin-bottom: 24px;">
-          <h2 style="color: #2d1b4e; margin: 0 0 16px 0; font-size: 20px; border-bottom: 2px solid #8c249d; padding-bottom: 8px;">
-            Highlights & Notes
-          </h2>
+          <h2 style="color: #2d1b4e; margin: 0 0 0 0; font-size: 22px; font-weight: 700;">Highlights & Notes</h2>
+          <div style="height: 3px; background: linear-gradient(90deg, #0369a1, #8c249d); margin: 6px 0 16px 0; border-radius: 2px;"></div>
           <p style="color: #6b7280; font-size: 14px;">No session notes recorded during this period.</p>
         </div>`,
       data: { notes: [] }
@@ -32,9 +31,8 @@ export async function generate(userId: number, periodStart: string, periodEnd: s
 
   let html = `
     <div style="margin-bottom: 24px;">
-      <h2 style="color: #2d1b4e; margin: 0 0 16px 0; font-size: 20px; border-bottom: 2px solid #8c249d; padding-bottom: 8px;">
-        Highlights & Notes
-      </h2>`;
+      <h2 style="color: #2d1b4e; margin: 0 0 0 0; font-size: 22px; font-weight: 700;">Highlights & Notes</h2>
+      <div style="height: 3px; background: linear-gradient(90deg, #0369a1, #8c249d); margin: 6px 0 16px 0; border-radius: 2px;"></div>`;
 
   for (const row of rows) {
     const date = new Date(row.started_at);

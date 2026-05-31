@@ -2,13 +2,13 @@ import { Badge } from "./ui/badge";
 
 type Priority = "P0" | "P1" | "P2";
 const labels: Record<Priority, string> = {
-  P0: "P0 · Revenue Path",
+  P0: "P0 · Priority",
   P1: "P1 · Launch Support",
   P2: "P2 · Later CMS",
 };
 const colors: Record<Priority, string> = {
-  P0: "bg-[#3a1d6e] text-[#f6efdb] border-transparent",
-  P1: "bg-[#c9a14a]/20 text-[#5a4413] dark:text-[#e3c483] border-[#c9a14a]/40",
+  P0: "bg-[#2d1b4e] text-[#d4af37] border-transparent",
+  P1: "bg-[#d4af37]/20 text-[#2d1b4e] dark:text-[#d4af37] border-[#d4af37]/40",
   P2: "bg-muted text-muted-foreground border-transparent",
 };
 
@@ -33,7 +33,7 @@ export function FrameHeader({
     <div className="flex flex-wrap items-start justify-between gap-4 border-b border-border pb-5 mb-6">
       <div className="space-y-1">
         <div className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
-          Frame {number}
+          Step {number}
         </div>
         <h1 className="text-2xl">{title}</h1>
         {description && (

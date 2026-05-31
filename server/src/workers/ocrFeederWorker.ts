@@ -26,24 +26,23 @@ import type { Pool, RowDataPacket } from 'mysql2/promise';
 import * as path from 'path';
 import sharp from 'sharp';
 import { promisify } from 'util';
-import { classifyRecordType } from '../utils/ocrClassifier';
-import { detectAndRemoveBorder } from '../ocr/preprocessing/borderDetection';
-import { detectAndCorrectSkew } from '../ocr/preprocessing/deskew';
-import { detectAndCropROI } from '../ocr/preprocessing/roiCrop';
-import { detectAndSplitSpread } from '../ocr/preprocessing/splitSpread';
 import { normalizeBackground } from '../ocr/preprocessing/bgNormalize';
+import { detectAndRemoveBorder } from '../ocr/preprocessing/borderDetection';
 import { gridPreserveDenoise } from '../ocr/preprocessing/denoise';
-import { generateRedactionMask } from '../ocr/preprocessing/redaction';
-import { generateOcrPlan } from '../ocr/preprocessing/ocrPlan';
+import { detectAndCorrectSkew } from '../ocr/preprocessing/deskew';
 import type { OcrRegion } from '../ocr/preprocessing/ocrPlan';
-import { selectRegionProfiles, getProfile } from '../ocr/preprocessing/ocrProfiles';
-import type { RegionProfileAssignment, ProfilePlanResult } from '../ocr/preprocessing/ocrProfiles';
-import { buildRetryPlan, extractSignals, computeStructureScore } from '../ocr/preprocessing/structureRetry';
-import type { RetryPlan } from '../ocr/preprocessing/structureRetry';
-import { selectTemplate, resolveTemplate, extractWithTemplate } from '../ocr/preprocessing/templateSpec';
-import type { TemplateMatchResult } from '../ocr/preprocessing/templateSpec';
-import { normalizeTokens, buildTableProvenance, buildRecordCandidatesProvenance } from '../ocr/preprocessing/provenance';
+import { generateOcrPlan } from '../ocr/preprocessing/ocrPlan';
+import type { ProfilePlanResult } from '../ocr/preprocessing/ocrProfiles';
+import { getProfile, selectRegionProfiles } from '../ocr/preprocessing/ocrProfiles';
+import { buildRecordCandidatesProvenance, buildTableProvenance, normalizeTokens } from '../ocr/preprocessing/provenance';
+import { generateRedactionMask } from '../ocr/preprocessing/redaction';
+import { detectAndCropROI } from '../ocr/preprocessing/roiCrop';
 import { computeScoringV2 } from '../ocr/preprocessing/scoringV2';
+import { detectAndSplitSpread } from '../ocr/preprocessing/splitSpread';
+import { buildRetryPlan, computeStructureScore, extractSignals } from '../ocr/preprocessing/structureRetry';
+import type { TemplateMatchResult } from '../ocr/preprocessing/templateSpec';
+import { extractWithTemplate, resolveTemplate, selectTemplate } from '../ocr/preprocessing/templateSpec';
+import { classifyRecordType } from '../utils/ocrClassifier';
 
 const { dbLogger } = require('../utils/dbLogger');
 
@@ -1359,9 +1358,30 @@ async function cropAndExtractRecords(
   const recordCandData = JSON.parse(fs.readFileSync(recordCandPath, 'utf8'));
   const tableExtData = JSON.parse(fs.readFileSync(tableExtPath, 'utf8'));
 
-  // Assertion: structured_table mode must never reach crop extraction
+  // Guard: structured_table mode must never reach crop extraction.
+  // Instead of throwing (which kills the worker loop), log and route to review gracefully.
   if (tableExtData._template_locked) {
-    throw new Error(`ASSERTION FAILED: cropAndExtractRecords called in structured_table mode (template=${tableExtData._template_id || 'unknown'}). Per-record crop OCR must not run on template-locked extractions.`);
+    const templateId = tableExtData._template_id || 'unknown';
+    const warnMsg = `[PerRecord] Page ${page.id}: MODE MISMATCH — cropAndExtractRecords called in structured_table mode (template=${templateId}). Skipping per-record crop; routing page to review.`;
+    console.warn(warnMsg);
+
+    // Log the discrepancy to ocr_jobs.error_regions (platform DB, best-effort)
+    try {
+      await platformPool.query(
+        `UPDATE ocr_jobs SET error_regions = CONCAT(COALESCE(error_regions, ''), ?) WHERE id = ?`,
+        [`[MODE_MISMATCH page=${page.id} template=${templateId}] `, page.job_id]
+      );
+    } catch (_: any) { /* best effort */ }
+
+    // Transition page to 'review' so a human can inspect
+    try {
+      await tenantPool.execute(
+        `UPDATE ocr_feeder_pages SET status = 'review', last_error = ? WHERE id = ?`,
+        [warnMsg.substring(0, 500), page.id]
+      );
+    } catch (_: any) { /* best effort */ }
+
+    return null;
   }
 
   const candidates = recordCandData.candidates || [];
@@ -2558,20 +2578,6 @@ async function processJob(job: JobRow): Promise<void> {
         recordType: record_type || 'baptism',
       });
 
-      // processOcrJobAsync uses 'completed'/'failed' status values but our ENUM is 'complete'/'error'
-      // Fix up the status after it returns
-      try {
-        const [statusRows] = await platformPool.query(
-          `SELECT status FROM ocr_jobs WHERE id = ?`, [jobId]
-        ) as any[];
-        const currentStatus = statusRows[0]?.status;
-        if (currentStatus === 'completed') {
-          await platformPool.query(`UPDATE ocr_jobs SET status = 'complete' WHERE id = ?`, [jobId]);
-        } else if (currentStatus === 'failed') {
-          await platformPool.query(`UPDATE ocr_jobs SET status = 'error' WHERE id = ?`, [jobId]);
-        }
-      } catch (_) { /* best effort status fixup */ }
-
       // Read back final state for logging + run classifier
       const [finalRows] = await platformPool.query(
         `SELECT status, confidence_score, ocr_text, LENGTH(ocr_text) as ocr_text_len FROM ocr_jobs WHERE id = ?`, [jobId]
@@ -2614,7 +2620,7 @@ async function processJob(job: JobRow): Promise<void> {
         // Sync completion back to church DB (so GET /api/church/:id/ocr/jobs sees it)
         try {
           await tenantPool.execute(
-            `UPDATE ocr_jobs SET status = 'completed', confidence_score = ?, ocr_text = ?, updated_at = NOW()
+            `UPDATE ocr_jobs SET status = 'complete', confidence_score = ?, ocr_text = ?, updated_at = NOW()
              WHERE church_id = ? AND filename = ? AND status IN ('queued', 'processing')`,
             [final.confidence_score, final.ocr_text, churchId, filename]
           );
@@ -2932,5 +2938,5 @@ if (require.main === module) {
   });
 }
 
-export { processJob, processPage, workerLoop, requestShutdown };
+export { processJob, processPage, requestShutdown, workerLoop };
 
