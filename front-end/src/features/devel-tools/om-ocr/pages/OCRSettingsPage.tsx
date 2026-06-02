@@ -4,6 +4,7 @@
  */
 
 import { useAuth } from '@/context/AuthContext';
+import { CustomizerContext } from '@/context/CustomizerContext';
 import { apiClient } from '@/shared/lib/axiosInstance';
 import {
     Alert,
@@ -27,7 +28,8 @@ import {
     IconFileDescription,
     IconUser,
 } from '@tabler/icons-react';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useContext, useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import OcrStudioNav from '../components/OcrStudioNav';
 
 interface TabPanelProps {
@@ -70,6 +72,9 @@ interface OCRSettingsData {
 const OCRSettingsPage: React.FC = () => {
   const { isLayout } = useContext(CustomizerContext);
   const { user } = useAuth();
+  const [searchParams] = useSearchParams();
+  const churchParam = searchParams.get('church');
+  const effectiveChurchId = churchParam ? Number(churchParam) : user?.church_id ? Number(user.church_id) : null;
   const [activeTab, setActiveTab] = useState(0);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -94,11 +99,11 @@ const OCRSettingsPage: React.FC = () => {
   }, []);
 
   const loadSettings = useCallback(async () => {
-    if (!user?.church_id) return;
+    if (!effectiveChurchId) return;
     
     setLoading(true);
     try {
-      const response = await apiClient.get(`/api/church/${user.church_id}/ocr/settings`);
+      const response = await apiClient.get(`/api/church/${effectiveChurchId}/ocr/settings`);
       const data = response.data?.settings || response.data;
       
       if (data) {
@@ -123,7 +128,7 @@ const OCRSettingsPage: React.FC = () => {
   }, [user?.church_id]);
 
   const handleSave = useCallback(async () => {
-    if (!user?.church_id) {
+    if (!effectiveChurchId) {
       setError('Church ID not available');
       return;
     }
@@ -154,7 +159,7 @@ const OCRSettingsPage: React.FC = () => {
 
       // Save settings - only send document processing and deletion settings
       // Backend will merge with existing settings
-      await apiClient.put(`/api/church/${user.church_id}/ocr/settings`, {
+      await apiClient.put(`/api/church/${effectiveChurchId}/ocr/settings`, {
         documentProcessing: settings.documentProcessing,
         documentDeletion: settings.documentDeletion,
       });
