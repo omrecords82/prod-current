@@ -31,9 +31,6 @@ export function Landing({ onStart, onAdmin, theme, onToggleTheme }: Props) {
           </a>
           <div className="flex items-center gap-2">
             <Button variant="ghost" onClick={() => { window.location.href = '/auth/login'; }}>Sign In</Button>
-            <Button onClick={onStart} className="bg-[#d4af37] hover:bg-[#c29d2f] text-[#2d1b4e] font-medium">
-              Start Church Setup
-            </Button>
             <ThemeToggle theme={theme} onToggle={onToggleTheme} />
           </div>
         </div>
@@ -131,16 +128,17 @@ export function Landing({ onStart, onAdmin, theme, onToggleTheme }: Props) {
       <section className="border-t border-border bg-card/40">
         <div className="max-w-6xl mx-auto px-6 py-16 grid md:grid-cols-3 gap-6">
           {[
-            { t: "Baptism Records", d: "Capture names, sponsors, dates, and clergy across decades of ledgers." },
-            { t: "Marriage Records", d: "Preserve sacramental marriages with full witness and clergy details." },
-            { t: "Funeral Records", d: "Honor the departed with carefully organized funeral and burial records." },
+            { key: 'baptism',  label: 'Baptism Records' },
+            { key: 'marriage', label: 'Marriage Records' },
+            { key: 'funeral',  label: 'Funeral Records' },
           ].map((r) => (
-            <Card key={r.t} className="border-border">
-              <CardContent className="p-6 space-y-2">
-                <div className="font-['Georgia'] text-[#2d1b4e] dark:text-[#d4af37]">{r.t}</div>
-                <p className="text-sm text-muted-foreground">{r.d}</p>
-              </CardContent>
-            </Card>
+            <div key={r.key} className="rounded-xl overflow-hidden border border-border shadow-sm">
+              <img
+                src={`/images/home/${r.key}-enroll-${theme}.png`}
+                alt={r.label}
+                className="w-full h-auto object-cover"
+              />
+            </div>
           ))}
         </div>
       </section>

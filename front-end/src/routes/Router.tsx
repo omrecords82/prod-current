@@ -88,7 +88,6 @@ const OmaiBridge = Loadable(lazy(() => import('../features/admin/OmaiBridge')));
 
 // OCR
 const OCRStudioPage = Loadable(lazy(() => import('../features/ocr/pages/OCRStudioPage')));
-const OcrUploader = Loadable(lazy(() => import('../features/ocr/OcrUploader')));
 const UploadRecordsPage = Loadable(lazy(() => import('../features/records-centralized/apps/upload-records/UploadRecordsPage')));
 
 // Big Book System
@@ -781,7 +780,7 @@ const Router = [
         element: (
           <ProtectedRoute requiredRole={['super_admin', 'admin', 'church_admin', 'priest']}>
             <AdminErrorBoundary>
-              <OcrUploader />
+              <UploadRecordsPage />
             </AdminErrorBoundary>
           </ProtectedRoute>
         )

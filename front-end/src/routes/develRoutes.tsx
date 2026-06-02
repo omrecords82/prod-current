@@ -24,7 +24,6 @@ const OcrTableExtractorPage = Loadable(lazy(() => import('../features/devel-tool
 const LayoutTemplateEditorPage = Loadable(lazy(() => import('../features/devel-tools/om-ocr/pages/LayoutTemplateEditorPage')));
 const OcrActivityMonitor = Loadable(lazy(() => import('../features/admin/OcrActivityMonitor')));
 const OCRStudioPage = Loadable(lazy(() => import('../features/ocr/pages/OCRStudioPage')));
-const ChurchOCRPage = Loadable(lazy(() => import('../features/ocr/pages/ChurchOCRPage')));
 const UploadRecordsPage = Loadable(lazy(() => import('../features/records-centralized/apps/upload-records/UploadRecordsPage')));
 
 /**
@@ -37,7 +36,6 @@ export const develRoutes = [
   featureRoute('/devel-tools/badge-state-manager', <BadgeStateManagerPage />, ROLE_SUPER, { featureId: 'badge-state-manager' }),
   // OCR Studio routes
   guardedFeatureRoute('/devel/ocr-studio', <OCRStudioPage />, ROLE_STAFF, { featureId: 'ocr-studio', priority: 4, featureName: 'OCR Studio' }),
-  guardedRoute('/devel/ocr-studio/church/:churchId', <ChurchOCRPage />, ROLE_STAFF),
   guardedRoute('/devel/ocr-setup-wizard', <OcrSetupWizardPage />, ROLE_STAFF),
   guardedFeatureRoute('/devel/ocr-studio/upload', <UploadRecordsPage />, ROLE_STAFF, { featureId: 'enhanced-ocr-uploader', priority: 2, featureName: 'OCR Upload' }),
   guardedRoute('/devel/ocr-studio/review/:churchId/:jobId', <OcrReviewPage />, ROLE_STAFF),
@@ -46,7 +44,4 @@ export const develRoutes = [
   guardedRoute('/devel/ocr-studio/table-extractor', <OcrTableExtractorPage />, ROLE_SUPER),
   guardedRoute('/devel/ocr-studio/layout-templates', <LayoutTemplateEditorPage />, ROLE_SUPER),
   guardedRoute('/devel/ocr-studio/settings', <OCRSettingsPage />, ROLE_STAFF),
-  guardedRoute('/devel/om-ocr-studio', <UploadRecordsPage />, ROLE_STAFF),
-  guardedRoute('/devel/ocr-settings', <OCRSettingsPage />, ROLE_STAFF),
-  guardedRoute('/devel/ocr-activity-monitor', <OcrActivityMonitor />, ROLE_SUPER),
 ];
