@@ -167,7 +167,7 @@ prefixes.
   [AGENTS.md §4.1](AGENTS.md#41-branch-naming).
 - **Workspace:** always work in your assigned worktree, never in the deploy
   directory `/var/www/orthodoxmetrics/prod`. OM worktrees:
-  `/var/www/om-workspaces/agent-{claude,claude2,cursor,windsurf}`.
+  `/var/www/workspaces/om/agent-{claude,cursor,windsurf}`.
 - **Sequence:** create the work item (POST `/api/omai-daily/items`) → branch
   is auto-created → check the branch out → commit work → POST
   `/api/omai-daily/items/:id/start-work` to enter `in_progress` → finish work

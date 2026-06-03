@@ -35,16 +35,16 @@ Before doing anything, navigate to your assigned OM worktree:
 
 ```bash
 # Claude CLI
-cd /var/www/om-workspaces/agent-claude
+cd /var/www/workspaces/om/agent-claude
 
 # Cursor
-cd /var/www/om-workspaces/agent-cursor
+cd /var/www/workspaces/om/agent-cursor
 
 # Windsurf
-cd /var/www/om-workspaces/agent-windsurf
+cd /var/www/workspaces/om/agent-windsurf
 ```
 
-**Direct edits to `/var/www/orthodoxmetrics/prod` are forbidden** unless that path is confirmed to be the intended workspace and not the deploy/integration target. The OM worktrees above (`/var/www/om-workspaces/agent-*`) are linked git worktrees of `prod-current` — work there.
+**Direct edits to `/var/www/orthodoxmetrics/prod` are forbidden** unless that path is confirmed to be the intended workspace and not the deploy/integration target. The OM worktrees above (`/var/www/workspaces/om/agent-*`) are linked git worktrees of `prod-current` — work there.
 
 For OMAI (`/var/www/omai/`) work, see `/var/www/shared/AGENT-WORKFLOW.md` and the `omai` repo. Never work from `/var/www/omai/` directly — it is deploy-only and blocked by pre-commit hooks.
 
@@ -176,7 +176,7 @@ gh pr create \
 
 ## Agent
 - **Tool:** claude_cli
-- **Workspace:** /var/www/omai-workspaces/agent-claude" \
+- **Workspace:** /var/www/workspaces/omai/agent-claude" \
   --label "agent-pr"
 ```
 
@@ -238,18 +238,18 @@ OrthodoxMetrics (`prod-current`) worktrees:
 | Directory | Purpose | Who writes |
 |---|---|---|
 | `/var/www/orthodoxmetrics/prod/` | Primary checkout, deploy/integration target | Admin / deploy script |
-| `/var/www/om-workspaces/agent-claude/` | Claude CLI worktree | Claude |
-| `/var/www/om-workspaces/agent-cursor/` | Cursor worktree | Cursor |
-| `/var/www/om-workspaces/agent-windsurf/` | Windsurf worktree | Windsurf |
+| `/var/www/workspaces/om/agent-claude/` | Claude CLI worktree | Claude |
+| `/var/www/workspaces/om/agent-cursor/` | Cursor worktree | Cursor |
+| `/var/www/workspaces/om/agent-windsurf/` | Windsurf worktree | Windsurf |
 
 OMAI (`omai`) worktrees:
 
 | Directory | Purpose | Who writes |
 |---|---|---|
 | `/var/www/omai/` | Production deploy target | Deploy script only |
-| `/var/www/omai-workspaces/agent-claude/` | Claude CLI worktree | Claude |
-| `/var/www/omai-workspaces/agent-cursor/` | Cursor worktree | Cursor |
-| `/var/www/omai-workspaces/agent-windsurf/` | Windsurf worktree | Windsurf |
+| `/var/www/workspaces/omai/agent-claude/` | Claude CLI worktree | Claude |
+| `/var/www/workspaces/omai/agent-cursor/` | Cursor worktree | Cursor |
+| `/var/www/workspaces/omai/agent-windsurf/` | Windsurf worktree | Windsurf |
 
 - Agents **must not** make changes directly in `/var/www/orthodoxmetrics/prod/` or `/var/www/omai/` (deploy targets)
 - Agents **must not** check out `main` in their worktree
