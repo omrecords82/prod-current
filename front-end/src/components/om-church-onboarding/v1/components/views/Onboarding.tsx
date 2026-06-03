@@ -17,7 +17,8 @@ import {
     ShieldCheck,
     X
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { inferLocationFields, reconcileInferredLocation } from "../../lib/inferLocationFields";
 import { ThemeToggle } from "../ThemeToggle";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
@@ -171,6 +172,44 @@ export function Onboarding({ onCancel, onComplete, theme, onToggleTheme }: Props
   // form step. Reset whenever the active step changes.
   const [triedNext, setTriedNext] = useState(false);
 
+  // Location auto-fill: remembers where each inferred field's value came from
+  // ("city_state" | "address" | "user") so we never clobber a user edit — the
+  // one exception being a city/state change, which intentionally re-infers.
+  const [locSource, setLocSource] = useState<
+    Partial<Record<"country" | "timezone" | "zip", "city_state" | "address" | "user">>
+  >({});
+  // Read the latest source inside the effect without making it a dependency
+  // (so the effect only re-runs on real city/state/address changes).
+  const locSourceRef = useRef(locSource);
+  locSourceRef.current = locSource;
+  const prevCityStateRef = useRef({ city: "", state: "" });
+
+  useEffect(() => {
+    const { city, state, address } = profile;
+    const inferred = inferLocationFields({ city, state, address, country: profile.country });
+    const cityStateChanged =
+      city !== prevCityStateRef.current.city || state !== prevCityStateRef.current.state;
+    prevCityStateRef.current = { city, state };
+
+    const { values: valueUpdates, sources: sourceUpdates } = reconcileInferredLocation(
+      inferred,
+      locSourceRef.current,
+      { cityStateChanged },
+    );
+
+    if (Object.keys(valueUpdates).length) {
+      setProfile((p) => ({ ...p, ...valueUpdates }));
+      setLocSource(sourceUpdates);
+    }
+    // Only city/state/address drive re-inference; locSource is read via ref.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [profile.city, profile.state, profile.address]);
+
+  // Mark a location field as user-owned so inference won't overwrite it
+  // (until the user changes city/state, which resets inference).
+  const markLocationUserEdited = (field: "country" | "timezone" | "zip") =>
+    setLocSource((s) => ({ ...s, [field]: "user" }));
+
   const stepIndex = steps.findIndex((s) => s.key === step);
 
   const findParishComplete =
@@ -298,7 +337,7 @@ export function Onboarding({ onCancel, onComplete, theme, onToggleTheme }: Props
             <FindParishStep parish={parish} setParish={setParish} />
           )}
           {step === "profile" && (
-            <ProfileStep profile={profile} setProfile={setProfile} errors={profileErrors} showErrors={triedNext} />
+            <ProfileStep profile={profile} setProfile={setProfile} errors={profileErrors} showErrors={triedNext} locSource={locSource} markLocationUserEdited={markLocationUserEdited} />
           )}
           {step === "modules" && (
             <ModulesStep modules={modules} setModules={setModules} />
@@ -606,9 +645,50 @@ function FindParishStep({
   );
 }
 
-function ProfileStep({ profile, setProfile, errors = {}, showErrors = false }: any) {
+function ProfileStep({
+  profile,
+  setProfile,
+  errors = {},
+  showErrors = false,
+  locSource = {},
+  markLocationUserEdited = () => {},
+}: any) {
   const set = (k: string, v: string) => setProfile({ ...profile, [k]: v });
+  // Setter for auto-fillable location fields: also marks the field user-owned
+  // so inference stops overwriting it.
+  const setLoc = (k: "country" | "timezone" | "zip", v: string) => {
+    setProfile({ ...profile, [k]: v });
+    markLocationUserEdited(k);
+  };
   const err = (k: string) => (showErrors ? errors[k] : undefined);
+
+  // Postal code is shown as a suggestion (subtle highlight + helper text) only
+  // while its value came from city/state inference — once the user picks or
+  // types a ZIP the highlight goes away.
+  const zipSuggested = locSource.zip === "city_state";
+  const zipAlternatives: string[] =
+    inferLocationFields({ city: profile.city, state: profile.state, address: profile.address }).zip
+      ?.alternatives ?? [];
+
+  // Timezone options: common US + EU zones, plus whatever was inferred (so an
+  // auto-filled value like America/Anchorage is always selectable).
+  const TIMEZONES = [
+    "America/New_York",
+    "America/Chicago",
+    "America/Denver",
+    "America/Phoenix",
+    "America/Los_Angeles",
+    "America/Anchorage",
+    "America/Adak",
+    "Pacific/Honolulu",
+    "Europe/Athens",
+    "Europe/Bucharest",
+  ];
+  const tzOptions =
+    profile.timezone && !TIMEZONES.includes(profile.timezone)
+      ? [profile.timezone, ...TIMEZONES]
+      : TIMEZONES;
+
   return (
     <SectionCard
       number={2}
@@ -671,24 +751,38 @@ function ProfileStep({ profile, setProfile, errors = {}, showErrors = false }: a
         <Field label="State / Province" required error={err("state")}>
           <Input value={profile.state} onChange={(e) => set("state", e.target.value)} />
         </Field>
-        <Field label="Postal code" required error={err("zip")}>
-          <Input value={profile.zip} onChange={(e) => set("zip", e.target.value)} />
+        <Field
+          label="Postal code"
+          required
+          error={err("zip")}
+          hint={zipSuggested ? "Suggested from city/state. Confirm or choose another ZIP." : undefined}
+        >
+          <Input
+            list="enroll-zip-suggestions"
+            value={profile.zip}
+            onChange={(e) => setLoc("zip", e.target.value)}
+            className={
+              zipSuggested
+                ? "border-amber-400 ring-2 ring-amber-300/50 bg-amber-50/60 dark:border-amber-500/70 dark:bg-amber-900/15"
+                : undefined
+            }
+          />
+          {zipAlternatives.length > 0 && (
+            <datalist id="enroll-zip-suggestions">
+              {zipAlternatives.map((z) => (
+                <option key={z} value={z} />
+              ))}
+            </datalist>
+          )}
         </Field>
         <Field label="Country" required error={err("country")}>
-          <Input value={profile.country} onChange={(e) => set("country", e.target.value)} />
+          <Input value={profile.country} onChange={(e) => setLoc("country", e.target.value)} />
         </Field>
         <Field label="Timezone" required error={err("timezone")}>
-          <Select value={profile.timezone} onValueChange={(v) => set("timezone", v)}>
+          <Select value={profile.timezone} onValueChange={(v) => setLoc("timezone", v)}>
             <SelectTrigger><SelectValue placeholder="Select timezone…" /></SelectTrigger>
             <SelectContent>
-              {[
-                "America/New_York",
-                "America/Chicago",
-                "America/Denver",
-                "America/Los_Angeles",
-                "Europe/Athens",
-                "Europe/Bucharest",
-              ].map((tz) => (
+              {tzOptions.map((tz) => (
                 <SelectItem key={tz} value={tz}>{tz}</SelectItem>
               ))}
             </SelectContent>
