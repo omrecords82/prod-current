@@ -1,12 +1,12 @@
 import SiteFooter from '@/components/frontend-pages/shared/footer/SiteFooter';
 import {
-    ArrowRight,
-    ClipboardCheck,
-    Cpu,
-    FileSignature,
-    Lock,
-    ShieldCheck,
-    UploadCloud
+  ArrowRight,
+  ClipboardCheck,
+  Cpu,
+  FileSignature,
+  Lock,
+  ShieldCheck,
+  UploadCloud
 } from "lucide-react";
 import { ThemeToggle } from "../ThemeToggle";
 import { Badge } from "../ui/badge";
@@ -132,11 +132,16 @@ export function Landing({ onStart, onAdmin, theme, onToggleTheme }: Props) {
             { key: 'marriage', label: 'Marriage Records' },
             { key: 'funeral',  label: 'Funeral Records' },
           ].map((r) => (
-            <div key={r.key} className="rounded-xl overflow-hidden border border-border shadow-sm">
+            <div key={r.key} className="flex flex-col items-center gap-3">
               <img
-                src={`/images/home/${r.key}-enroll-${theme}.png`}
+                src={`/images/enroll/${r.key}-enroll-light.png`}
                 alt={r.label}
-                className="w-full h-auto object-cover"
+                className="w-full h-auto rounded-lg object-cover dark:hidden"
+              />
+              <img
+                src={`/images/enroll/${r.key}-enroll-dark.png`}
+                alt={r.label}
+                className="w-full h-auto rounded-lg object-cover hidden dark:block"
               />
             </div>
           ))}
