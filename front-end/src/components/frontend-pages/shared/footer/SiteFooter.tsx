@@ -25,7 +25,7 @@ const SiteFooter = () => {
   return (
     <footer className="bg-[#2d1b4e] dark:bg-gray-950 text-white">
       <div className="max-w-7xl mx-auto px-6 py-8">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-12">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
           {/* Brand — SVG logo with sacrament images */}
           <div className="col-span-1">
             <div className="inline-flex items-center gap-3 mb-4">
@@ -81,7 +81,7 @@ const SiteFooter = () => {
 
           {/* Legal */}
           <div>
-            <h3 className="font-['Inter'] font-medium text-[16px] mb-4">Legal</h3>
+            <h3 className="font-['Inter'] font-medium text-[16px] mb-4">{t('footer.heading_legal')}</h3>
             <ul className="space-y-3 list-none p-0 m-0">
               {FOOTER_LINKS.legal.map((link) => (
                 <li key={link.to}>
