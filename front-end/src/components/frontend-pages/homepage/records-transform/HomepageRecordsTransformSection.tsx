@@ -13,7 +13,7 @@ export default function HomepageRecordsTransformSection() {
   const { t } = useLanguage();
 
   return (
-    <section className="py-16 md:py-20 bg-[#2d1b4e] dark:bg-gray-950 text-white">
+    <section className="py-16 md:py-20 bg-[#2d1b4e] dark:bg-[#0d1117] text-white">
       <div className="max-w-6xl mx-auto px-4 md:px-6">
         {/* Title */}
         <div className="text-center mb-10 md:mb-12">

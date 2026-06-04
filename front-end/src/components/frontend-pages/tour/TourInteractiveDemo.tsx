@@ -200,7 +200,7 @@ const TourInteractiveDemo = () => {
 
         {/* Main demo area */}
         <div
-          className="bg-[#f9fafb] dark:bg-gray-900 rounded-2xl border border-[rgba(45,27,78,0.08)] dark:border-gray-800 shadow-lg overflow-hidden"
+          className="bg-[#f9fafb] dark:bg-[#0d1117] rounded-2xl border border-[rgba(45,27,78,0.08)] dark:border-gray-800 shadow-lg overflow-hidden"
           onKeyDown={handleKeyDown}
           tabIndex={0}
           role="region"

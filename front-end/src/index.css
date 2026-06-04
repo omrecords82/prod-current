@@ -523,6 +523,11 @@ button:not([class*="bg-"]):not([class*="text-"]):not([class*="Mui"]):not([class*
   --ag-background-color: #0a0a0a;
 }
 
+/* Public/marketing dark mode: match enrollment header surface (#0d1117) */
+html.dark {
+  background-color: #0d1117;
+}
+
 .liturgical-gradient {
   background: linear-gradient(
     135deg,

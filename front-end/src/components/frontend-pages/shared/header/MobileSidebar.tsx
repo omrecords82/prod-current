@@ -9,6 +9,7 @@ import Stack from '@mui/material/Stack';
 import { IconMoon, IconSun } from '@tabler/icons-react';
 import { useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { BrandLogo } from '@/layouts/full/shared/logo/Logo';
 import { NavLinks } from './Navigations';
 
 const portalMobileLinks = [
@@ -44,11 +45,9 @@ const MobileSidebar = ({ isPortal = false }: MobileSidebarProps) => {
   return (
     <>
       <Box px={3} py={2}>
-        <Box
-          component="img"
-          src={activeMode === 'dark' ? '/images/logos/om-logo-dark.png' : '/images/logos/om-logo-light.png'}
-          alt={t('common.brand_name')}
-          sx={{ height: 40, width: 'auto', objectFit: 'contain' }}
+        <BrandLogo
+          colorScheme={activeMode === 'dark' ? 'dark' : 'light'}
+          height={40}
         />
       </Box>
       <Box p={3}>

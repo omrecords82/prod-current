@@ -12,7 +12,6 @@ import {
     Mail,
     MapPin,
     PartyPopper,
-    Save,
     Search,
     ShieldCheck,
     X
@@ -21,6 +20,7 @@ import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import type { ParishGeoJSON } from "@/features/devel-tools/us-church-map/ParishDetailMap";
 import { apiClient } from "@/api/utils/axiosInstance";
 import { inferLocationFields, reconcileInferredLocation } from "../../lib/inferLocationFields";
+import { Logo } from "../Logo";
 import { ThemeToggle } from "../ThemeToggle";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
@@ -38,11 +38,13 @@ import { Switch } from "../ui/switch";
 
 const steps = [
   { key: "find-parish", label: "Find Your Parish", n: 1 },
-  { key: "profile", label: "Church Profile", n: 2 },
-  { key: "modules", label: "Record Modules", n: 3 },
-  { key: "admin", label: "Admin Account", n: 4 },
-  { key: "review", label: "Review & Submit", n: 5 },
-  { key: "confirm", label: "Confirmation", n: 6 },
+  { key: "contact", label: "Your Contact", n: 2 },
+  { key: "parish", label: "Parish Info", n: 3 },
+  { key: "location", label: "Location", n: 4 },
+  { key: "modules", label: "Record Modules", n: 5 },
+  { key: "admin", label: "Administrator", n: 6 },
+  { key: "review", label: "Review & Submit", n: 7 },
+  { key: "confirm", label: "Confirmation", n: 8 },
 ] as const;
 
 type StepKey = (typeof steps)[number]["key"];
@@ -89,41 +91,35 @@ function isStrongPassword(pw: string): boolean {
   return pw.length >= 12 && /\d/.test(pw) && /[^A-Za-z0-9]/.test(pw);
 }
 
-// Required-field validation for the Church Profile step. Returns a map of
-// field → error message; an empty map means the step is valid.
-function getProfileErrors(p: any): Record<string, string> {
+function getContactErrors(p: any): Record<string, string> {
   const e: Record<string, string> = {};
-  const required: [string, string][] = [
-    ["churchName", "Church name"],
-    ["jurisdiction", "Jurisdiction"],
-    ["firstName", "Parish contact first name"],
-    ["lastName", "Parish contact last name"],
-    ["address", "Address"],
-    ["city", "City"],
-    ["state", "State / Province"],
-    ["zip", "Postal code"],
-    ["country", "Country"],
-    ["timezone", "Timezone"],
-  ];
-  for (const [k, label] of required) {
-    if (!String(p[k] ?? "").trim()) e[k] = `${label} is required`;
-  }
-  if (!String(p.email ?? "").trim()) e.email = "Contact email is required";
+  if (!String(p.firstName ?? "").trim()) e.firstName = "First name is required";
+  if (!String(p.lastName ?? "").trim()) e.lastName = "Last name is required";
+  if (!String(p.email ?? "").trim()) e.email = "Email is required";
   else if (!EMAIL_RE.test(String(p.email).trim())) e.email = "Enter a valid email address";
   return e;
 }
 
-// Required-field validation for the Admin Account step.
+function getParishErrors(p: any): Record<string, string> {
+  const e: Record<string, string> = {};
+  if (!String(p.churchName ?? "").trim()) e.churchName = "Church name is required";
+  return e;
+}
+
 function getAdminErrors(a: any): Record<string, string> {
   const e: Record<string, string> = {};
-  if (!String(a.firstName ?? "").trim()) e.firstName = "Admin first name is required";
-  if (!String(a.lastName ?? "").trim()) e.lastName = "Admin last name is required";
-  if (!String(a.email ?? "").trim()) e.email = "Admin email is required";
+  if (!String(a.firstName ?? "").trim()) e.firstName = "First name is required";
+  if (!String(a.lastName ?? "").trim()) e.lastName = "Last name is required";
+  if (!String(a.email ?? "").trim()) e.email = "Email is required";
   else if (!EMAIL_RE.test(String(a.email).trim())) e.email = "Enter a valid email address";
-  if (!a.password) e.password = "Password is required";
-  else if (!isStrongPassword(a.password)) e.password = "At least 12 characters, with one number and one symbol";
-  if (!a.confirm) e.confirm = "Please confirm your password";
-  else if (a.confirm !== a.password) e.confirm = "Passwords do not match";
+  if (a.password || a.confirm) {
+    if (!a.password) e.password = "Enter a password or clear both fields";
+    else if (!isStrongPassword(a.password)) {
+      e.password = "At least 12 characters, with one number and one symbol";
+    }
+    if (!a.confirm) e.confirm = "Please confirm your password";
+    else if (a.confirm !== a.password) e.confirm = "Passwords do not match";
+  }
   return e;
 }
 
@@ -231,9 +227,11 @@ export function Onboarding({ onCancel, onComplete, theme, onToggleTheme }: Props
     parish.selected !== null ||
     (parish.notListed && parish.manualName.trim().length > 0);
 
-  const profileErrors = getProfileErrors(profile);
+  const contactErrors = getContactErrors(profile);
+  const parishErrors = getParishErrors(profile);
   const adminErrors = getAdminErrors(admin);
-  const profileComplete = Object.keys(profileErrors).length === 0;
+  const contactComplete = Object.keys(contactErrors).length === 0;
+  const parishComplete = Object.keys(parishErrors).length === 0;
   const adminComplete = Object.keys(adminErrors).length === 0;
 
   // find-parish drives the disabled state of Next; the form steps stay
@@ -296,7 +294,8 @@ export function Onboarding({ onCancel, onComplete, theme, onToggleTheme }: Props
     if (!canProceed || submitting) return;
     // Block advancing past a form step until its required fields are valid,
     // and reveal the inline errors.
-    if (step === "profile" && !profileComplete) { setTriedNext(true); return; }
+    if (step === "contact" && !contactComplete) { setTriedNext(true); return; }
+    if (step === "parish" && !parishComplete) { setTriedNext(true); return; }
     if (step === "admin" && !adminComplete) { setTriedNext(true); return; }
     if (step === "review") {
       void submitEnrollment();
@@ -345,8 +344,7 @@ export function Onboarding({ onCancel, onComplete, theme, onToggleTheme }: Props
       <header className="border-b border-border bg-card">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           <a href="/frontend-pages/homepage" className="flex items-center no-underline">
-            <img src="/images/logos/logo-top.svg" alt="Orthodox Metrics" className="h-10 w-auto object-contain dark:hidden" />
-            <img src="/images/logos/logo-top-dark.svg" alt="Orthodox Metrics" className="h-10 w-auto object-contain hidden dark:block" />
+            <Logo colorScheme={theme} size="md" />
           </a>
           <div className="flex items-center gap-3">
             <Button variant="ghost" onClick={onCancel}>
@@ -404,14 +402,31 @@ export function Onboarding({ onCancel, onComplete, theme, onToggleTheme }: Props
           {step === "find-parish" && (
             <FindParishStep parish={parish} setParish={setParish} theme={theme} />
           )}
-          {step === "profile" && (
-            <ProfileStep profile={profile} setProfile={setProfile} errors={profileErrors} showErrors={triedNext} locSource={locSource} markLocationUserEdited={markLocationUserEdited} />
+          {step === "contact" && (
+            <ContactStep profile={profile} setProfile={setProfile} errors={contactErrors} showErrors={triedNext} />
+          )}
+          {step === "parish" && (
+            <ParishInfoStep profile={profile} setProfile={setProfile} errors={parishErrors} showErrors={triedNext} />
+          )}
+          {step === "location" && (
+            <LocationStep
+              profile={profile}
+              setProfile={setProfile}
+              locSource={locSource}
+              markLocationUserEdited={markLocationUserEdited}
+            />
           )}
           {step === "modules" && (
             <ModulesStep modules={modules} setModules={setModules} />
           )}
           {step === "admin" && (
-            <AdminStep admin={admin} setAdmin={setAdmin} errors={adminErrors} showErrors={triedNext} />
+            <AdminStep
+              admin={admin}
+              setAdmin={setAdmin}
+              profile={profile}
+              errors={adminErrors}
+              showErrors={triedNext}
+            />
           )}
           {step === "review" && (
             <ReviewStep
@@ -438,7 +453,8 @@ export function Onboarding({ onCancel, onComplete, theme, onToggleTheme }: Props
           )}
 
           {triedNext &&
-            ((step === "profile" && !profileComplete) ||
+            ((step === "contact" && !contactComplete) ||
+              (step === "parish" && !parishComplete) ||
               (step === "admin" && !adminComplete)) && (
               <div className="flex items-start gap-2 p-3 rounded-md border border-destructive/40 bg-destructive/5 text-sm text-destructive">
                 <CircleAlert className="h-4 w-4 mt-0.5 shrink-0" />
@@ -452,9 +468,11 @@ export function Onboarding({ onCancel, onComplete, theme, onToggleTheme }: Props
                 <ArrowLeft className="h-4 w-4 mr-2" /> Back
               </Button>
               <div className="flex items-center gap-2">
-                <Button variant="outline">
-                  <Save className="h-4 w-4 mr-2" /> Save Draft
-                </Button>
+                {step === "location" && (
+                  <Button variant="outline" onClick={goNext}>
+                    Skip for now
+                  </Button>
+                )}
                 <Button
                   onClick={goNext}
                   disabled={!canProceed || submitting}
@@ -466,7 +484,7 @@ export function Onboarding({ onCancel, onComplete, theme, onToggleTheme }: Props
                     </>
                   ) : (
                     <>
-                      {step === "review" ? "Submit Provision Request" : "Next"}{" "}
+                      {step === "review" ? "Submit Provision Request" : step === "location" ? "Continue" : "Next"}{" "}
                       <ArrowRight className="h-4 w-4 ml-2" />
                     </>
                   )}
@@ -822,33 +840,116 @@ function FindParishStep({
   );
 }
 
-function ProfileStep({
+function ContactStep({
   profile,
   setProfile,
   errors = {},
   showErrors = false,
+}: any) {
+  const set = (k: string, v: string) => setProfile({ ...profile, [k]: v });
+  const err = (k: string) => (showErrors ? errors[k] : undefined);
+
+  return (
+    <SectionCard
+      number={2}
+      title="Your Contact"
+      description="Who should we reach about this enrollment? Just the basics — we will ask for parish details next."
+    >
+      <div className="grid md:grid-cols-2 gap-5 max-w-xl">
+        <Field label="First name" required error={err("firstName")}>
+          <Input value={profile.firstName} onChange={(e) => set("firstName", e.target.value)} autoComplete="given-name" />
+        </Field>
+        <Field label="Last name" required error={err("lastName")}>
+          <Input value={profile.lastName} onChange={(e) => set("lastName", e.target.value)} autoComplete="family-name" />
+        </Field>
+        <div className="md:col-span-2">
+          <Field label="Email" required hint="We send approval and onboarding updates here." error={err("email")}>
+            <Input type="email" value={profile.email} onChange={(e) => set("email", e.target.value)} autoComplete="email" />
+          </Field>
+        </div>
+      </div>
+    </SectionCard>
+  );
+}
+
+function ParishInfoStep({
+  profile,
+  setProfile,
+  errors = {},
+  showErrors = false,
+}: any) {
+  const set = (k: string, v: string) => setProfile({ ...profile, [k]: v });
+  const err = (k: string) => (showErrors ? errors[k] : undefined);
+
+  return (
+    <SectionCard
+      number={3}
+      title="Parish Info"
+      description="Confirm your church name and add optional details. Jurisdiction and size help us route your request."
+    >
+      <div className="grid md:grid-cols-2 gap-5">
+        <Field label="Church name" required error={err("churchName")}>
+          <Input value={profile.churchName} onChange={(e) => set("churchName", e.target.value)} />
+        </Field>
+        <Field label="Jurisdiction" hint="Optional — select if you know it.">
+          <Select value={profile.jurisdiction} onValueChange={(v) => set("jurisdiction", v)}>
+            <SelectTrigger><SelectValue placeholder="Select jurisdiction…" /></SelectTrigger>
+            <SelectContent>
+              {[
+                "Greek Orthodox Archdiocese of America",
+                "Orthodox Church in America (OCA)",
+                "Antiochian Orthodox Christian Archdiocese",
+                "Serbian Orthodox Church",
+                "Russian Orthodox Church Outside Russia",
+                "Romanian Orthodox Archdiocese",
+                "Other",
+              ].map((j) => (
+                <SelectItem key={j} value={j}>{j}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </Field>
+        <Field label="Phone" hint="Optional">
+          <Input value={profile.phone} onChange={(e) => set("phone", e.target.value)} type="tel" />
+        </Field>
+        <Field label="Website" hint="Optional">
+          <Input value={profile.website} onChange={(e) => set("website", e.target.value)} />
+        </Field>
+        <Field label="Approximate church size" hint="Optional">
+          <Select value={profile.size} onValueChange={(v) => set("size", v)}>
+            <SelectTrigger><SelectValue placeholder="Select church size…" /></SelectTrigger>
+            <SelectContent>
+              {["Under 100", "100–200", "200–500", "500–1000", "1000+"].map((v) => (
+                <SelectItem key={v} value={v}>{v}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </Field>
+        <Field label="How did you hear about us?" hint="Optional">
+          <Input value={profile.referral} onChange={(e) => set("referral", e.target.value)} />
+        </Field>
+      </div>
+    </SectionCard>
+  );
+}
+
+function LocationStep({
+  profile,
+  setProfile,
   locSource = {},
   markLocationUserEdited = () => {},
 }: any) {
   const set = (k: string, v: string) => setProfile({ ...profile, [k]: v });
-  // Setter for auto-fillable location fields: also marks the field user-owned
-  // so inference stops overwriting it.
   const setLoc = (k: "country" | "timezone" | "zip", v: string) => {
     setProfile({ ...profile, [k]: v });
     markLocationUserEdited(k);
   };
-  const err = (k: string) => (showErrors ? errors[k] : undefined);
 
-  // Postal code is shown as a suggestion (subtle highlight + helper text) only
-  // while its value came from city/state inference — once the user picks or
-  // types a ZIP the highlight goes away.
   const zipSuggested = locSource.zip === "city_state";
   const zipAlternatives: string[] =
     inferLocationFields({ city: profile.city, state: profile.state, address: profile.address }).zip
       ?.alternatives ?? [];
 
-  // Timezone options: common US + EU zones, plus whatever was inferred (so an
-  // auto-filled value like America/Anchorage is always selectable).
   const TIMEZONES = [
     "America/New_York",
     "America/Chicago",
@@ -868,71 +969,23 @@ function ProfileStep({
 
   return (
     <SectionCard
-      number={2}
-      title="Church Profile"
-      description="Tell us about your parish. These details help Orthodox Metrics provision your workspace and tailor your records."
+      number={4}
+      title="Location"
+      description="Optional now — add your parish address when you have it, or skip and continue. You can update this after approval."
     >
       <div className="grid md:grid-cols-2 gap-5">
-        <Field label="Church name" required error={err("churchName")}>
-          <Input value={profile.churchName} onChange={(e) => set("churchName", e.target.value)} />
-        </Field>
-        <Field label="Jurisdiction" required error={err("jurisdiction")}>
-          <Select value={profile.jurisdiction} onValueChange={(v) => set("jurisdiction", v)}>
-            <SelectTrigger><SelectValue placeholder="Select jurisdiction…" /></SelectTrigger>
-            <SelectContent>
-              {[
-                "Greek Orthodox Archdiocese of America",
-                "Orthodox Church in America (OCA)",
-                "Antiochian Orthodox Christian Archdiocese",
-                "Serbian Orthodox Church",
-                "Russian Orthodox Church Outside Russia",
-                "Romanian Orthodox Archdiocese",
-                "Other",
-              ].map((j) => (
-                <SelectItem key={j} value={j}>{j}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </Field>
-        <Field label="Parish contact first name" required error={err("firstName")}>
-          <Input value={profile.firstName} onChange={(e) => set("firstName", e.target.value)} />
-        </Field>
-        <Field label="Parish contact last name" required error={err("lastName")}>
-          <Input value={profile.lastName} onChange={(e) => set("lastName", e.target.value)} />
-        </Field>
-        <Field label="Contact email" required hint="Used for provisioning updates." error={err("email")}>
-          <Input type="email" value={profile.email} onChange={(e) => set("email", e.target.value)} />
-        </Field>
-        <Field label="Phone">
-          <Input value={profile.phone} onChange={(e) => set("phone", e.target.value)} />
-        </Field>
-        <Field label="Website">
-          <Input value={profile.website} onChange={(e) => set("website", e.target.value)} />
-        </Field>
-        <Field label="Church size">
-          <Select value={profile.size} onValueChange={(v) => set("size", v)}>
-            <SelectTrigger><SelectValue placeholder="Select church size…" /></SelectTrigger>
-            <SelectContent>
-              {["Under 100", "100–200", "200–500", "500–1000", "1000+"].map((v) => (
-                <SelectItem key={v} value={v}>{v}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </Field>
-        <Field label="Address" required error={err("address")}>
+        <Field label="Street address" hint="Optional">
           <Input value={profile.address} onChange={(e) => set("address", e.target.value)} />
         </Field>
-        <Field label="City" required error={err("city")}>
+        <Field label="City" hint="Optional">
           <Input value={profile.city} onChange={(e) => set("city", e.target.value)} />
         </Field>
-        <Field label="State / Province" required error={err("state")}>
+        <Field label="State / Province" hint="Optional">
           <Input value={profile.state} onChange={(e) => set("state", e.target.value)} />
         </Field>
         <Field
           label="Postal code"
-          required
-          error={err("zip")}
-          hint={zipSuggested ? "Suggested from city/state. Confirm or choose another ZIP." : undefined}
+          hint={zipSuggested ? "Suggested from city/state — confirm or change." : "Optional"}
         >
           <Input
             list="enroll-zip-suggestions"
@@ -952,10 +1005,10 @@ function ProfileStep({
             </datalist>
           )}
         </Field>
-        <Field label="Country" required error={err("country")}>
+        <Field label="Country" hint="Optional">
           <Input value={profile.country} onChange={(e) => setLoc("country", e.target.value)} />
         </Field>
-        <Field label="Timezone" required error={err("timezone")}>
+        <Field label="Timezone" hint="Optional">
           <Select value={profile.timezone} onValueChange={(v) => setLoc("timezone", v)}>
             <SelectTrigger><SelectValue placeholder="Select timezone…" /></SelectTrigger>
             <SelectContent>
@@ -965,16 +1018,6 @@ function ProfileStep({
             </SelectContent>
           </Select>
         </Field>
-        <Field label="Referral source">
-          <Input value={profile.referral} onChange={(e) => set("referral", e.target.value)} />
-        </Field>
-      </div>
-
-      <div className="flex items-start gap-3 p-4 rounded-lg bg-[rgba(212,175,55,0.08)] dark:bg-[rgba(30,42,58,0.8)] border border-[#d4af37]/25 dark:border-white/8 text-sm">
-        <CircleAlert className="h-4 w-4 mt-0.5 text-[#2d1b4e] dark:text-[#d4af37] shrink-0" />
-        <div>
-          Required fields are marked with <Req />. Your draft is saved automatically every minute.
-        </div>
       </div>
     </SectionCard>
   );
@@ -1007,7 +1050,7 @@ function ModulesStep({ modules, setModules }: any) {
   const count = Object.values(modules).filter(Boolean).length;
   return (
     <SectionCard
-      number={3}
+      number={5}
       title="Record Module Selection"
       description="Choose the sacramental record books you want to digitize and manage. You can add more later."
     >
@@ -1077,14 +1120,27 @@ function ModulesStep({ modules, setModules }: any) {
   );
 }
 
-function AdminStep({ admin, setAdmin, errors = {}, showErrors = false }: any) {
+function AdminStep({ admin, setAdmin, profile, errors = {}, showErrors = false }: any) {
   const set = (k: string, v: any) => setAdmin({ ...admin, [k]: v });
   const err = (k: string) => (showErrors ? errors[k] : undefined);
+
+  useEffect(() => {
+    if (!admin.email && profile.email) {
+      setAdmin((a: typeof admin) => ({
+        ...a,
+        email: profile.email,
+        firstName: a.firstName || profile.firstName,
+        lastName: a.lastName || profile.lastName,
+      }));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   return (
     <SectionCard
-      number={4}
-      title="Admin Account Setup"
-      description="Tell us who should be the first administrator. Your sign-in account is created after Orthodox Metrics approves your request."
+      number={6}
+      title="Administrator"
+      description="Who should be the first admin when your workspace is ready? Password is optional until we provision your account."
     >
       <div className="grid md:grid-cols-2 gap-5">
         <Field label="Admin first name" required error={err("firstName")}>
@@ -1099,8 +1155,7 @@ function AdminStep({ admin, setAdmin, errors = {}, showErrors = false }: any) {
         <div />
         <Field
           label="Password"
-          required
-          hint="Choose a password for later — it is not sent until your workspace is provisioned. At least 12 characters, with one number and one symbol."
+          hint="Optional — choose now or when you receive your approval email. At least 12 characters with a number and symbol if you fill this in."
           error={err("password")}
         >
           <Input
@@ -1110,7 +1165,7 @@ function AdminStep({ admin, setAdmin, errors = {}, showErrors = false }: any) {
             placeholder="••••••••••••"
           />
         </Field>
-        <Field label="Confirm password" required error={err("confirm")}>
+        <Field label="Confirm password" error={err("confirm")}>
           <Input
             type="password"
             value={admin.confirm}
@@ -1147,7 +1202,7 @@ function AdminStep({ admin, setAdmin, errors = {}, showErrors = false }: any) {
 function ReviewStep({ profile, modules, admin }: any) {
   return (
     <SectionCard
-      number={5}
+      number={7}
       title="Review & Submit"
       description="Confirm your details below. Submitting will create a provision request for Orthodox Metrics staff to review."
     >
@@ -1224,7 +1279,7 @@ function ConfirmStep({
 
   return (
     <SectionCard
-      number={6}
+      number={8}
       title="Submission Confirmation"
       description="Your provision request has been received."
     >

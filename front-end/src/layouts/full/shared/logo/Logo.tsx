@@ -5,6 +5,72 @@ import { CustomizerContext } from '@/context/CustomizerContext';
 import { styled, useTheme } from '@mui/material';
 import { Link } from 'react-router-dom';
 
+/** Transparent PNG logos: light file for light UI surfaces, dark file for dark UI surfaces. */
+export const LOGO_SRC_LIGHT = '/images/logos/om-logo-light.png';
+export const LOGO_SRC_DARK = '/images/logos/om-logo-dark.png';
+
+export type BrandLogoProps = {
+  className?: string;
+  height?: number;
+  href?: string;
+  /** When set, overrides theme/customizer (use for scoped pages like enrollment). */
+  colorScheme?: 'light' | 'dark';
+  /** Always use the dark-surface logo (e.g. purple footer). */
+  onDarkSurface?: boolean;
+};
+
+export function resolveBrandLogoSrc(opts: {
+  colorScheme?: 'light' | 'dark';
+  onDarkSurface?: boolean;
+  muiMode?: 'light' | 'dark';
+  customizerMode?: string;
+}): string {
+  const isDark =
+    opts.onDarkSurface ||
+    opts.colorScheme === 'dark' ||
+    (opts.colorScheme !== 'light' &&
+      (opts.muiMode === 'dark' || opts.customizerMode === 'dark'));
+  return isDark ? LOGO_SRC_DARK : LOGO_SRC_LIGHT;
+}
+
+export function BrandLogo({
+  className = 'h-10 w-auto object-contain',
+  height,
+  href,
+  colorScheme,
+  onDarkSurface,
+}: BrandLogoProps) {
+  const { activeMode } = useContext(CustomizerContext);
+  const theme = useTheme();
+  const src = resolveBrandLogoSrc({
+    colorScheme,
+    onDarkSurface,
+    muiMode: theme.palette.mode,
+    customizerMode: activeMode,
+  });
+
+  const img = (
+    <img
+      src={src}
+      alt="Orthodox Metrics"
+      className={className}
+      style={
+        height
+          ? { height, width: 'auto', objectFit: 'contain' }
+          : undefined
+      }
+    />
+  );
+
+  if (href) {
+    return (
+      <a href={href} className="flex items-center no-underline">
+        {img}
+      </a>
+    );
+  }
+  return img;
+}
 
 const Logo: FC = () => {
   const { isCollapse, isSidebarHover } = useContext(CustomizerContext);
@@ -20,9 +86,7 @@ const Logo: FC = () => {
     alignItems: 'center',
   }));
 
-  const logoSrc = theme.palette.mode === 'dark'
-    ? '/images/logos/om-logo-dark.png'
-    : '/images/logos/om-logo-light.png';
+  const logoSrc = resolveBrandLogoSrc({ muiMode: theme.palette.mode });
 
   return (
     <LinkStyled to="/">

@@ -46,7 +46,7 @@ const Homepage = () => {
       </section>
 
       {/* Key Features */}
-      <section className="py-20 bg-white dark:bg-gray-900">
+      <section className="py-20 bg-white dark:bg-[#0d1117]">
         <div className="max-w-7xl mx-auto px-6">
           <div className="text-center mb-16">
             <div className="inline-flex items-center gap-2 bg-[rgba(45,27,78,0.05)] dark:bg-gray-800 px-4 py-2 rounded-full mb-4">
@@ -81,7 +81,7 @@ const Homepage = () => {
       <HomepageRecordsTransformSection />
 
       {/* Why Choose Us */}
-      <section className="py-20 bg-white dark:bg-gray-900">
+      <section className="py-20 bg-white dark:bg-[#0d1117]">
         <div className="max-w-7xl mx-auto px-6">
           <div className="grid md:grid-cols-2 gap-16 items-center">
             <div>
@@ -110,7 +110,7 @@ const Homepage = () => {
 
             <div className="bg-gradient-to-br from-[#f9fafb] to-[#f3f4f6] dark:from-gray-800 dark:to-gray-700 rounded-2xl p-12 border border-[rgba(45,27,78,0.1)] dark:border-gray-600">
               <div className="space-y-8">
-                <div className="bg-white dark:bg-gray-900 rounded-xl p-6 shadow-sm">
+                <div className="bg-white dark:bg-[#0d1117] rounded-xl p-6 shadow-sm">
                   <EditableText contentKey="why.stat1.number" as="div" className="text-[#d4af37] font-['Georgia'] text-5xl mb-2">
                     {t('home.why_stat1_number')}
                   </EditableText>
@@ -118,7 +118,7 @@ const Homepage = () => {
                     {t('home.why_stat1_label')}
                   </EditableText>
                 </div>
-                <div className="bg-white dark:bg-gray-900 rounded-xl p-6 shadow-sm">
+                <div className="bg-white dark:bg-[#0d1117] rounded-xl p-6 shadow-sm">
                   <EditableText contentKey="why.stat2.number" as="div" className="text-[#2d1b4e] dark:text-[#d4af37] font-['Georgia'] text-5xl mb-2">
                     {t('home.why_stat2_number')}
                   </EditableText>
@@ -126,7 +126,7 @@ const Homepage = () => {
                     {t('home.why_stat2_label')}
                   </EditableText>
                 </div>
-                <div className="bg-white dark:bg-gray-900 rounded-xl p-6 shadow-sm">
+                <div className="bg-white dark:bg-[#0d1117] rounded-xl p-6 shadow-sm">
                   <EditableText contentKey="why.stat3.number" as="div" className="text-[#d4af37] font-['Georgia'] text-5xl mb-2">
                     {t('home.why_stat3_number')}
                   </EditableText>

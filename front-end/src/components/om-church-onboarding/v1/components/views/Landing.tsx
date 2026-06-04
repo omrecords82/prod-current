@@ -8,6 +8,7 @@ import {
   ShieldCheck,
   UploadCloud
 } from "lucide-react";
+import { Logo } from "../Logo";
 import { ThemeToggle } from "../ThemeToggle";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
@@ -26,8 +27,7 @@ export function Landing({ onStart, onAdmin, theme, onToggleTheme }: Props) {
       <header className="border-b border-border bg-card/60 backdrop-blur sticky top-0 z-10">
         <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
           <a href="/frontend-pages/homepage" className="flex items-center no-underline">
-            <img src="/images/logos/logo-top.svg" alt="Orthodox Metrics" className="h-10 w-auto object-contain dark:hidden" />
-            <img src="/images/logos/logo-top-dark.svg" alt="Orthodox Metrics" className="h-10 w-auto object-contain hidden dark:block" />
+            <Logo colorScheme={theme} size="md" />
           </a>
           <div className="flex items-center gap-2">
             <Button variant="ghost" onClick={() => { window.location.href = '/auth/login'; }}>Sign In</Button>

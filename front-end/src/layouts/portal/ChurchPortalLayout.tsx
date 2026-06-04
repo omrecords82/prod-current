@@ -5,6 +5,7 @@ import { useLanguage } from '@/context/LanguageContext';
 import { churchApi } from '@/features/account/accountApi';
 import { CustomizerContext } from '@/context/CustomizerContext';
 import Customizer from '@/layouts/full/shared/customizer/Customizer';
+import { BrandLogo } from '@/layouts/full/shared/logo/Logo';
 import { Box, CircularProgress, Container, Divider, ListItemIcon, Menu, MenuItem, Typography } from '@mui/material';
 import { IconChevronDown, IconLogout, IconMoon, IconSettings, IconSun, IconUser, IconWorld } from '@tabler/icons-react';
 import React, { useContext, useEffect, useState } from 'react';
@@ -244,16 +245,7 @@ const PortalFooter: React.FC = () => {
             <span className="text-[10px] uppercase tracking-[0.12em] text-[#9ca3af] dark:text-gray-500 font-['Inter']">
               Powered by
             </span>
-            <img
-              src="/images/logos/om-logo-light.png"
-              alt="Orthodox Metrics"
-              className="h-5 w-auto object-contain dark:hidden"
-            />
-            <img
-              src="/images/logos/om-logo-dark.png"
-              alt="Orthodox Metrics"
-              className="h-5 w-auto object-contain hidden dark:block"
-            />
+            <BrandLogo className="h-5 w-auto object-contain" height={20} />
           </div>
         </div>
       </div>

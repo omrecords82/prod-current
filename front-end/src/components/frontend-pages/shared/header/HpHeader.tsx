@@ -9,6 +9,7 @@ import useMediaQuery from '@mui/material/useMediaQuery';
 import { IconMenu2, IconMoon, IconSun, IconWorld } from '@tabler/icons-react';
 import React, { useContext, useRef, useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
+import { BrandLogo } from '@/layouts/full/shared/logo/Logo';
 import MobileSidebar from './MobileSidebar';
 import PortalNavigations from './PortalNavigations';
 
@@ -51,22 +52,14 @@ const HpHeader = () => {
   }, [langOpen]);
 
   return (
-    <nav className="bg-white dark:bg-gray-900 border-b border-[rgba(45,27,78,0.1)] dark:border-gray-800 sticky top-0 z-50">
+    <nav className="bg-white dark:bg-[#0d1117] border-b border-[rgba(45,27,78,0.1)] dark:border-white/10 sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-6">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <a href="/frontend-pages/homepage" className="flex items-center no-underline">
-            <img
-              src="/images/logos/logo-top.svg"
-              alt="Orthodox Metrics"
-              className="h-10 w-auto object-contain dark:hidden"
-            />
-            <img
-              src="/images/logos/logo-top-dark.svg"
-              alt="Orthodox Metrics"
-              className="h-10 w-auto object-contain hidden dark:block"
-            />
-          </a>
+          <BrandLogo
+            href="/frontend-pages/homepage"
+            colorScheme={activeMode === 'dark' ? 'dark' : 'light'}
+          />
 
           {/* Desktop Navigation */}
           {mdUp ? (
