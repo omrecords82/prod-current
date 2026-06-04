@@ -2,6 +2,8 @@ export type RecordStatus = "Recorded" | "Verified" | "Awaiting Clergy";
 export type RecordType = "baptism" | "marriage" | "funeral";
 export type ViewMode = "table" | "cards" | "timeline" | "analytics";
 export type Density = "compact" | "default" | "comfortable";
+/** AG Grid column layout presets inside the Table view */
+export type GridLayoutPreset = "full" | "summary" | "clergy" | "compact";
 
 export interface BaptismRecord {
   id: string;

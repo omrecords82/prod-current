@@ -19,13 +19,17 @@ export function MoreModals({ action, onClose, columns, visibleCols, onToggleCol,
   const [copied, setCopied] = useState(false);
   const link = "https://orthodox-metrics.com/share/parish/ss-peter-paul/r/collab";
 
-  const inputCls = "w-full px-3 py-2 rounded-md border border-gray-200 bg-white text-sm text-gray-900";
+  const inputCls = "w-full px-3 py-2 rounded-md border border-[var(--rm-border)] bg-[var(--rm-card)] text-sm text-[var(--rm-fg)]";
+  const dialogPaper = { className: 'rm-scope' as const, sx: { bgcolor: 'var(--rm-card)', color: 'var(--rm-fg)' } };
+  const accentBtnSx = { textTransform: 'none' as const, bgcolor: 'var(--rm-accent)', '&:hover': { bgcolor: 'var(--rm-accent-hover)' } };
+  const selectedChip = "text-white border-transparent bg-[var(--rm-accent)]";
+  const chip = "border-[var(--rm-border)] text-[var(--rm-fg)] hover:bg-[var(--rm-muted)]";
 
   return (
     <>
       {/* Export */}
-      <Dialog open={action === "export"} onClose={onClose} maxWidth="xs" fullWidth PaperProps={{ sx: { bgcolor: '#ffffff', color: '#1a1a2e' } }}>
-        <DialogTitle sx={{ color: '#1a1a2e' }}>Export Records</DialogTitle>
+      <Dialog open={action === "export"} onClose={onClose} maxWidth="xs" fullWidth PaperProps={dialogPaper}>
+        <DialogTitle sx={{ color: 'var(--rm-fg)' }}>Export Records</DialogTitle>
         <DialogContent>
           <div className="rm-scope space-y-2">
             <div className="text-xs text-gray-500">Export format</div>
@@ -34,21 +38,21 @@ export function MoreModals({ action, onClose, columns, visibleCols, onToggleCol,
                 <button
                   key={f}
                   onClick={() => setFormat(f)}
-                  className={`px-3 py-2 rounded-md border text-sm transition-all ${format === f ? "text-white border-transparent bg-[#11307a]" : "border-gray-200 text-gray-900 hover:bg-gray-50"}`}
+                  className={`px-3 py-2 rounded-md border text-sm transition-all ${format === f ? selectedChip : chip}`}
                 >{f}</button>
               ))}
             </div>
           </div>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={onClose} sx={{ textTransform: 'none' }}>Cancel</Button>
-          <Button onClick={() => { onToast(`Exporting as ${format}…`); onClose(); }} variant="contained" sx={{ textTransform: 'none', bgcolor: '#11307a', '&:hover': { bgcolor: '#0e2865' } }}>Export</Button>
+          <Button onClick={onClose} sx={{ textTransform: 'none', color: 'var(--rm-accent)' }}>Cancel</Button>
+          <Button onClick={() => { onToast(`Exporting as ${format}…`); onClose(); }} variant="contained" sx={accentBtnSx}>Export</Button>
         </DialogActions>
       </Dialog>
 
       {/* Import */}
-      <Dialog open={action === "import"} onClose={onClose} maxWidth="xs" fullWidth PaperProps={{ sx: { bgcolor: '#ffffff', color: '#1a1a2e' } }}>
-        <DialogTitle sx={{ color: '#1a1a2e' }}>Import Records</DialogTitle>
+      <Dialog open={action === "import"} onClose={onClose} maxWidth="xs" fullWidth PaperProps={dialogPaper}>
+        <DialogTitle sx={{ color: 'var(--rm-fg)' }}>Import Records</DialogTitle>
         <DialogContent>
           <div className="rm-scope">
             <label className="block border-2 border-dashed border-gray-200 rounded-xl p-8 text-center hover:bg-gray-50 cursor-pointer transition-all">
@@ -65,14 +69,14 @@ export function MoreModals({ action, onClose, columns, visibleCols, onToggleCol,
           </div>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={onClose} sx={{ textTransform: 'none' }}>Cancel</Button>
-          <Button onClick={() => { onToast("Records imported"); onClose(); }} variant="contained" sx={{ textTransform: 'none', bgcolor: '#11307a', '&:hover': { bgcolor: '#0e2865' } }}>Upload</Button>
+          <Button onClick={onClose} sx={{ textTransform: 'none', color: 'var(--rm-accent)' }}>Cancel</Button>
+          <Button onClick={() => { onToast("Records imported"); onClose(); }} variant="contained" sx={accentBtnSx}>Upload</Button>
         </DialogActions>
       </Dialog>
 
       {/* Report */}
-      <Dialog open={action === "report"} onClose={onClose} maxWidth="xs" fullWidth PaperProps={{ sx: { bgcolor: '#ffffff', color: '#1a1a2e' } }}>
-        <DialogTitle sx={{ color: '#1a1a2e' }}>Generate Records Report</DialogTitle>
+      <Dialog open={action === "report"} onClose={onClose} maxWidth="xs" fullWidth PaperProps={dialogPaper}>
+        <DialogTitle sx={{ color: 'var(--rm-fg)' }}>Generate Records Report</DialogTitle>
         <DialogContent>
           <div className="rm-scope space-y-3 pt-1">
             <label className="block space-y-1">
@@ -91,16 +95,16 @@ export function MoreModals({ action, onClose, columns, visibleCols, onToggleCol,
           </div>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={onClose} sx={{ textTransform: 'none' }}>Cancel</Button>
-          <Button onClick={() => { onToast(`Generating ${reportType} report`); onClose(); }} variant="contained" sx={{ textTransform: 'none', bgcolor: '#11307a', '&:hover': { bgcolor: '#0e2865' } }}>
+          <Button onClick={onClose} sx={{ textTransform: 'none', color: 'var(--rm-accent)' }}>Cancel</Button>
+          <Button onClick={() => { onToast(`Generating ${reportType} report`); onClose(); }} variant="contained" sx={accentBtnSx}>
             <FileText className="w-4 h-4 mr-1" /> Generate
           </Button>
         </DialogActions>
       </Dialog>
 
       {/* Collab */}
-      <Dialog open={action === "collab"} onClose={onClose} maxWidth="xs" fullWidth PaperProps={{ sx: { bgcolor: '#ffffff', color: '#1a1a2e' } }}>
-        <DialogTitle sx={{ color: '#1a1a2e' }}>Collaboration Link</DialogTitle>
+      <Dialog open={action === "collab"} onClose={onClose} maxWidth="xs" fullWidth PaperProps={dialogPaper}>
+        <DialogTitle sx={{ color: 'var(--rm-fg)' }}>Collaboration Link</DialogTitle>
         <DialogContent>
           <div className="rm-scope">
           <div className="text-xs text-gray-500 mb-3">Anyone with this link can view this record set.</div>
@@ -108,7 +112,7 @@ export function MoreModals({ action, onClose, columns, visibleCols, onToggleCol,
             <input readOnly value={link} className="flex-1 px-3 py-2 rounded-md border border-gray-200 bg-gray-50 text-xs text-gray-900" />
             <button
               onClick={() => { navigator.clipboard?.writeText(link); setCopied(true); setTimeout(() => setCopied(false), 1500); }}
-              className="inline-flex items-center gap-1 px-3 py-2 rounded-md text-white text-sm bg-[#11307a] hover:bg-[#0e2865]"
+              className="inline-flex items-center gap-1 px-3 py-2 rounded-md text-white text-sm bg-[var(--rm-accent)] hover:bg-[var(--rm-accent-hover)]"
             >
               {copied ? <><Check className="w-4 h-4" /> Copied</> : <><Copy className="w-4 h-4" /> Copy</>}
             </button>
@@ -121,8 +125,8 @@ export function MoreModals({ action, onClose, columns, visibleCols, onToggleCol,
       </Dialog>
 
       {/* Grid Options */}
-      <Dialog open={action === "grid"} onClose={onClose} maxWidth="xs" fullWidth PaperProps={{ sx: { bgcolor: '#ffffff', color: '#1a1a2e' } }}>
-        <DialogTitle sx={{ color: '#1a1a2e' }}>Grid Options</DialogTitle>
+      <Dialog open={action === "grid"} onClose={onClose} maxWidth="xs" fullWidth PaperProps={dialogPaper}>
+        <DialogTitle sx={{ color: 'var(--rm-fg)' }}>Grid Options</DialogTitle>
         <DialogContent>
           <div className="rm-scope space-y-2">
             <div className="text-xs text-gray-500">Visible columns</div>
@@ -135,7 +139,7 @@ export function MoreModals({ action, onClose, columns, visibleCols, onToggleCol,
           </div>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={onClose} variant="contained" sx={{ textTransform: 'none', bgcolor: '#11307a', '&:hover': { bgcolor: '#0e2865' } }}>Done</Button>
+          <Button onClick={onClose} variant="contained" sx={accentBtnSx}>Done</Button>
         </DialogActions>
       </Dialog>
     </>

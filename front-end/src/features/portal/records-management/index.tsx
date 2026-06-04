@@ -312,7 +312,7 @@ const RecordsManagement: React.FC = () => {
                 records={filtered}
                 recordType={recordType}
                 fieldConfig={fieldConfig}
-                highlight={search}
+                highlight={debouncedSearch || search}
                 density={density}
                 standard={standardTable}
                 visibleCols={visibleCols}

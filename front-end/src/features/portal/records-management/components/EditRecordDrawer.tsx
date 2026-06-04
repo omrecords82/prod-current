@@ -215,7 +215,7 @@ function FormSection({ title, children }: { title: string; children: React.React
   return (
     <div>
       <div className="text-base font-medium text-[var(--rm-fg)] mb-1">{title}</div>
-      <div className="h-0.5 w-16 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full mb-4" />
+      <div className="h-0.5 w-16 rounded-full mb-4" style={{ background: 'linear-gradient(to right, var(--rm-accent-dark), var(--rm-accent))' }} />
       <div className="space-y-3">{children}</div>
     </div>
   );

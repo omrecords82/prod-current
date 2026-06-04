@@ -24,11 +24,17 @@ export function AddRecordModal({ open, recordType, clergyList, onClose, onSave }
     birthplace: "", address: "", clergy: clergyList[0] || "", status: "Recorded",
   });
 
-  const inputCls = "w-full px-2.5 py-2 rounded-md border border-gray-200 bg-white text-sm text-gray-900 outline-none focus:border-[#11307a] focus:ring-2 focus:ring-[rgba(17,48,122,0.12)] transition-all";
+  const inputCls = "w-full px-2.5 py-2 rounded-md border border-[var(--rm-border)] bg-[var(--rm-card)] text-sm text-[var(--rm-fg)] outline-none focus:border-[var(--rm-accent)] focus:ring-2 focus:ring-[var(--rm-accent-soft)] transition-all";
+
+  const accentBtnSx = {
+    textTransform: 'none' as const,
+    bgcolor: 'var(--rm-accent)',
+    '&:hover': { bgcolor: 'var(--rm-accent-hover)' },
+  };
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth PaperProps={{ sx: { bgcolor: '#ffffff', color: '#1a1a2e' } }}>
-      <DialogTitle sx={{ color: '#1a1a2e' }}>{TITLES[recordType]}</DialogTitle>
+    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth PaperProps={{ className: 'rm-scope', sx: { bgcolor: 'var(--rm-card)', color: 'var(--rm-fg)' } }}>
+      <DialogTitle sx={{ color: 'var(--rm-fg)' }}>{TITLES[recordType]}</DialogTitle>
       <DialogContent>
         <div className="rm-scope grid grid-cols-2 gap-3 pt-2">
           {recordType === "baptism" && (
@@ -74,8 +80,8 @@ export function AddRecordModal({ open, recordType, clergyList, onClose, onSave }
         </div>
       </DialogContent>
       <DialogActions sx={{ px: 3, pb: 2 }}>
-        <Button onClick={onClose} sx={{ textTransform: 'none' }}>Cancel</Button>
-        <Button onClick={() => onSave(form)} variant="contained" sx={{ textTransform: 'none', bgcolor: '#11307a', '&:hover': { bgcolor: '#0e2865' } }}>Save Record</Button>
+        <Button onClick={onClose} sx={{ textTransform: 'none', color: 'var(--rm-accent)' }}>Cancel</Button>
+        <Button onClick={() => onSave(form)} variant="contained" sx={accentBtnSx}>Save Record</Button>
       </DialogActions>
     </Dialog>
   );
