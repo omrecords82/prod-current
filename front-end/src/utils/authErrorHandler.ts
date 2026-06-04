@@ -13,6 +13,13 @@ let refreshInProgress: Promise<boolean> | null = null;
  * Returns true if refresh succeeded, false otherwise.
  */
 async function tryRefreshToken(): Promise<boolean> {
+  if (
+    sessionStorage.getItem('om_logged_out') === '1'
+    || sessionStorage.getItem('om_logout_in_progress') === '1'
+  ) {
+    return false;
+  }
+
   // If a refresh is already in flight, piggyback on it
   if (refreshInProgress) {
     return refreshInProgress;
@@ -94,6 +101,15 @@ export function resetRetry(key: string): void {
  * First attempts a token refresh; only redirects to login if refresh fails.
  */
 export async function handle401Error(error: any, context: string = 'api'): Promise<never> {
+  if (
+    sessionStorage.getItem('om_logged_out') === '1'
+    || sessionStorage.getItem('om_logout_in_progress') === '1'
+  ) {
+    AuthService.clearLocalAuth();
+    window.location.replace('/login');
+    throw new Error('Authentication required - redirecting to login');
+  }
+
   console.warn(`[AuthErrorHandler] 401 in ${context} — attempting token refresh`);
 
   // Try to refresh before giving up

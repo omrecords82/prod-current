@@ -110,6 +110,7 @@ export class AuthService {
     }
     sessionStorage.setItem(OM_LOGOUT_IN_PROGRESS_KEY, '1');
     sessionStorage.setItem(OM_LOGGED_OUT_KEY, '1');
+    document.cookie = 'om_logged_out=1; path=/; max-age=600; SameSite=Lax';
     this.clearLocalAuth();
     try {
       await apiJson("/auth/logout", { method: "POST" });

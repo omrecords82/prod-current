@@ -1,6 +1,7 @@
 import React from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext.tsx';
+import AuthService from '../../shared/lib/authService';
 import { UserRole } from '../../types/orthodox-metrics.types.ts';
 import { Box, CircularProgress } from '@mui/material';
 
@@ -31,6 +32,11 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   }
 
   if (!authenticated) {
+    // Full-page /login serves platform-login (nginx). In-SPA /auth/login would silent-SSO loop.
+    if (AuthService.isSignedOut()) {
+      window.location.replace('/login');
+      return null;
+    }
     return <Navigate to="/auth/login" replace />;
   }
 
