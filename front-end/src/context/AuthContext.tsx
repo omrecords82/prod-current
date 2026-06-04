@@ -120,6 +120,10 @@ function AuthProvider({ children }: AuthProviderProps) {
         throw new Error('Login failed - invalid response from server');
       }
 
+      if ((response as { pendingRedirect?: boolean }).pendingRedirect) {
+        return { success: true, pendingRedirect: true };
+      }
+
       if (!response.success) {
         throw new Error(response.message || 'Login failed');
       }

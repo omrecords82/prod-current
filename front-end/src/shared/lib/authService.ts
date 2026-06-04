@@ -38,27 +38,32 @@ export class AuthService {
    */
   static async login(credentials: LoginCredentials): Promise<AuthResponse> {
     try {
-      const response = await apiJson("/auth/login", {
-        method: "POST",
-        body: JSON.stringify({ email: credentials.username, password: credentials.password })
-      });
-
-      // Backend returns { success: true, user: {...}, access_token: "...", message: "...", redirectUrl: "..." }
-      if ((response.ok || response.success) && response.user) {
+      const next = '/dashboards/modern';
+      const res = await fetch(
+        `/api/auth/oidc/orthodoxmetrics/credentials?next=${encodeURIComponent(next)}`,
+        {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+          body: JSON.stringify({
+            username: credentials.username,
+            password: credentials.password,
+          }),
+        },
+      );
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        const err = new Error((data as { message?: string }).message || 'Login failed') as Error & { status?: number };
+        err.status = res.status;
+        throw err;
+      }
+      if ((data as { redirect_url?: string }).redirect_url) {
         sessionStorage.removeItem(OM_LOGGED_OUT_KEY);
         sessionStorage.removeItem(OM_LOGOUT_IN_PROGRESS_KEY);
-        // Store user data
-        localStorage.setItem('auth_user', JSON.stringify(response.user));
-
-        // Store access token if provided (for JWT auth)
-        if (response.access_token) {
-          localStorage.setItem('access_token', response.access_token);
-        }
-
-        return response;
-      } else {
-        throw new Error(response.message || 'Login failed');
+        window.location.href = (data as { redirect_url: string }).redirect_url;
+        return { success: true, pendingRedirect: true } as AuthResponse;
       }
+      throw new Error((data as { message?: string }).message || 'Login failed');
     } catch (error: any) {
       // Convert technical errors to user-friendly messages
       let friendlyMessage = "Something went wrong. Please try again.";

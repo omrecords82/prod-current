@@ -106,7 +106,7 @@ export async function handle401Error(error: any, context: string = 'api'): Promi
     || sessionStorage.getItem('om_logout_in_progress') === '1'
   ) {
     AuthService.clearLocalAuth();
-    window.location.replace('/login');
+    window.location.replace('/auth/login2');
     throw new Error('Authentication required - redirecting to login');
   }
 
@@ -128,8 +128,8 @@ export async function handle401Error(error: any, context: string = 'api'): Promi
   AuthService.clearLocalAuth();
   sessionStorage.setItem('om_logged_out', '1');
 
-  console.log('[AuthErrorHandler] Redirecting to platform login');
-  window.location.replace('/login');
+  console.log('[AuthErrorHandler] Redirecting to login');
+  window.location.replace('/auth/login2');
 
   throw new Error('Authentication required - redirecting to login');
 }

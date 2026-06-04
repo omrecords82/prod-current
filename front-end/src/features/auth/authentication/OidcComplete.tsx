@@ -54,7 +54,7 @@ export default function OidcComplete() {
     return (
       <Box sx={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 2, p: 3 }}>
         <Typography color="error" variant="h6">{error}</Typography>
-        <Button variant="contained" href="/login">Try again</Button>
+        <Button variant="contained" href="/auth/login2">Try again</Button>
       </Box>
     );
   }

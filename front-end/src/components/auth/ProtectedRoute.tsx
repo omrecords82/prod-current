@@ -32,12 +32,11 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   }
 
   if (!authenticated) {
-    // Full-page /login serves platform-login (nginx). In-SPA /auth/login would silent-SSO loop.
     if (AuthService.isSignedOut()) {
-      window.location.replace('/login');
+      window.location.replace('/auth/login2');
       return null;
     }
-    return <Navigate to="/auth/login" replace />;
+    return <Navigate to="/auth/login2" replace />;
   }
 
   // Helper function to get redirect path for non-superadmin users

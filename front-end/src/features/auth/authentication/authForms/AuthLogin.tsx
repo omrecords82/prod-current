@@ -86,6 +86,9 @@ const AuthLogin = ({ title, subtitle, subtext }: loginType) => {
 
     try {
       const result = await login(formData.username, formData.password, formData.rememberMe);
+      if (result && typeof result === 'object' && 'pendingRedirect' in result && (result as { pendingRedirect?: boolean }).pendingRedirect) {
+        return;
+      }
       // Use redirectUrl from login response if available, otherwise route based on role
       if (result && typeof result === 'object' && 'redirectUrl' in result && result.redirectUrl) {
         window.location.href = result.redirectUrl;

@@ -155,7 +155,7 @@ const ReactSortingTable = Loadable(lazy(() => import('../features/tables/react-t
 const ReactStickyTable = Loadable(lazy(() => import('../features/tables/react-tables/sticky/page')));
 
 // authentication
-const Login2 = Loadable(lazy(() => import('../features/auth/authentication/SsoLoginRedirect')));
+const Login2 = Loadable(lazy(() => import('../features/auth/authentication/auth2/Login2')));
 const OidcComplete = Loadable(lazy(() => import('../features/auth/authentication/OidcComplete')));
 const Register = Loadable(lazy(() => import('../features/auth/authentication/auth1/Register')));
 const Register2 = Loadable(lazy(() => import('../features/auth/authentication/auth2/Register2')));
