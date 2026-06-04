@@ -1,13 +1,29 @@
+import { WhatWeDoPanel } from '@/components/frontend-pages/homepage/HomepageIntro';
 import HomepageHero from '@/components/frontend-pages/homepage/HomepageHero';
-import HomepageIntro from '@/components/frontend-pages/homepage/HomepageIntro';
 import HomepageRecordsTransformSection from '@/components/frontend-pages/homepage/records-transform/HomepageRecordsTransformSection';
 import EditableText from '@/components/frontend-pages/shared/EditableText';
 import RichEditableText from '@/components/frontend-pages/shared/RichEditableText';
 import PublicSeo from '@/components/seo/PublicSeo';
 import { PUBLIC_ROUTES } from '@/config/publicRoutes';
 import { useLanguage } from '@/context/LanguageContext';
-import { ArrowRight, BarChart3, BookOpen, Calendar, CheckCircle2, Globe, Search, Shield, type LucideIcon } from '@/ui/icons';
+import {
+  ArrowRight,
+  BarChart3,
+  BookOpen,
+  Calendar,
+  CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
+  Globe,
+  Search,
+  Shield,
+  type LucideIcon,
+} from '@/ui/icons';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
+
+const HIGHLIGHT_SLIDE_COUNT = 3;
+const HIGHLIGHT_AUTO_MS = 8000;
 
 const Homepage = () => {
   const { t } = useLanguage();
@@ -21,63 +37,8 @@ const Homepage = () => {
         bare
       />
       <HomepageHero />
-      <HomepageIntro />
+      <HomepageHighlightCarousel />
 
-      {/* How It Works */}
-      <section className="py-20 bg-[#f9fafb] dark:bg-gray-800">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="text-center mb-16">
-            <div className="inline-flex items-center gap-2 bg-white dark:bg-gray-700 px-4 py-2 rounded-full mb-4 shadow-sm">
-              <EditableText contentKey="steps.badge" as="span" className="font-['Inter'] text-[14px] text-[#2d1b4e] dark:text-white">
-                {t('home.steps_badge')}
-              </EditableText>
-            </div>
-            <RichEditableText contentKey="steps.title" as="h2" className="font-['Georgia'] text-4xl md:text-5xl text-[#2d1b4e] dark:text-white mb-4">
-              {t('home.steps_title')}
-            </RichEditableText>
-          </div>
-
-          <div className="grid md:grid-cols-3 gap-12">
-            <StepItem number={1} titleKey="steps.step1.title" descKey="steps.step1.desc" title={t('home.steps_step1_title')} description={t('home.steps_step1_desc')} variant="purple" />
-            <StepItem number={2} titleKey="steps.step2.title" descKey="steps.step2.desc" title={t('home.steps_step2_title')} description={t('home.steps_step2_desc')} variant="purple" />
-            <StepItem number={3} titleKey="steps.step3.title" descKey="steps.step3.desc" title={t('home.steps_step3_title')} description={t('home.steps_step3_desc')} variant="gold" />
-          </div>
-        </div>
-      </section>
-
-      {/* Key Features */}
-      <section className="py-20 bg-white dark:bg-[#0d1117]">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="text-center mb-16">
-            <div className="inline-flex items-center gap-2 bg-[rgba(45,27,78,0.05)] dark:bg-gray-800 px-4 py-2 rounded-full mb-4">
-              <EditableText contentKey="features.badge" as="span" className="font-['Inter'] text-[14px] text-[#2d1b4e] dark:text-white">
-                {t('home.features_badge')}
-              </EditableText>
-            </div>
-            <RichEditableText contentKey="features.title" as="h2" className="font-['Georgia'] text-4xl md:text-5xl text-[#2d1b4e] dark:text-white mb-4">
-              {t('home.features_title')}
-            </RichEditableText>
-          </div>
-
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {KEY_FEATURES.map((f, i) => (
-              <div key={i} className="bg-white dark:bg-gray-800 border border-[#f3f4f6] dark:border-gray-700 rounded-xl p-6 hover:shadow-md transition-shadow">
-                <div className="w-14 h-14 bg-[#2d1b4e] dark:bg-[#d4af37] rounded-lg flex items-center justify-center mb-4">
-                  <f.icon className="text-[#d4af37] dark:text-[#2d1b4e]" size={28} />
-                </div>
-                <EditableText contentKey={`features.card${i + 1}.title`} as="h3" className="font-['Inter'] font-medium text-xl text-[#2d1b4e] dark:text-white mb-2">
-                  {t(`home.features_feat${i + 1}_title`)}
-                </EditableText>
-                <RichEditableText contentKey={`features.card${i + 1}.desc`} as="p" className="font-['Inter'] text-[15px] text-[#4a5565] dark:text-gray-400 leading-relaxed">
-                  {t(`home.features_feat${i + 1}_desc`)}
-                </RichEditableText>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Records Transform Showcase */}
       <HomepageRecordsTransformSection />
 
       {/* Why Choose Us */}
@@ -172,7 +133,193 @@ const Homepage = () => {
 
 export default Homepage;
 
-// ── Local sub-components ──
+function HomepageHighlightCarousel() {
+  const { t } = useLanguage();
+  const [slide, setSlide] = useState(0);
+  const [paused, setPaused] = useState(false);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const slideLabels = [
+    t('home.intro_badge'),
+    t('home.steps_badge'),
+    t('home.features_badge'),
+  ];
+
+  const goTo = useCallback((index: number) => {
+    setSlide(((index % HIGHLIGHT_SLIDE_COUNT) + HIGHLIGHT_SLIDE_COUNT) % HIGHLIGHT_SLIDE_COUNT);
+  }, []);
+
+  const goRelative = useCallback((delta: number) => {
+    setSlide((s) => (s + delta + HIGHLIGHT_SLIDE_COUNT) % HIGHLIGHT_SLIDE_COUNT);
+  }, []);
+
+  const startAuto = useCallback(() => {
+    if (timerRef.current) clearInterval(timerRef.current);
+    timerRef.current = setInterval(() => {
+      setSlide((s) => (s + 1) % HIGHLIGHT_SLIDE_COUNT);
+    }, HIGHLIGHT_AUTO_MS);
+  }, []);
+
+  useEffect(() => {
+    if (paused) {
+      if (timerRef.current) clearInterval(timerRef.current);
+      return;
+    }
+    startAuto();
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, [paused, startAuto]);
+
+  const handleManual = (delta: number) => {
+    goRelative(delta);
+    startAuto();
+  };
+
+  const arrowClass =
+    'absolute top-1/2 -translate-y-1/2 z-20 flex h-11 w-11 items-center justify-center rounded-full border border-[rgba(45,27,78,0.15)] dark:border-white/15 bg-white dark:bg-[#161b22] text-[#2d1b4e] dark:text-[#d4af37] shadow-md hover:bg-[#f9fafb] dark:hover:bg-[#1e2a3a] transition-colors';
+
+  return (
+    <section
+      className="py-20 bg-[#f9fafb] dark:bg-[#0d1117] relative"
+      aria-roledescription="carousel"
+      aria-label="What we do, process, and features"
+      onMouseEnter={() => setPaused(true)}
+      onMouseLeave={() => setPaused(false)}
+      onFocusCapture={() => setPaused(true)}
+      onBlurCapture={(e) => {
+        if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setPaused(false);
+      }}
+    >
+      <div className="max-w-7xl mx-auto px-6 md:px-14 relative">
+        <button
+          type="button"
+          className={`${arrowClass} left-0 md:-left-2`}
+          onClick={() => handleManual(-1)}
+          aria-label={`Previous: ${slideLabels[(slide + HIGHLIGHT_SLIDE_COUNT - 1) % HIGHLIGHT_SLIDE_COUNT]}`}
+        >
+          <ChevronLeft size={24} />
+        </button>
+        <button
+          type="button"
+          className={`${arrowClass} right-0 md:-right-2`}
+          onClick={() => handleManual(1)}
+          aria-label={`Next: ${slideLabels[(slide + 1) % HIGHLIGHT_SLIDE_COUNT]}`}
+        >
+          <ChevronRight size={24} />
+        </button>
+
+        <div className="relative min-h-[420px] md:min-h-[480px] px-2 md:px-8">
+          <div
+            className={`transition-opacity duration-500 ease-in-out ${
+              slide === 0 ? 'opacity-100 relative z-10' : 'opacity-0 absolute inset-0 pointer-events-none z-0'
+            }`}
+            aria-hidden={slide !== 0}
+          >
+            <WhatWeDoPanel />
+          </div>
+          <div
+            className={`transition-opacity duration-500 ease-in-out ${
+              slide === 1 ? 'opacity-100 relative z-10' : 'opacity-0 absolute inset-0 pointer-events-none z-0'
+            }`}
+            aria-hidden={slide !== 1}
+          >
+            <SimpleProcessPanel />
+          </div>
+          <div
+            className={`transition-opacity duration-500 ease-in-out ${
+              slide === 2 ? 'opacity-100 relative z-10' : 'opacity-0 absolute inset-0 pointer-events-none z-0'
+            }`}
+            aria-hidden={slide !== 2}
+          >
+            <FeaturesPanel />
+          </div>
+        </div>
+
+        <div className="flex justify-center gap-2 mt-8" role="tablist" aria-label="Section slides">
+          {slideLabels.map((label, i) => (
+            <button
+              key={label}
+              type="button"
+              role="tab"
+              aria-selected={slide === i}
+              aria-label={label}
+              onClick={() => {
+                goTo(i);
+                startAuto();
+              }}
+              className={`h-2 rounded-full transition-all ${
+                slide === i
+                  ? 'w-8 bg-[#2d1b4e] dark:bg-[#d4af37]'
+                  : 'w-2 bg-[rgba(45,27,78,0.2)] dark:bg-white/25 hover:bg-[rgba(45,27,78,0.35)]'
+              }`}
+            />
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function SimpleProcessPanel() {
+  const { t } = useLanguage();
+
+  return (
+    <>
+      <div className="text-center mb-16">
+        <div className="inline-flex items-center gap-2 bg-white dark:bg-gray-700 px-4 py-2 rounded-full mb-4 shadow-sm">
+          <EditableText contentKey="steps.badge" as="span" className="font-['Inter'] text-[14px] text-[#2d1b4e] dark:text-white">
+            {t('home.steps_badge')}
+          </EditableText>
+        </div>
+        <RichEditableText contentKey="steps.title" as="h2" className="font-['Georgia'] text-4xl md:text-5xl text-[#2d1b4e] dark:text-white mb-4">
+          {t('home.steps_title')}
+        </RichEditableText>
+      </div>
+
+      <div className="grid md:grid-cols-3 gap-12">
+        <StepItem number={1} titleKey="steps.step1.title" descKey="steps.step1.desc" title={t('home.steps_step1_title')} description={t('home.steps_step1_desc')} variant="purple" />
+        <StepItem number={2} titleKey="steps.step2.title" descKey="steps.step2.desc" title={t('home.steps_step2_title')} description={t('home.steps_step2_desc')} variant="purple" />
+        <StepItem number={3} titleKey="steps.step3.title" descKey="steps.step3.desc" title={t('home.steps_step3_title')} description={t('home.steps_step3_desc')} variant="gold" />
+      </div>
+    </>
+  );
+}
+
+function FeaturesPanel() {
+  const { t } = useLanguage();
+
+  return (
+    <>
+      <div className="text-center mb-16">
+        <div className="inline-flex items-center gap-2 bg-[rgba(45,27,78,0.05)] dark:bg-gray-800 px-4 py-2 rounded-full mb-4">
+          <EditableText contentKey="features.badge" as="span" className="font-['Inter'] text-[14px] text-[#2d1b4e] dark:text-white">
+            {t('home.features_badge')}
+          </EditableText>
+        </div>
+        <RichEditableText contentKey="features.title" as="h2" className="font-['Georgia'] text-4xl md:text-5xl text-[#2d1b4e] dark:text-white mb-4">
+          {t('home.features_title')}
+        </RichEditableText>
+      </div>
+
+      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+        {KEY_FEATURES.map((f, i) => (
+          <div key={i} className="bg-white dark:bg-gray-800 border border-[#f3f4f6] dark:border-gray-700 rounded-xl p-6 hover:shadow-md transition-shadow">
+            <div className="w-14 h-14 bg-[#2d1b4e] dark:bg-[#d4af37] rounded-lg flex items-center justify-center mb-4">
+              <f.icon className="text-[#d4af37] dark:text-[#2d1b4e]" size={28} />
+            </div>
+            <EditableText contentKey={`features.card${i + 1}.title`} as="h3" className="font-['Inter'] font-medium text-xl text-[#2d1b4e] dark:text-white mb-2">
+              {t(`home.features_feat${i + 1}_title`)}
+            </EditableText>
+            <RichEditableText contentKey={`features.card${i + 1}.desc`} as="p" className="font-['Inter'] text-[15px] text-[#4a5565] dark:text-gray-400 leading-relaxed">
+              {t(`home.features_feat${i + 1}_desc`)}
+            </RichEditableText>
+          </div>
+        ))}
+      </div>
+    </>
+  );
+}
 
 function StepItem({ number, titleKey, descKey, title, description, variant }: { number: number; titleKey: string; descKey: string; title: string; description: string; variant: 'purple' | 'gold' }) {
   return (
@@ -197,8 +344,6 @@ function StepItem({ number, titleKey, descKey, title, description, variant }: { 
     </div>
   );
 }
-
-// ── Static data (icons only — text comes from translations) ──
 
 const KEY_FEATURES: { icon: LucideIcon }[] = [
   { icon: Globe },
