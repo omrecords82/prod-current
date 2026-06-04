@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
@@ -19,11 +19,7 @@ export default function SsoLoginRedirect() {
 
   const next = '/dashboards/modern';
 
-  useEffect(() => {
-    if (!signedOut) {
-      window.location.replace(`/login?app=om&next=${encodeURIComponent(next)}`);
-    }
-  }, [signedOut]);
+  // Do not redirect to /login — nginx + platform-login would loop with /auth/login2.
 
   const clearSignedOutFlags = () => {
     sessionStorage.removeItem('om_logged_out');
@@ -61,21 +57,13 @@ export default function SsoLoginRedirect() {
     }
   };
 
-  if (!signedOut) {
-    return (
-      <Box sx={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <Typography color="text.secondary">Redirecting to sign in…</Typography>
-      </Box>
-    );
-  }
-
   return (
     <Box
       component="form"
       onSubmit={submit}
       sx={{ minHeight: '60vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 2, p: 3, maxWidth: 400, mx: 'auto' }}
     >
-      <Typography variant="h5">Signed out</Typography>
+      <Typography variant="h5">{signedOut ? 'Signed out' : 'Sign in'}</Typography>
       <Typography color="text.secondary">Sign in with your om.internal account.</Typography>
       <TextField label="Email" type="email" fullWidth required value={email} onChange={(ev) => setEmail(ev.target.value)} autoComplete="username" />
       <TextField label="Password" type="password" fullWidth required value={password} onChange={(ev) => setPassword(ev.target.value)} autoComplete="current-password" />
@@ -83,7 +71,6 @@ export default function SsoLoginRedirect() {
       <Button type="submit" variant="contained" fullWidth disabled={busy}>
         {busy ? 'Signing in…' : 'Sign in'}
       </Button>
-      <Button variant="text" href={`/login?app=om&next=${encodeURIComponent(next)}`}>Use platform sign-in page</Button>
     </Box>
   );
 }
