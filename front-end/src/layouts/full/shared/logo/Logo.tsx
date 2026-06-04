@@ -5,9 +5,13 @@ import { CustomizerContext } from '@/context/CustomizerContext';
 import { styled, useTheme } from '@mui/material';
 import { Link } from 'react-router-dom';
 
-/** Transparent PNG logos: light file for light UI surfaces, dark file for dark UI surfaces. */
+/** App shell / sidebar PNG marks */
 export const LOGO_SRC_LIGHT = '/images/logos/om-logo-light.png';
 export const LOGO_SRC_DARK = '/images/logos/om-logo-dark.png';
+
+/** Public marketing header SVG wordmarks */
+export const LOGO_TOP_SVG_LIGHT = '/images/logos/logo-top.svg';
+export const LOGO_TOP_SVG_DARK = '/images/logos/logo-top-dark.svg';
 
 export type BrandLogoProps = {
   className?: string;
@@ -15,29 +19,46 @@ export type BrandLogoProps = {
   href?: string;
   /** When set, overrides theme/customizer (use for scoped pages like enrollment). */
   colorScheme?: 'light' | 'dark';
-  /** Always use the dark-surface logo (e.g. purple footer). */
+  /** `header-svg` = public site top bar; `png` = app sidebar / auth shells */
+  variant?: 'header-svg' | 'png';
+  /** @deprecated Footer uses wordmark text; kept for compatibility */
   onDarkSurface?: boolean;
 };
+
+export function resolveBrandColorScheme(opts: {
+  colorScheme?: 'light' | 'dark';
+  onDarkSurface?: boolean;
+  muiMode?: 'light' | 'dark';
+  customizerMode?: string;
+}): 'light' | 'dark' {
+  const isDark =
+    opts.onDarkSurface ||
+    opts.colorScheme === 'dark' ||
+    (opts.colorScheme !== 'light' &&
+      (opts.muiMode === 'dark' || opts.customizerMode === 'dark'));
+  return isDark ? 'dark' : 'light';
+}
 
 export function resolveBrandLogoSrc(opts: {
   colorScheme?: 'light' | 'dark';
   onDarkSurface?: boolean;
   muiMode?: 'light' | 'dark';
   customizerMode?: string;
+  variant?: 'header-svg' | 'png';
 }): string {
-  const isDark =
-    opts.onDarkSurface ||
-    opts.colorScheme === 'dark' ||
-    (opts.colorScheme !== 'light' &&
-      (opts.muiMode === 'dark' || opts.customizerMode === 'dark'));
-  return isDark ? LOGO_SRC_DARK : LOGO_SRC_LIGHT;
+  const scheme = resolveBrandColorScheme(opts);
+  if (opts.variant === 'header-svg') {
+    return scheme === 'dark' ? LOGO_TOP_SVG_DARK : LOGO_TOP_SVG_LIGHT;
+  }
+  return scheme === 'dark' ? LOGO_SRC_DARK : LOGO_SRC_LIGHT;
 }
 
 export function BrandLogo({
-  className = 'h-10 w-auto object-contain',
+  className = 'h-10 w-auto max-w-[min(100%,280px)] object-contain object-left',
   height,
   href,
   colorScheme,
+  variant = 'png',
   onDarkSurface,
 }: BrandLogoProps) {
   const { activeMode } = useContext(CustomizerContext);
@@ -47,6 +68,7 @@ export function BrandLogo({
     onDarkSurface,
     muiMode: theme.palette.mode,
     customizerMode: activeMode,
+    variant,
   });
 
   const img = (

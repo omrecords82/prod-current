@@ -57,8 +57,10 @@ const HpHeader = () => {
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <BrandLogo
+            variant="header-svg"
             href="/frontend-pages/homepage"
             colorScheme={activeMode === 'dark' ? 'dark' : 'light'}
+            className="h-10 w-auto max-h-10 max-w-[min(100%,300px)] object-contain object-left"
           />
 
           {/* Desktop Navigation */}

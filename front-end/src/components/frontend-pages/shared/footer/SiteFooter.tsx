@@ -1,5 +1,4 @@
 import { FOOTER_LINKS } from '@/config/publicRoutes';
-import { BrandLogo } from '@/layouts/full/shared/logo/Logo';
 import { useLanguage } from '@/context/LanguageContext';
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
@@ -27,14 +26,29 @@ const SiteFooter = () => {
     <footer className="bg-[#2d1b4e] dark:bg-[#0d1117] text-white">
       <div className="max-w-7xl mx-auto px-6 py-8">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
-          {/* Brand — SVG logo with sacrament images */}
+          {/* Brand — LLC wordmark + sacrament images */}
           <div className="col-span-1">
-            <div className="inline-flex items-center gap-3 mb-4">
-              <BrandLogo onDarkSurface className="h-10 w-auto object-contain" />
+            <div className="inline-flex items-center gap-4 mb-4 flex-wrap">
+              <a
+                href="/frontend-pages/homepage"
+                className="no-underline shrink-0 group"
+                aria-label="Orthodox Metrics LLC"
+              >
+                <span
+                  className="font-['Georgia'] text-[1.35rem] leading-tight tracking-[0.02em] text-white block"
+                  style={{ fontWeight: 400 }}
+                >
+                  Orthodox Metrics
+                  <span className="text-[#d4af37] font-['Inter'] text-[0.7rem] uppercase tracking-[0.22em] ml-1.5 align-middle">
+                    LLC
+                  </span>
+                </span>
+              </a>
               <img
                 src={FOOTER_SACRAMENT_IMAGES[activeIndex].src}
-                alt="Sacrament"
-                className="h-16 w-auto object-contain transition-opacity duration-500"
+                alt=""
+                role="presentation"
+                className="h-16 w-auto object-contain transition-opacity duration-500 drop-shadow-sm"
               />
             </div>
             <p className="font-['Inter'] text-[14px] text-[rgba(255,255,255,0.7)] leading-relaxed">

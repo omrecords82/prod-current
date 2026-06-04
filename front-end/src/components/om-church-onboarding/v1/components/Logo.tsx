@@ -1,28 +1,30 @@
 import {
-  LOGO_SRC_DARK,
-  LOGO_SRC_LIGHT,
-  resolveBrandLogoSrc,
+  LOGO_TOP_SVG_DARK,
+  LOGO_TOP_SVG_LIGHT,
+  resolveBrandColorScheme,
 } from '@/layouts/full/shared/logo/Logo';
 
 type LogoProps = {
-  /** UI color scheme of the surrounding page (not the logo file name). */
+  /** Page color scheme (light background vs dark background). */
   colorScheme?: 'light' | 'dark';
   className?: string;
   size?: 'sm' | 'md' | 'lg';
 };
 
-const HEIGHTS = { sm: 36, md: 44, lg: 56 } as const;
+const HEIGHTS = { sm: 36, md: 40, lg: 48 } as const;
 
 export function Logo({ colorScheme, className = '', size = 'md' }: LogoProps) {
   const h = HEIGHTS[size];
-  const src = resolveBrandLogoSrc({ colorScheme });
+  const scheme = resolveBrandColorScheme({ colorScheme });
+  const src = scheme === 'dark' ? LOGO_TOP_SVG_DARK : LOGO_TOP_SVG_LIGHT;
 
   return (
     <div className={`inline-flex items-center ${className}`} aria-label="Orthodox Metrics">
       <img
         src={src}
         alt="Orthodox Metrics"
-        style={{ height: h, width: 'auto', objectFit: 'contain' }}
+        className="w-auto max-w-[min(100%,300px)] object-contain object-left"
+        style={{ height: h }}
       />
     </div>
   );
@@ -37,16 +39,16 @@ export function LogoMark({
   className?: string;
   size?: number;
 }) {
-  const src = resolveBrandLogoSrc({ colorScheme });
+  const scheme = resolveBrandColorScheme({ colorScheme });
+  const src = scheme === 'dark' ? LOGO_TOP_SVG_DARK : LOGO_TOP_SVG_LIGHT;
+
   return (
     <div className={`inline-flex items-center ${className}`} aria-label="Orthodox Metrics">
       <img
         src={src}
         alt="Orthodox Metrics"
-        style={{ height: size, width: 'auto', objectFit: 'contain' }}
+        style={{ height: size, width: 'auto', maxWidth: 220, objectFit: 'contain' }}
       />
     </div>
   );
 }
-
-export { LOGO_SRC_DARK, LOGO_SRC_LIGHT };
