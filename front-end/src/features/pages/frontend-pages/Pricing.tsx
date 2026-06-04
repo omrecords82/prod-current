@@ -32,12 +32,33 @@ const PagePricing = () => {
     { idx: 7, small: '—', medium: '—', large: '✓' },
   ];
 
+  const quoteOffer = (name: string, category: string) => ({
+    '@type': 'Offer' as const,
+    name,
+    category,
+    availability: 'https://schema.org/OnlineOnly',
+    description: t('pricing.schema_quote_description'),
+  });
+
+  const pricedOffer = (name: string, category: string, price: string) => ({
+    '@type': 'Offer' as const,
+    name,
+    category,
+    priceCurrency: 'USD',
+    price,
+    priceSpecification: {
+      '@type': 'PriceSpecification' as const,
+      priceCurrency: 'USD',
+      valueAddedTaxIncluded: false,
+    },
+  });
+
   return (
     <>
       <PublicSeo
         title="Pricing"
         description="Plan tiers for parishes of every size — small, medium, large, and enterprise. Contact us for a quote tailored to your parish."
-        path="/frontend-pages/pricing"
+        path="/pricing"
       />
       <JsonLd
         data={[
@@ -46,7 +67,7 @@ const PagePricing = () => {
             '@type': 'BreadcrumbList',
             itemListElement: [
               { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://orthodoxmetrics.com/' },
-              { '@type': 'ListItem', position: 2, name: 'Pricing', item: 'https://orthodoxmetrics.com/frontend-pages/pricing' },
+              { '@type': 'ListItem', position: 2, name: 'Pricing', item: 'https://orthodoxmetrics.com/pricing' },
             ],
           },
           {
@@ -56,12 +77,18 @@ const PagePricing = () => {
             applicationCategory: 'BusinessApplication',
             applicationSubCategory: 'Church management / sacramental records',
             operatingSystem: 'Web (any modern browser)',
-            url: 'https://orthodoxmetrics.com/frontend-pages/pricing',
-            offers: [
-              { '@type': 'Offer', name: t('pricing.plan_small_name'), category: 'Small Parish', priceCurrency: 'USD', price: '0', priceSpecification: { '@type': 'PriceSpecification', priceCurrency: 'USD', valueAddedTaxIncluded: false, description: 'Contact for quote' } },
-              { '@type': 'Offer', name: t('pricing.plan_medium_name'), category: 'Medium Parish', priceCurrency: 'USD', price: '0', priceSpecification: { '@type': 'PriceSpecification', priceCurrency: 'USD', valueAddedTaxIncluded: false, description: 'Contact for quote' } },
-              { '@type': 'Offer', name: t('pricing.plan_large_name'), category: 'Large Parish', priceCurrency: 'USD', price: '0', priceSpecification: { '@type': 'PriceSpecification', priceCurrency: 'USD', valueAddedTaxIncluded: false, description: 'Contact for quote' } },
-            ],
+            url: 'https://orthodoxmetrics.com/pricing',
+            offers: HIDE_PRICES
+              ? [
+                  quoteOffer(t('pricing.plan_small_name'), 'Small Parish'),
+                  quoteOffer(t('pricing.plan_medium_name'), 'Medium Parish'),
+                  quoteOffer(t('pricing.plan_large_name'), 'Large Parish'),
+                ]
+              : [
+                  pricedOffer(t('pricing.plan_small_name'), 'Small Parish', t('pricing.plan_small_price').replace(/[^\d.]/g, '') || '49'),
+                  pricedOffer(t('pricing.plan_medium_name'), 'Medium Parish', t('pricing.plan_medium_price').replace(/[^\d.]/g, '') || '99'),
+                  pricedOffer(t('pricing.plan_large_name'), 'Large Parish', t('pricing.plan_large_price').replace(/[^\d.]/g, '') || '199'),
+                ],
           },
         ]}
       />
@@ -72,6 +99,16 @@ const PagePricing = () => {
         subtitle={t('pricing.hero_subtitle')}
         editKeyPrefix="pricing.hero"
       />
+
+      {HIDE_PRICES && (
+        <section className="py-6 om-section-base border-b border-[rgba(45,27,78,0.08)] dark:border-white/10">
+          <div className="max-w-4xl mx-auto px-6 text-center">
+            <p className="font-['Inter'] text-[15px] text-[#4a5565] dark:text-gray-400 leading-relaxed">
+              {t('pricing.quote_only_notice')}
+            </p>
+          </div>
+        </section>
+      )}
 
       {/* Pricing Cards */}
       <section className="py-20 om-section-base">
@@ -85,7 +122,7 @@ const PagePricing = () => {
               perMonth={t('pricing.per_month')}
               billingNote={t('pricing.plan_small_billing')}
               features={SMALL_FEAT_KEYS.map((i) => t(`pricing.plan_small_feat${i}`))}
-              btnLabel={t('pricing.btn_get_started')}
+              btnLabel={HIDE_PRICES ? t('pricing.btn_request_quote') : t('pricing.btn_get_started')}
             />
 
             {/* Medium Parish — Featured */}
@@ -103,7 +140,7 @@ const PagePricing = () => {
               </div>
               <div className="mb-6">
                 {HIDE_PRICES ? (
-                  <p className="font-['Georgia'] text-3xl">Contact for Pricing</p>
+                  <p className="font-['Georgia'] text-3xl">{t('pricing.btn_request_quote')}</p>
                 ) : (
                   <>
                     <div className="flex items-baseline gap-2">
@@ -128,7 +165,7 @@ const PagePricing = () => {
                 to={PUBLIC_ROUTES.CONTACT}
                 className="block w-full text-center px-6 py-3 bg-[#d4af37] dark:bg-[#2d1b4e] text-[#2d1b4e] dark:text-white rounded-lg font-['Inter'] font-medium hover:bg-[#c29d2f] dark:hover:bg-[#1f1236] transition-colors"
               >
-                {t('pricing.btn_get_started')}
+                {HIDE_PRICES ? t('pricing.btn_request_quote') : t('pricing.btn_get_started')}
               </Link>
             </div>
 
@@ -140,7 +177,7 @@ const PagePricing = () => {
               perMonth={t('pricing.per_month')}
               billingNote={t('pricing.plan_large_billing')}
               features={LARGE_FEAT_KEYS.map((i) => t(`pricing.plan_large_feat${i}`))}
-              btnLabel={t('pricing.btn_get_started')}
+              btnLabel={HIDE_PRICES ? t('pricing.btn_request_quote') : t('pricing.btn_get_started')}
             />
           </div>
 
@@ -236,7 +273,7 @@ function PricingCard({ name, description, price, perMonth, billingNote, features
       </div>
       <div className="mb-6">
         {HIDE_PRICES ? (
-          <p className="font-['Georgia'] text-3xl text-[#2d1b4e] dark:text-white">Contact for Pricing</p>
+          <p className="font-['Georgia'] text-3xl text-[#2d1b4e] dark:text-white">{t('pricing.btn_request_quote')}</p>
         ) : (
           <>
             <div className="flex items-baseline gap-2">

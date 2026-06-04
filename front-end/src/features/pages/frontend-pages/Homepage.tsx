@@ -14,9 +14,11 @@ import {
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
+  FileText,
   Globe,
   Search,
   Shield,
+  Church,
   type LucideIcon,
 } from '@/ui/icons';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -24,6 +26,22 @@ import { Link } from 'react-router-dom';
 
 const HIGHLIGHT_SLIDE_COUNT = 3;
 const HIGHLIGHT_AUTO_MS = 8000;
+
+function usePrefersReducedMotion(): boolean {
+  const [reduced, setReduced] = useState(() => {
+    if (typeof window === 'undefined' || !window.matchMedia) return false;
+    return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  });
+
+  useEffect(() => {
+    const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const onChange = () => setReduced(mq.matches);
+    mq.addEventListener('change', onChange);
+    return () => mq.removeEventListener('change', onChange);
+  }, []);
+
+  return reduced;
+}
 
 const Homepage = () => {
   const { t } = useLanguage();
@@ -33,10 +51,11 @@ const Homepage = () => {
       <PublicSeo
         title="Sacramental records, modernized for every parish"
         description="Orthodox Metrics is the records platform for Orthodox parishes — secure baptism, marriage, and funeral registers, OCR digitization of historic ledgers, and multi-tenant parish administration."
-        path="/frontend-pages/homepage"
+        path="/"
         bare
       />
       <HomepageHero />
+      <HomepageProofStrip />
       <HomepageHighlightCarousel />
 
       <HomepageRecordsTransformSection />
@@ -112,17 +131,17 @@ const Homepage = () => {
           </RichEditableText>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link
-              to={PUBLIC_ROUTES.CONTACT}
+              to={PUBLIC_ROUTES.ENROLL}
               className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-[#d4af37] text-[#2d1b4e] rounded-lg font-['Inter'] font-medium text-[16px] hover:bg-[#c29d2f] transition-colors no-underline"
             >
-              {t('home.cta_get_started')}
+              {t('common.enroll_parish')}
               <ArrowRight size={20} />
             </Link>
             <Link
-              to={PUBLIC_ROUTES.PRICING}
+              to={PUBLIC_ROUTES.CONTACT}
               className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-white/10 backdrop-blur-sm border border-white/20 text-white rounded-lg font-['Inter'] font-medium text-[16px] hover:bg-white/20 transition-colors no-underline"
             >
-              {t('home.cta_view_pricing')}
+              {t('common.contact_us')}
             </Link>
           </div>
         </div>
@@ -133,8 +152,37 @@ const Homepage = () => {
 
 export default Homepage;
 
+const PROOF_STRIP_ITEMS: { tKey: string; icon: LucideIcon }[] = [
+  { tKey: 'home.proof_records', icon: BookOpen },
+  { tKey: 'home.proof_certificates', icon: FileText },
+  { tKey: 'home.proof_secure', icon: Shield },
+  { tKey: 'home.proof_orthodox', icon: Church },
+];
+
+function HomepageProofStrip() {
+  const { t } = useLanguage();
+
+  return (
+    <section className="py-8 om-section-base border-b border-[rgba(45,27,78,0.08)] dark:border-white/10" aria-label="Product proof">
+      <div className="max-w-7xl mx-auto px-6">
+        <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 list-none p-0 m-0">
+          {PROOF_STRIP_ITEMS.map(({ tKey, icon: Icon }) => (
+            <li key={tKey} className="flex items-start gap-3">
+              <Icon className="text-[#d4af37] flex-shrink-0 mt-0.5" size={22} aria-hidden />
+              <span className="font-['Inter'] text-[15px] text-[#4a5565] dark:text-gray-400 leading-snug">
+                {t(tKey)}
+              </span>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </section>
+  );
+}
+
 function HomepageHighlightCarousel() {
   const { t } = useLanguage();
+  const prefersReducedMotion = usePrefersReducedMotion();
   const [slide, setSlide] = useState(0);
   const [paused, setPaused] = useState(false);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -161,7 +209,7 @@ function HomepageHighlightCarousel() {
   }, []);
 
   useEffect(() => {
-    if (paused) {
+    if (paused || prefersReducedMotion) {
       if (timerRef.current) clearInterval(timerRef.current);
       return;
     }
@@ -169,7 +217,7 @@ function HomepageHighlightCarousel() {
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
-  }, [paused, startAuto]);
+  }, [paused, prefersReducedMotion, startAuto]);
 
   const handleManual = (delta: number) => {
     goRelative(delta);

@@ -7,7 +7,8 @@ import PageContainer from '@/shared/ui/PageContainer';
 import PublicSeo from '@/components/seo/PublicSeo';
 import { useLanguage } from '@/context/LanguageContext';
 import axios from 'axios';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 
 const ENQUIRY_TYPE_KEYS = [
   { value: 'general', key: 'contact.option_general' },
@@ -18,8 +19,11 @@ const ENQUIRY_TYPE_KEYS = [
   { value: 'other', key: 'contact.option_other' },
 ];
 
+const VALID_ENQUIRY_TYPES = new Set(ENQUIRY_TYPE_KEYS.map((o) => o.value));
+
 const Contact = () => {
   const { t } = useLanguage();
+  const [searchParams] = useSearchParams();
   const [form, setForm] = useState({
     firstName: '',
     lastName: '',
@@ -30,6 +34,13 @@ const Contact = () => {
   });
   const [submitting, setSubmitting] = useState(false);
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  useEffect(() => {
+    const enquiry = searchParams.get('enquiry');
+    if (enquiry && VALID_ENQUIRY_TYPES.has(enquiry)) {
+      setForm((prev) => ({ ...prev, enquiryType: enquiry }));
+    }
+  }, [searchParams]);
 
   const handleChange = (field: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     setForm((prev) => ({ ...prev, [field]: e.target.value }));
@@ -71,7 +82,7 @@ const Contact = () => {
       <PublicSeo
         title="Contact"
         description="Reach Orthodox Metrics for parish onboarding, records-related questions, technical help, or partnership inquiries."
-        path="/frontend-pages/contact"
+        path="/contact"
       />
       {/* Hero */}
       <HeroSection
@@ -88,8 +99,14 @@ const Contact = () => {
             {/* Contact Form */}
             <div className="lg:col-span-2">
               <h2 className="font-['Georgia'] text-3xl text-[#2d1b4e] dark:text-white mb-2">{t('contact.form_title')}</h2>
-              <p className="font-['Inter'] text-[16px] text-[#4a5565] dark:text-gray-400 mb-8">
+              <p className="font-['Inter'] text-[16px] text-[#4a5565] dark:text-gray-400 mb-4">
                 {t('contact.form_desc')}
+              </p>
+              <p className="font-['Inter'] text-[15px] text-[#4a5565] dark:text-gray-400 mb-8">
+                {t('contact.enroll_hint')}{' '}
+                <Link to={PUBLIC_ROUTES.ENROLL} className="text-[#2d1b4e] dark:text-[#d4af37] font-medium no-underline hover:underline">
+                  {t('common.enroll_parish')}
+                </Link>
               </p>
 
               {feedback && (

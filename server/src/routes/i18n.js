@@ -32,6 +32,8 @@ const ENGLISH_DEFAULTS = {
   'common.sign_out': 'Sign Out',
   'common.church_login': 'Church Login',
   'common.get_started': 'Get Started',
+  'common.enroll_parish': 'Enroll Your Parish',
+  'common.contact_us': 'Contact Us',
   'common.dark_mode': 'Dark Mode',
   'common.light_mode': 'Light Mode',
   'common.language': 'Language',
@@ -45,6 +47,9 @@ const ENGLISH_DEFAULTS = {
   'common.lang_georgian': 'Georgian',
 
   // ─── nav.* ──────────────────────────────────────────────────────
+  'nav.group_product': 'Product',
+  'nav.group_company': 'Company',
+  'nav.group_support': 'Support',
   'nav.home': 'Home',
   'nav.about': 'About',
   'nav.tour': 'Tour',
@@ -62,6 +67,8 @@ const ENGLISH_DEFAULTS = {
   'footer.platform_tour': 'Platform Tour',
   'footer.sample_records': 'Sample Records',
   'footer.pricing': 'Pricing',
+  'footer.enroll_parish': 'Enroll Your Parish',
+  'footer.faq': 'FAQ',
   'footer.about_us': 'About Us',
   'footer.blog': 'Blog',
   'footer.contact': 'Contact',
@@ -103,8 +110,27 @@ const ENGLISH_DEFAULTS = {
   'home.hero_badge': 'Trusted by Orthodox Parishes Worldwide',
   'home.hero_title': 'Sacred Records Management for the Modern Parish',
   'home.hero_subtitle': 'Transform centuries of handwritten sacramental records into secure, searchable digital archives. Preserve your spiritual heritage while embracing modern technology.',
-  'home.hero_cta_tour': 'Take a Tour',
+  'home.hero_cta_tour': 'See the Tour',
+  'home.hero_cta_enroll': 'Enroll Your Parish',
   'home.hero_cta_demo': 'Request Demo',
+  'home.hero_slide1_title': 'Table view for fast record management.',
+  'home.hero_slide1_desc': 'Search, filter, review, and manage sacramental records from a structured table designed for parish recordkeeping workflows.',
+  'home.hero_slide2_title': 'Cards view for focused review.',
+  'home.hero_slide2_desc': 'Review individual records in a clean card layout that makes names, dates, clergy, status, and record details easier to scan.',
+  'home.hero_slide3_title': 'Timeline view for historical context.',
+  'home.hero_slide3_desc': 'See parish records in chronological order so sacramental history becomes easier to trace, review, and understand over time.',
+  'home.hero_slide4_title': 'Analytics built from parish records.',
+  'home.hero_slide4_desc': 'Turn sacramental record data into meaningful parish insights, including trends, completeness, clergy activity, and historical patterns.',
+  'home.hero_slide5_title': 'Certificates generated from verified records.',
+  'home.hero_slide5_desc': 'Generate polished certificates directly from reviewed parish records, reducing duplicate work and helping clergy respond quickly to requests.',
+  'home.hero_slide6_title': 'From paper archives to searchable records.',
+  'home.hero_slide6_desc': 'Preserve original parish record images while converting their contents into structured, searchable data for long-term use.',
+  'home.hero_slide7_title': 'Real records, carefully processed.',
+  'home.hero_slide7_desc': 'Actual scanned parish records are processed into Orthodox Metrics so your parish can preserve, verify, and access its sacramental history.',
+  'home.proof_records': 'Sacramental record registers',
+  'home.proof_certificates': 'Certificate generation',
+  'home.proof_secure': 'Encrypted parish storage',
+  'home.proof_orthodox': 'Built for Orthodox parishes',
   // Intro
   'home.intro_badge': 'What We Do',
   'home.intro_title': 'Digitize. Preserve. Connect.',
@@ -287,9 +313,13 @@ const ENGLISH_DEFAULTS = {
   'tour.extra4_title': 'Calendar Integration',
   'tour.extra4_desc': 'Link records to liturgical calendars with support for Old and New Calendar traditions.',
   // CTA
-  'tour.cta_title': 'Ready to See It in Action?',
-  'tour.cta_subtitle': 'Schedule a personalized demo to see how Orthodox Metrics can transform your parish record keeping',
-  'tour.cta_button': 'Request a Demo',
+  'tour.hero_badge': 'Product tour',
+  'tour.hero_title': 'See Orthodox Metrics in action',
+  'tour.hero_subtitle': 'Walk through digitizing records, searching registers, and parish administration in a guided demo.',
+  'tour.cta_title': 'Ready to enroll your parish?',
+  'tour.cta_subtitle': 'Start the online setup wizard or contact us if you prefer to talk with our team first.',
+  'tour.cta_button': 'Contact Us',
+  'tour.cta_samples': 'See sample records',
 
   // ─── contact.* ────────────────────────────────────────────────────
   // Hero
@@ -298,6 +328,8 @@ const ENGLISH_DEFAULTS = {
   'contact.hero_subtitle': 'Whether you\'re ready to register your parish, have questions about the platform, or need technical support, we\'re here to help.',
   // Form
   'contact.form_title': 'Send a Message',
+  'contact.enroll_hint': 'Ready to enroll your parish online?',
+  'contact.enroll_hint': 'Ready to enroll your parish online?',
   'contact.form_desc': 'Fill out the form below and we\'ll respond as soon as possible.',
   'contact.label_first_name': 'First Name',
   'contact.label_last_name': 'Last Name',
@@ -351,9 +383,17 @@ const ENGLISH_DEFAULTS = {
 
   // ─── faq.* ─────────────────────────────────────────────────────────
   // Page banner
+  'faq.hero_badge': 'Support',
   'faq.page_title': 'Frequently Asked Questions',
   'faq.page_subtitle': 'Find answers to common questions about Orthodox Metrics',
+  'faq.cta_title': 'Still have questions?',
+  'faq.cta_subtitle': 'Start parish enrollment online or contact our team for help.',
   // Accordion title
+  'faq.cat_setup': 'Setup',
+  'faq.cat_records': 'Records',
+  'faq.cat_security': 'Security',
+  'faq.cat_pricing': 'Pricing',
+  'faq.cat_support': 'Support',
   'faq.accordion_title': 'Frequently Asked Questions',
   // Q&A pairs
   'faq.q1': 'What is included with my purchase?',
@@ -395,7 +435,10 @@ const ENGLISH_DEFAULTS = {
   // Hero
   'pricing.hero_badge': 'Simple, Transparent Pricing',
   'pricing.hero_title': 'Plans for Parishes of All Sizes',
-  'pricing.hero_subtitle': 'Choose the plan that fits your parish. All plans include core features, security, and support.',
+  'pricing.hero_subtitle': 'Compare plan tiers for parishes of every size. We tailor pricing to your parish — request a quote for details.',
+  'pricing.schema_quote_description': 'Contact Orthodox Metrics for a custom parish quote.',
+  'pricing.quote_only_notice': 'Published dollar amounts are not shown here. Every parish receives a tailored quote — use Request a Quote or contact us to discuss plans.',
+  'pricing.btn_request_quote': 'Request a Quote',
   // Plan names & descriptions
   'pricing.plan_small_name': 'Small Parish',
   'pricing.plan_small_desc': 'Perfect for parishes with up to 500 families',
@@ -569,6 +612,7 @@ const ENGLISH_DEFAULTS = {
   'samples.cta_title': 'Ready to Digitize Your Records?',
   'samples.cta_subtitle': 'See how Orthodox Metrics can preserve your parish history',
   'samples.cta_btn_demo': 'Request a Demo',
+  'samples.cta_btn_enroll': 'Enroll Your Parish',
   'samples.cta_btn_pricing': 'View Pricing',
 
   // ─── portfolio.* ──────────────────────────────────────────────────

@@ -14,6 +14,14 @@ import JsonLd from '@/components/seo/JsonLd';
 // AND add the key+value in i18n.js.
 const FAQ_KEYS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10'] as const;
 
+const FAQ_CATEGORIES: { labelKey: string; keys: readonly (typeof FAQ_KEYS)[number][] }[] = [
+  { labelKey: 'faq.cat_setup', keys: ['3'] },
+  { labelKey: 'faq.cat_records', keys: ['4', '5', '7', '9'] },
+  { labelKey: 'faq.cat_security', keys: ['8', '10'] },
+  { labelKey: 'faq.cat_pricing', keys: ['1', '2'] },
+  { labelKey: 'faq.cat_support', keys: ['6'] },
+];
+
 const FAQ = () => {
   const theme = useTheme();
   const { t } = useLanguage();
@@ -99,32 +107,55 @@ const FAQ = () => {
             {t('faq.accordion_title')}
           </Typography>
           <Box mt={7}>
-            {FAQ_KEYS.map((k) => {
-              const question = t(`faq.q${k}`);
-              const answer = t(`faq.a${k}`);
-              if (question === `faq.q${k}` || answer === `faq.a${k}`) return null;
-              const isOpen = expandedKey === k;
+            {FAQ_CATEGORIES.map((category) => {
+              const items = category.keys.filter((k) => {
+                const question = t(`faq.q${k}`);
+                const answer = t(`faq.a${k}`);
+                return question !== `faq.q${k}` && answer !== `faq.a${k}`;
+              });
+              if (items.length === 0) return null;
               return (
-                <StyledAccordian
-                  key={k}
-                  expanded={isOpen}
-                  onChange={handleChange(k)}
-                >
-                  <AccordionSummary
-                    expandIcon={
-                      isOpen ? (
-                        <IconMinus size="21" stroke="1.5" />
-                      ) : (
-                        <IconPlus size="21" stroke="1.5" />
-                      )
-                    }
-                    aria-controls={`panel${k}-content`}
-                    id={`panel${k}-header`}
+                <Box key={category.labelKey} mb={4}>
+                  <Typography
+                    variant="h6"
+                    component="h3"
+                    sx={{
+                      fontFamily: 'Georgia, serif',
+                      fontWeight: 600,
+                      mb: 2,
+                      color: 'text.primary',
+                    }}
                   >
-                    {question}
-                  </AccordionSummary>
-                  <AccordionDetails>{answer}</AccordionDetails>
-                </StyledAccordian>
+                    {t(category.labelKey)}
+                  </Typography>
+                  {items.map((k) => {
+                    const question = t(`faq.q${k}`);
+                    const answer = t(`faq.a${k}`);
+                    const isOpen = expandedKey === k;
+                    return (
+                      <StyledAccordian
+                        key={k}
+                        expanded={isOpen}
+                        onChange={handleChange(k)}
+                      >
+                        <AccordionSummary
+                          expandIcon={
+                            isOpen ? (
+                              <IconMinus size="21" stroke="1.5" />
+                            ) : (
+                              <IconPlus size="21" stroke="1.5" />
+                            )
+                          }
+                          aria-controls={`panel${k}-content`}
+                          id={`panel${k}-header`}
+                        >
+                          {question}
+                        </AccordionSummary>
+                        <AccordionDetails>{answer}</AccordionDetails>
+                      </StyledAccordian>
+                    );
+                  })}
+                </Box>
               );
             })}
           </Box>

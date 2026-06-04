@@ -36,21 +36,27 @@ export default function App() {
       )}
 
       {view === "complete" && (
-        <div className="min-h-screen flex items-center justify-center bg-background text-foreground px-6">
-          <div className="max-w-xl text-center space-y-4">
+        <div className="min-h-screen flex items-center justify-center bg-background text-foreground px-6 py-16">
+          <div className="max-w-xl text-center space-y-6 om-card p-10">
             <h1 className="font-['Georgia'] text-3xl text-[#2d1b4e] dark:text-[#d4af37]">
-              Thank you — your provision request is in.
+              Thank you — your enrollment request is in.
             </h1>
-            <p className="text-muted-foreground">
+            <p className="font-['Inter'] text-[16px] text-muted-foreground leading-relaxed">
               Orthodox Metrics staff will review your submission and reach out
               within one business day to schedule onboarding.
             </p>
-            <div className="pt-2">
+            <div className="flex flex-col sm:flex-row gap-3 justify-center pt-2">
               <a
-                href="/frontend-pages/homepage"
-                className="inline-flex items-center gap-2 px-8 py-4 rounded-lg bg-[#d4af37] hover:bg-[#c29d2f] text-[#2d1b4e] font-medium no-underline transition-colors"
+                href="/"
+                className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-lg bg-[#d4af37] hover:bg-[#c29d2f] text-[#2d1b4e] font-medium no-underline transition-colors"
               >
                 Back to homepage
+              </a>
+              <a
+                href="/contact"
+                className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-lg border border-border text-foreground font-medium no-underline hover:bg-muted/50 transition-colors"
+              >
+                Contact us
               </a>
             </div>
           </div>

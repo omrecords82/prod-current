@@ -1,4 +1,4 @@
-import { FOOTER_LINKS } from '@/config/publicRoutes';
+import { FOOTER_LINKS, PUBLIC_ROUTES } from '@/config/publicRoutes';
 import { useLanguage } from '@/context/LanguageContext';
 import { Link } from 'react-router-dom';
 
@@ -13,7 +13,7 @@ const SiteFooter = () => {
           {/* Brand */}
           <div className="col-span-1">
             <a
-              href="/frontend-pages/homepage"
+              href={PUBLIC_ROUTES.HOME}
               className="no-underline inline-block mb-4"
               aria-label="Orthodox Metrics LLC"
             >
@@ -84,6 +84,16 @@ const SiteFooter = () => {
           <div>
             <h3 className="font-['Inter'] font-medium text-[16px] mb-4">{t('footer.heading_support')}</h3>
             <ul className="space-y-3 list-none p-0 m-0">
+              {FOOTER_LINKS.support.map((link) => (
+                <li key={link.to}>
+                  <Link
+                    to={link.to}
+                    className="font-['Inter'] text-[14px] text-[rgba(255,255,255,0.7)] hover:text-white transition-colors no-underline"
+                  >
+                    {t(link.tKey)}
+                  </Link>
+                </li>
+              ))}
               <li>
                 <a
                   href="mailto:support@orthodoxmetrics.com"

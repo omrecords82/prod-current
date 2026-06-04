@@ -9,7 +9,7 @@ type Props = {
   title: string;
   /** Meta description for SERP + social cards. Keep ≤ 160 chars. */
   description: string;
-  /** Path on the site (e.g. "/frontend-pages/pricing"). Built into canonical + og:url. */
+  /** Path on the site (e.g. "/pricing"). Built into canonical + og:url. */
   path: string;
   /** Custom OG/Twitter image. Defaults to the site-wide cover. */
   image?: string;
@@ -27,7 +27,7 @@ type Props = {
  *   <PublicSeo
  *     title="Pricing"
  *     description="Plan tiers for parishes of every size."
- *     path="/frontend-pages/pricing"
+ *     path="/pricing"
  *   />
  *
  * Index.html ships sensible site-wide defaults; this overrides only what the

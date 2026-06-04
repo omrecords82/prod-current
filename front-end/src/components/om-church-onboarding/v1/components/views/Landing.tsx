@@ -26,7 +26,7 @@ export function Landing({ onStart, onAdmin, theme, onToggleTheme }: Props) {
     <div className="min-h-screen bg-background text-foreground">
       <header className="border-b border-border bg-card/60 backdrop-blur sticky top-0 z-10">
         <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
-          <a href="/frontend-pages/homepage" className="flex items-center no-underline">
+          <a href="/" className="flex items-center no-underline">
             <Logo colorScheme={theme} size="md" />
           </a>
           <div className="flex items-center gap-2">
@@ -68,7 +68,7 @@ export function Landing({ onStart, onAdmin, theme, onToggleTheme }: Props) {
               >
                 Start Church Setup <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
-              <Button size="lg" variant="outline" onClick={() => { window.location.href = '/frontend-pages/contact'; }} className="px-8 py-4 rounded-lg text-[16px]">
+              <Button size="lg" variant="outline" onClick={() => { window.location.href = '/contact'; }} className="px-8 py-4 rounded-lg text-[16px]">
                 Contact Orthodox Metrics
               </Button>
             </div>

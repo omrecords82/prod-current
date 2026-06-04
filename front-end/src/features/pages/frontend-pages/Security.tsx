@@ -1,5 +1,7 @@
-import PageContainer from '@/shared/ui/PageContainer';
+import { HeroSection } from '@/components/frontend-pages/shared/sections';
 import PublicSeo from '@/components/seo/PublicSeo';
+import { useLanguage } from '@/context/LanguageContext';
+import PageContainer from '@/shared/ui/PageContainer';
 
 // Security copy below is intentionally NOT i18n-driven. The text describes
 // concrete operational practices and contact addresses that should not drift
@@ -8,6 +10,8 @@ const EFFECTIVE_DATE = 'May 6, 2026';
 const CONTACT_EMAIL = 'info@orthodoxmetrics.com';
 
 const Security = () => {
+  const { t } = useLanguage();
+
   return (
     <PageContainer title="Security" description="Orthodox Metrics security and trust">
       <PublicSeo
@@ -16,12 +20,14 @@ const Security = () => {
         path="/security"
       />
 
+      <HeroSection
+        badge={t('security.hero_badge')}
+        title={t('security.hero_title')}
+        subtitle={t('security.hero_subtitle')}
+      />
+
       <section className="py-20 om-section-base">
         <div className="max-w-3xl mx-auto px-6 om-legal-prose">
-          <h1 className="font-['Georgia'] text-4xl md:text-5xl text-[#2d1b4e] dark:text-white mb-8">
-            Security
-          </h1>
-
           <p className="font-['Inter'] text-[14px] text-[#6b7280] dark:text-gray-500 mb-2">
             <strong>Effective Date:</strong> {EFFECTIVE_DATE}
           </p>

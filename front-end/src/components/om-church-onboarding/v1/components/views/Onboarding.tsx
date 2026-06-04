@@ -16,6 +16,7 @@ import {
     ShieldCheck,
     X
 } from "lucide-react";
+import SiteFooter from '@/components/frontend-pages/shared/footer/SiteFooter';
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import type { ParishGeoJSON } from "@/features/devel-tools/us-church-map/ParishDetailMap";
 import { apiClient } from "@/api/utils/axiosInstance";
@@ -335,7 +336,7 @@ export function Onboarding({ onCancel, onComplete, theme, onToggleTheme }: Props
     <div className="min-h-screen bg-background text-foreground">
       <header className="border-b border-border bg-card">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-          <a href="/frontend-pages/homepage" className="flex items-center no-underline">
+          <a href="/" className="flex items-center no-underline">
             <Logo colorScheme={theme} size="md" />
           </a>
           <div className="flex items-center gap-3">
@@ -349,9 +350,17 @@ export function Onboarding({ onCancel, onComplete, theme, onToggleTheme }: Props
 
       <div className="max-w-7xl mx-auto px-6 py-10 grid lg:grid-cols-[260px_1fr] gap-10">
         <aside>
-          <div className="text-xs uppercase tracking-[0.18em] text-muted-foreground mb-3">
+          <div className="text-xs uppercase tracking-[0.18em] text-muted-foreground mb-1">
             Onboarding Wizard
           </div>
+          <p className="font-['Inter'] text-[13px] text-muted-foreground mb-3">
+            Step {stepIndex + 1} of {steps.length} · about 8 minutes
+          </p>
+          <p className="font-['Inter'] text-[12px] text-muted-foreground mb-3">
+            <a href="mailto:support@orthodoxmetrics.com" className="text-[#2d1b4e] dark:text-[#d4af37] no-underline hover:underline">
+              support@orthodoxmetrics.com
+            </a>
+          </p>
           <ol className="space-y-1">
             {steps.map((s, i) => {
               const done = i < stepIndex;
@@ -501,6 +510,7 @@ export function Onboarding({ onCancel, onComplete, theme, onToggleTheme }: Props
           )}
         </div>
       </div>
+      <SiteFooter />
     </div>
   );
 }

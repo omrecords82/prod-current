@@ -1,4 +1,4 @@
-import { PUBLIC_NAV_LINKS } from '@/config/publicRoutes';
+import { isPublicNavActive, PUBLIC_NAV_LINKS, PUBLIC_ROUTES } from '@/config/publicRoutes';
 import { useAuth } from '@/context/AuthContext';
 import { CustomizerContext } from '@/context/CustomizerContext';
 import { useLanguage } from '@/context/LanguageContext';
@@ -58,7 +58,7 @@ const HpHeader = () => {
           {/* Logo */}
           <BrandLogo
             variant="header-svg"
-            href="/frontend-pages/homepage"
+            href={PUBLIC_ROUTES.HOME}
             colorScheme={activeMode === 'dark' ? 'dark' : 'light'}
             className="h-10 w-auto max-h-10 max-w-[min(100%,300px)] object-contain object-left"
           />
@@ -74,7 +74,7 @@ const HpHeader = () => {
             ) : (
               <div className="flex items-center gap-8">
                 {PUBLIC_NAV_LINKS.map((link) => {
-                  const isActive = location.pathname === link.to;
+                  const isActive = isPublicNavActive(location.pathname, link.to);
                   return (
                     <NavLink
                       key={link.to}
@@ -162,10 +162,10 @@ const HpHeader = () => {
                     {t('common.sign_in')}
                   </a>
                   <a
-                    href="/frontend-pages/enroll"
+                    href={PUBLIC_ROUTES.ENROLL}
                     className="px-5 py-2.5 bg-[#d4af37] text-[#2d1b4e] rounded-lg font-['Inter'] text-[15px] font-medium hover:bg-[#c29d2f] transition-colors no-underline"
                   >
-                    {t('common.get_started')}
+                    {t('common.enroll_parish')}
                   </a>
                 </>
               )

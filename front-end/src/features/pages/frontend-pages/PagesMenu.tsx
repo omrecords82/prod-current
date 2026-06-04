@@ -9,6 +9,7 @@
 
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import { PUBLIC_ROUTES } from '@/config/publicRoutes';
 import {
   Box,
   Container,
@@ -46,37 +47,37 @@ const PagesMenu: React.FC = () => {
     {
       title: 'Homepage',
       description: 'Main landing page',
-      path: '/frontend-pages/homepage',
+      path: PUBLIC_ROUTES.HOME,
       icon: <HomeIcon />,
     },
     {
       title: 'Contact',
       description: 'Contact us page',
-      path: '/frontend-pages/contact',
+      path: PUBLIC_ROUTES.CONTACT,
       icon: <ContactIcon />,
     },
     {
       title: 'Portfolio',
       description: 'View our portfolio',
-      path: '/frontend-pages/portfolio',
+      path: PUBLIC_ROUTES.HOME,
       icon: <PortfolioIcon />,
     },
     {
       title: 'Pricing',
       description: 'View pricing plans',
-      path: '/frontend-pages/pricing',
+      path: PUBLIC_ROUTES.PRICING,
       icon: <PricingIcon />,
     },
     {
       title: 'Blog',
       description: 'Read our blog posts',
-      path: '/frontend-pages/blog',
+      path: PUBLIC_ROUTES.BLOG,
       icon: <BlogIcon />,
     },
     {
       title: 'Gallery',
       description: 'Browse our gallery',
-      path: '/frontend-pages/gallery',
+      path: PUBLIC_ROUTES.HOME,
       icon: <GalleryIcon />,
     },
   ];

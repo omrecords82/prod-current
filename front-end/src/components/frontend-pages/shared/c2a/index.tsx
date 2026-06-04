@@ -1,3 +1,4 @@
+import { PUBLIC_ROUTES } from '@/config/publicRoutes';
 import { Box, Button, Container, Stack, Typography, useTheme } from '@mui/material';
 import { useLanguage } from '@/context/LanguageContext';
 
@@ -71,7 +72,7 @@ const C2a = () => {
           <Button
             variant="contained"
             size="large"
-            href="/frontend-pages/contact"
+            href={PUBLIC_ROUTES.CONTACT}
             sx={{
               background: 'linear-gradient(135deg, #D4AF37, #F4D03F)',
               color: '#1a0a2e',
@@ -93,7 +94,7 @@ const C2a = () => {
           <Button
             variant="outlined"
             size="large"
-            href="/frontend-pages/contact"
+            href={PUBLIC_ROUTES.CONTACT}
             sx={{
               borderColor: isDark ? 'rgba(255,255,255,0.4)' : 'rgba(26,10,46,0.3)',
               color: isDark ? '#ffffff' : '#1a0a2e',

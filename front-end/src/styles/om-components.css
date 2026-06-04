@@ -89,21 +89,21 @@
   background-color: #fff;
 }
 .dark .om-section-base {
-  background-color: #111827;
+  background-color: #0d1117;
 }
 
 .om-section-elevated {
   background-color: #f9fafb;
 }
 .dark .om-section-elevated {
-  background-color: #1f2937;
+  background-color: #161b22;
 }
 
 .om-section-subtle {
   background-color: #f3f4f6;
 }
 .dark .om-section-subtle {
-  background-color: #374151;
+  background-color: #1c2128;
 }
 
 /* ========================================

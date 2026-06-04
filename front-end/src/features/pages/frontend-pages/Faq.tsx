@@ -1,78 +1,45 @@
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-
-// @ts-ignore
-
 import FAQ from '@/components/frontend-pages/homepage/faq';
-
-import C2a from '@/components/frontend-pages/shared/c2a';
-
+import { HeroSection, CTASection } from '@/components/frontend-pages/shared/sections';
 import ScrollToTop from '@/components/frontend-pages/shared/scroll-to-top';
-
-import PageContainer from '@/shared/ui/PageContainer';
-
 import PublicSeo from '@/components/seo/PublicSeo';
-
-import { Box, Container, Typography } from '@mui/material';
-
+import { PUBLIC_ROUTES } from '@/config/publicRoutes';
 import { useLanguage } from '@/context/LanguageContext';
-
-
+import { Link } from 'react-router-dom';
 
 const Faq = () => {
-
   const { t } = useLanguage();
 
   return (
-
-    <PageContainer title="FAQ" description="Frequently asked questions about Orthodox Metrics">
-
+    <>
       <PublicSeo
         title="Frequently Asked Questions"
         description="Answers to common questions about Orthodox Metrics — onboarding, sacramental records, OCR digitization, security, pricing, and more."
-        path="/frontend-pages/faq"
+        path="/faq"
       />
 
+      <HeroSection
+        badge={t('faq.hero_badge')}
+        title={t('faq.page_title')}
+        subtitle={t('faq.page_subtitle')}
+        editKeyPrefix="faq.hero"
+      />
 
+      <section className="py-12 om-section-base">
+        <FAQ />
+      </section>
 
-      {/* Banner */}
-
-      <Box sx={{ backgroundColor: 'primary.light', py: { xs: 4, lg: 6 }, textAlign: 'center' }}>
-
-        <Container maxWidth="lg">
-
-          <Typography variant="h2" component="h1" fontWeight={700} mb={1}>
-
-            {t('faq.page_title')}
-
-          </Typography>
-
-          <Typography variant="body1" color="text.secondary" fontSize="16px">
-
-            {t('faq.page_subtitle')}
-
-          </Typography>
-
-        </Container>
-
-      </Box>
-
-
-
-      <FAQ />
-
-
-
-      <C2a />
+      <CTASection title={t('faq.cta_title')} subtitle={t('faq.cta_subtitle')}>
+        <Link to={PUBLIC_ROUTES.ENROLL} className="om-btn-accent">
+          {t('common.enroll_parish')}
+        </Link>
+        <Link to={PUBLIC_ROUTES.CONTACT} className="om-btn-secondary">
+          {t('common.contact_us')}
+        </Link>
+      </CTASection>
 
       <ScrollToTop />
-
-    </PageContainer>
-
+    </>
   );
-
 };
 
-
-
 export default Faq;
-

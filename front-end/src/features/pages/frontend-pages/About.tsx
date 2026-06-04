@@ -46,7 +46,7 @@ const About = () => {
       <PublicSeo
         title="About"
         description="Why we built Orthodox Metrics: a records platform for Orthodox parishes that respects canonical custody, supports multiple jurisdictions, and modernizes the work of preserving sacramental life."
-        path="/frontend-pages/about"
+        path="/about"
       />
       <JsonLd
         data={[
@@ -55,14 +55,14 @@ const About = () => {
             '@type': 'BreadcrumbList',
             itemListElement: [
               { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://orthodoxmetrics.com/' },
-              { '@type': 'ListItem', position: 2, name: 'About', item: 'https://orthodoxmetrics.com/frontend-pages/about' },
+              { '@type': 'ListItem', position: 2, name: 'About', item: 'https://orthodoxmetrics.com/about' },
             ],
           },
           {
             '@context': 'https://schema.org',
             '@type': 'AboutPage',
             name: 'About Orthodox Metrics',
-            url: 'https://orthodoxmetrics.com/frontend-pages/about',
+            url: 'https://orthodoxmetrics.com/about',
             publisher: { '@type': 'Organization', name: 'Orthodox Metrics', url: 'https://orthodoxmetrics.com/' },
           },
           {
@@ -225,17 +225,17 @@ const About = () => {
         editKeyPrefix="about.cta"
       >
         <Link
-          to={PUBLIC_ROUTES.CONTACT}
+          to={PUBLIC_ROUTES.ENROLL}
           className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-[#d4af37] text-[#2d1b4e] rounded-lg font-['Inter'] font-medium text-[16px] hover:bg-[#c29d2f] transition-colors no-underline"
         >
-          <EditableText contentKey="about.cta_button" as="span">{t('about.cta_button')}</EditableText>
+          {t('common.enroll_parish')}
           <ArrowRight size={20} />
         </Link>
         <Link
-          to={PUBLIC_ROUTES.TOUR}
+          to={PUBLIC_ROUTES.CONTACT}
           className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-white/10 backdrop-blur-sm border border-white/20 text-white rounded-lg font-['Inter'] font-medium text-[16px] hover:bg-white/20 transition-colors no-underline"
         >
-          <EditableText contentKey="about.cta_tour" as="span">{t('about.cta_tour')}</EditableText>
+          {t('common.contact_us')}
         </Link>
       </CTASection>
 

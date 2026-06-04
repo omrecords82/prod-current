@@ -1959,6 +1959,119 @@
         "added": 0,
         "removed": 0
       }
+    },
+    {
+      "id": "build-1780597222683",
+      "timestamp": "2026-06-04T18:20:22.683Z",
+      "type": "frontend",
+      "success": true,
+      "buildTime": 34.949,
+      "files": {
+        "changed": [
+          "components/frontend-pages/homepage/HomepageIntro.tsx",
+          "components/frontend-pages/homepage/records-transform/HomepageRecordsTransformSection.tsx",
+          "components/frontend-pages/shared/footer/SiteFooter.tsx",
+          "components/frontend-pages/shared/header/HpHeader.tsx",
+          "components/frontend-pages/shared/header/MobileSidebar.tsx",
+          "components/frontend-pages/tour/TourInteractiveDemo.tsx",
+          "components/om-church-onboarding/v1/components/Logo.tsx",
+          "components/om-church-onboarding/v1/components/views/Landing.tsx",
+          "components/om-church-onboarding/v1/components/views/Onboarding.tsx",
+          "features/pages/frontend-pages/About.tsx",
+          "features/pages/frontend-pages/Homepage.tsx",
+          "features/pages/frontend-pages/Samples.tsx",
+          "layouts/full/shared/logo/Logo.tsx",
+          "layouts/portal/ChurchPortalLayout.tsx"
+        ],
+        "added": [],
+        "removed": []
+      },
+      "totalFiles": {
+        "changed": 14,
+        "added": 0,
+        "removed": 0
+      }
+    },
+    {
+      "id": "build-1780597669122",
+      "timestamp": "2026-06-04T18:27:49.122Z",
+      "type": "frontend",
+      "success": true,
+      "buildTime": 35.307,
+      "files": {
+        "changed": [
+          "components/om-church-onboarding/v1/components/views/Onboarding.tsx"
+        ],
+        "added": [],
+        "removed": []
+      },
+      "totalFiles": {
+        "changed": 1,
+        "added": 0,
+        "removed": 0
+      }
+    },
+    {
+      "id": "build-1780599742962",
+      "timestamp": "2026-06-04T19:02:22.962Z",
+      "type": "frontend",
+      "success": true,
+      "buildTime": 34.909,
+      "files": {
+        "changed": [
+          "components/frontend-pages/shared/footer/SiteFooter.tsx",
+          "components/frontend-pages/shared/header/HpHeader.tsx",
+          "components/frontend-pages/shared/header/MobileSidebar.tsx",
+          "components/om-church-onboarding/v1/components/Logo.tsx",
+          "layouts/full/shared/logo/Logo.tsx"
+        ],
+        "added": [],
+        "removed": []
+      },
+      "totalFiles": {
+        "changed": 5,
+        "added": 0,
+        "removed": 0
+      }
+    },
+    {
+      "id": "build-1780599926683",
+      "timestamp": "2026-06-04T19:05:26.683Z",
+      "type": "frontend",
+      "success": true,
+      "buildTime": 34.853,
+      "files": {
+        "changed": [
+          "components/frontend-pages/shared/footer/SiteFooter.tsx"
+        ],
+        "added": [],
+        "removed": []
+      },
+      "totalFiles": {
+        "changed": 1,
+        "added": 0,
+        "removed": 0
+      }
+    },
+    {
+      "id": "build-1780600243798",
+      "timestamp": "2026-06-04T19:10:43.797Z",
+      "type": "frontend",
+      "success": true,
+      "buildTime": 34.35,
+      "files": {
+        "changed": [
+          "components/frontend-pages/homepage/HomepageIntro.tsx",
+          "features/pages/frontend-pages/Homepage.tsx"
+        ],
+        "added": [],
+        "removed": []
+      },
+      "totalFiles": {
+        "changed": 2,
+        "added": 0,
+        "removed": 0
+      }
     }
   ],
   "lastState": {
@@ -2803,12 +2916,12 @@
       "components/frontend-pages/blog/banner/index.tsx": "00830d1b6cb845831f62f23568196aa0",
       "components/frontend-pages/homepage/HomepageFeatures.tsx": "df5c51983e17b7f61488ca4081691988",
       "components/frontend-pages/homepage/HomepageHero.tsx": "2ef919336cce7f04d1386f4b7cf698cc",
-      "components/frontend-pages/homepage/HomepageIntro.tsx": "7a896e56412bc836a29a0dfaed6ac631",
+      "components/frontend-pages/homepage/HomepageIntro.tsx": "705d56ec92d5700e84f5c8f2d953694b",
       "components/frontend-pages/homepage/WelcomeCarousel.tsx": "aade4834f427f2dae6a56f3760845a5f",
       "components/frontend-pages/homepage/faq/index.tsx": "d1e1f3fc2d7ef9f27a7431f910d495f0",
       "components/frontend-pages/homepage/records-transform/ConfidenceBadge.tsx": "c6d5fdd8c452b62120090165b9bd2a4d",
       "components/frontend-pages/homepage/records-transform/EnhancedRecordViewer.tsx": "ff9e1bc12c2b90dbdc6b996980e811a0",
-      "components/frontend-pages/homepage/records-transform/HomepageRecordsTransformSection.tsx": "9140e00c0a5edf6ef831a3602593874e",
+      "components/frontend-pages/homepage/records-transform/HomepageRecordsTransformSection.tsx": "3fa49e1bd5f6f6d4fc5844b892d74631",
       "components/frontend-pages/homepage/records-transform/ImageComparisonPanel.tsx": "6a1ab85114b58c5d92d20097cb7acb5d",
       "components/frontend-pages/homepage/records-transform/RecordTypeCards.tsx": "a1cec4a13320d90cc4a02ffcee34873f",
       "components/frontend-pages/homepage/records-transform/RecordsDataTable.tsx": "087e5d18da5af84b4c65d31624e5ed18",
@@ -2817,12 +2930,12 @@
       "components/frontend-pages/shared/EditableText.tsx": "9b99793ca917e8f128b4f6e0090f0d91",
       "components/frontend-pages/shared/RichEditableText.tsx": "9efb522ca9bb250267118e527308909a",
       "components/frontend-pages/shared/c2a/index.tsx": "716bb9889bb6e33dd4d91130933b472b",
-      "components/frontend-pages/shared/footer/SiteFooter.tsx": "0b33dc2e5ca29d9caba963ee2d9b1005",
+      "components/frontend-pages/shared/footer/SiteFooter.tsx": "4021b8cdc1554b8b997f33b5203a5e70",
       "components/frontend-pages/shared/footer/index.tsx": "90b93e0dd70d8f9e23343f10171207ff",
       "components/frontend-pages/shared/header/HeaderAlert.tsx": "fe6f2f94e86965f2e40a3bb61580df25",
       "components/frontend-pages/shared/header/HeaderAmbience.tsx": "4c37bfad6d905e919ee4403ba16d1d27",
-      "components/frontend-pages/shared/header/HpHeader.tsx": "88fa9a5c7e36bccc71c374f2b8ce760e",
-      "components/frontend-pages/shared/header/MobileSidebar.tsx": "33adb3750747146ae261f1ee5d7b65da",
+      "components/frontend-pages/shared/header/HpHeader.tsx": "b6723a18ee46b7cc935906d0b8554d2b",
+      "components/frontend-pages/shared/header/MobileSidebar.tsx": "95f4dcce30df3cc9b2d60b7d1bf9a150",
       "components/frontend-pages/shared/header/Navigations.tsx": "256e87c56278ee65f1a3ff4bce28d7de",
       "components/frontend-pages/shared/header/PortalNavigations.tsx": "f347e4f44064bd5bf4d9b3bf6b2c2ed3",
       "components/frontend-pages/shared/leadership/Contact.tsx": "6df8e5e359b1dcc22c30614bd4016e56",
@@ -2847,7 +2960,7 @@
       "components/frontend-pages/tour/DemoStepDigitize.tsx": "f56a19767931a742a0ea9b56cf9d4382",
       "components/frontend-pages/tour/DemoStepOrganize.tsx": "d55fc5c8d9b115c3b112757f7fd0b381",
       "components/frontend-pages/tour/DemoStepSearch.tsx": "ec17addfc9914ba240e2376a8feedf6c",
-      "components/frontend-pages/tour/TourInteractiveDemo.tsx": "98be57ec151a3e9237ab0945402721b5",
+      "components/frontend-pages/tour/TourInteractiveDemo.tsx": "7772e303ee3168575a66315d27b03ada",
       "components/frontend-pages/tour/index.ts": "a9a5e69d221c359af17ba03d321f271a",
       "components/frontend-pages/tour/tourDemoData.ts": "b5f9b27f53d8e1f714e667d23fde9f9d",
       "components/global/ErrorDetailsCard.tsx": "c0d1835445dd3c5feab248069a5f5fb1",
@@ -2858,7 +2971,7 @@
       "components/layout/WorkSessionPrompt.tsx": "5f629fb03bb811960e33d45ff9d6bcf9",
       "components/notifications/NotificationBell.tsx": "17ba21556d57957a9094dea6ebd0e9cd",
       "components/om-church-onboarding/v1/App.tsx": "8f9d4cfed18485d398fc292f2dccc722",
-      "components/om-church-onboarding/v1/components/Logo.tsx": "a6cc81404490522dfcb48a0ed484af1c",
+      "components/om-church-onboarding/v1/components/Logo.tsx": "5c2a65e4e8e2abf72befc1eef8ea23b3",
       "components/om-church-onboarding/v1/components/PriorityBadge.tsx": "ddd58839ff36228f00b1a1a4f3a41e19",
       "components/om-church-onboarding/v1/components/ThemeToggle.tsx": "26f36683763ae970d4022b8a432317c1",
       "components/om-church-onboarding/v1/components/ui/badge.tsx": "027ca1b168b5a31ec381898dd0fad1d8",
@@ -2870,8 +2983,8 @@
       "components/om-church-onboarding/v1/components/ui/switch.tsx": "24628008ea7aeeecdd193ca7de846552",
       "components/om-church-onboarding/v1/components/ui/textarea.tsx": "9aa996cfdc9b59dd5e9cce00e5fb8280",
       "components/om-church-onboarding/v1/components/ui/utils.ts": "d9837f38cc05303254571985e3164050",
-      "components/om-church-onboarding/v1/components/views/Landing.tsx": "ea87b8f2dbbee447de55bd7b3de4a29f",
-      "components/om-church-onboarding/v1/components/views/Onboarding.tsx": "d814508c5107d510c934121e0279c56b",
+      "components/om-church-onboarding/v1/components/views/Landing.tsx": "a7f0f7b365c9b02426e039b31dba9672",
+      "components/om-church-onboarding/v1/components/views/Onboarding.tsx": "220880b34456a49a57d21396cf7d8fd8",
       "components/om-church-onboarding/v1/lib/__tests__/inferLocationFields.test.js": "525b2b917d8612f00824e566f3349295",
       "components/om-church-onboarding/v1/lib/inferLocationFields.js": "4dd828439ab217cd22714d97525443f9",
       "components/om-church-onboarding/v1/lib/locationData.js": "302a28d0e429757a1b5a2be738ab9041",
@@ -3382,7 +3495,7 @@
       "features/ocr/components/OcrPipelineOverview.tsx": "3009edbbda487100a0a5523266c202ea",
       "features/ocr/pages/OCRStudioPage.tsx": "ae97fd8ef17edae7e1d2ec1c72b66eb6",
       "features/omlearn/OMLearn.tsx": "de63020b74b0772c48d8ebc2acd5e1d6",
-      "features/pages/frontend-pages/About.tsx": "b0d26663feca553381cd00aac795dc45",
+      "features/pages/frontend-pages/About.tsx": "fd8a2f4676f3a8a7c794763ad797c99c",
       "features/pages/frontend-pages/Blog.tsx": "bb26e78345c542185c44edfa3adff0a1",
       "features/pages/frontend-pages/BlogPost.tsx": "204e584e605598f04d1034b09bbf7b0d",
       "features/pages/frontend-pages/Contact.tsx": "1824a50c19822c6725c10b6634913360",
@@ -3392,7 +3505,7 @@
       "features/pages/frontend-pages/GreekRecordsViewer.tsx": "dacf04938d7d960c423eb491f6659713",
       "features/pages/frontend-pages/HTMLViewer.tsx": "b3670f74e20672149bbfa568c312b72e",
       "features/pages/frontend-pages/Header.tsx": "531c3a94345a86bdb8f156349f58fc71",
-      "features/pages/frontend-pages/Homepage.tsx": "1b11477fcb505b3f190eb3ebfa3ca911",
+      "features/pages/frontend-pages/Homepage.tsx": "fed017906ccbb5232e43c560274d81e8",
       "features/pages/frontend-pages/LeftSideMenu.tsx": "742ce0c832dcee099237a358b4034038",
       "features/pages/frontend-pages/OCATimeline.tsx": "1032768c75ec7efe94f0fc6179f3b2fd",
       "features/pages/frontend-pages/PagesMenu.tsx": "3a17841c9ab86631ca3888b7e05af011",
@@ -3403,7 +3516,7 @@
       "features/pages/frontend-pages/PublicTasksListPage.tsx": "d114a2dd4176dc82d832f59914baaccb",
       "features/pages/frontend-pages/SacramentalRestrictionsPublicPage.tsx": "91bd8499eec8a898e56fd67cda8c927f",
       "features/pages/frontend-pages/SampleRecordsExplorer.tsx": "6210fb1bdc40f2393b5920ac84ef033a",
-      "features/pages/frontend-pages/Samples.tsx": "4061d720de1c86070dd16ec4e3d1fd65",
+      "features/pages/frontend-pages/Samples.tsx": "57e3e9753766f91166ab79eb783340d5",
       "features/pages/frontend-pages/Security.tsx": "eeda3b4922adacfec41a0bc91905e1a2",
       "features/pages/frontend-pages/Terms.tsx": "548b98237dd630c8a2e148517c51fe80",
       "features/pages/frontend-pages/Tour.tsx": "694d90618bc6d839e2a991cf8f9f82be",
@@ -3562,7 +3675,7 @@
       "layouts/full/shared/customizer/Customizer.tsx": "29249b177b43014c9780a29147a9f01b",
       "layouts/full/shared/customizer/RTL.tsx": "7faf02d97cc18a95ef99dbeb2033efac",
       "layouts/full/shared/loadable/Loadable.tsx": "14a8b989619f1452493242ee33a1d573",
-      "layouts/full/shared/logo/Logo.tsx": "78c5d7e99cbe7729faaea1f2e84222e3",
+      "layouts/full/shared/logo/Logo.tsx": "18659a876cbcdac88b2123f33f08d7bf",
       "layouts/full/shared/welcome/Welcome.tsx": "54cf765bf4e96cf86d011adaa9398d42",
       "layouts/full/vertical/header/AppLinks.tsx": "56fd97f949ec96fa4c07798bab1e461a",
       "layouts/full/vertical/header/Header.tsx": "48013b69a45fb7bccedcdfbc2b71bcf4",
@@ -3585,7 +3698,7 @@
       "layouts/full/vertical/sidebar/Sidebar.tsx": "3201ec263fd4b6e76eb83fe3e8a393a1",
       "layouts/full/vertical/sidebar/SidebarItems.tsx": "5d86cf00bb4ee22081bab9690e095da8",
       "layouts/full/vertical/sidebar/SidebarProfile/Profile.tsx": "8b85a38c322929101811be9e0f8740c4",
-      "layouts/portal/ChurchPortalLayout.tsx": "94135625812cd496ac14140b21be43ac",
+      "layouts/portal/ChurchPortalLayout.tsx": "baff4c506209073b2c3d437c15a3fbd0",
       "layouts/public/PublicLayout.tsx": "2acfd12aad6892f7105ef3d12f56ddfc",
       "lib/analytics.ts": "bc50f40f401259b6811fcc7d74b8cdf7",
       "lib/useProfileSync.ts": "a90f3200d39a66b149394ef5caadb817",

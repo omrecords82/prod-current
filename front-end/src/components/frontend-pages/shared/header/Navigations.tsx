@@ -1,4 +1,4 @@
-import { PUBLIC_NAV_LINKS } from '@/config/publicRoutes';
+import { isPublicNavActive, PUBLIC_NAV_LINKS } from '@/config/publicRoutes';
 import { useLanguage } from '@/context/LanguageContext';
 import { Chip } from '@mui/material';
 import Button from '@mui/material/Button';
@@ -30,7 +30,7 @@ const Navigations = () => {
     <>
       {NavLinks.map((navlink, i) => (
         <StyledButton
-          className={pathname === navlink.to ? 'active' : 'not-active'}
+          className={isPublicNavActive(pathname, navlink.to) ? 'active' : 'not-active'}
           variant="text"
           key={i}
           component={NavLink}

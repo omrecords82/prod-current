@@ -1,5 +1,7 @@
-import PageContainer from '@/shared/ui/PageContainer';
+import { HeroSection } from '@/components/frontend-pages/shared/sections';
 import PublicSeo from '@/components/seo/PublicSeo';
+import { useLanguage } from '@/context/LanguageContext';
+import PageContainer from '@/shared/ui/PageContainer';
 
 // Legal copy below is intentionally NOT i18n-driven. Translating a privacy
 // policy requires per-jurisdiction legal review; until that exists the
@@ -9,6 +11,8 @@ const COMPANY = 'Orthodox Metrics LLC';
 const CONTACT_EMAIL = 'info@orthodoxmetrics.com';
 
 const Privacy = () => {
+  const { t } = useLanguage();
+
   return (
     <PageContainer title="Privacy Policy" description="Orthodox Metrics privacy policy">
       <PublicSeo
@@ -17,12 +21,14 @@ const Privacy = () => {
         path="/privacy"
       />
 
+      <HeroSection
+        badge={t('privacy.hero_badge')}
+        title={t('privacy.hero_title')}
+        subtitle={t('privacy.hero_subtitle')}
+      />
+
       <section className="py-20 om-section-base">
         <div className="max-w-3xl mx-auto px-6 om-legal-prose">
-          <h1 className="font-['Georgia'] text-4xl md:text-5xl text-[#2d1b4e] dark:text-white mb-8">
-            Privacy Policy
-          </h1>
-
           <p className="font-['Inter'] text-[14px] text-[#6b7280] dark:text-gray-500 mb-2">
             <strong>Effective Date:</strong> {EFFECTIVE_DATE}
           </p>

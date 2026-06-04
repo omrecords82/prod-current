@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import { Shield, Users, FileText, Calendar } from '@/ui/icons';
 import { PUBLIC_ROUTES } from '@/config/publicRoutes';
-import { CTASection } from '@/components/frontend-pages/shared/sections';
+import { CTASection, HeroSection } from '@/components/frontend-pages/shared/sections';
 import EditableText from '@/components/frontend-pages/shared/EditableText';
 import { TourInteractiveDemo } from '@/components/frontend-pages/tour';
 import PublicSeo from '@/components/seo/PublicSeo';
@@ -17,6 +17,19 @@ const Tour = () => {
         description="Walk through Orthodox Metrics: parish dashboards, sacramental records, OCR digitization, and church administration in one secure platform."
         path="/tour"
       />
+      <HeroSection
+        badge={t('tour.hero_badge')}
+        title={t('tour.hero_title')}
+        subtitle={t('tour.hero_subtitle')}
+        editKeyPrefix="tour.hero"
+      >
+        <Link to={PUBLIC_ROUTES.ENROLL} className="om-btn-accent">
+          {t('common.enroll_parish')}
+        </Link>
+        <Link to={PUBLIC_ROUTES.SAMPLES} className="om-btn-secondary">
+          {t('tour.cta_samples')}
+        </Link>
+      </HeroSection>
       {/* Interactive Demo */}
       <TourInteractiveDemo />
 
@@ -45,7 +58,8 @@ const Tour = () => {
 
       {/* CTA */}
       <CTASection title={t('tour.cta_title')} subtitle={t('tour.cta_subtitle')} editKeyPrefix="tour.cta">
-        <Link to={PUBLIC_ROUTES.CONTACT} className="om-btn-accent">{t('tour.cta_button')}</Link>
+        <Link to={PUBLIC_ROUTES.ENROLL} className="om-btn-accent">{t('common.enroll_parish')}</Link>
+        <Link to={PUBLIC_ROUTES.CONTACT} className="om-btn-secondary">{t('common.contact_us')}</Link>
       </CTASection>
     </>
   );

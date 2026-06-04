@@ -1,3 +1,4 @@
+import { PUBLIC_ROUTES } from '@/config/publicRoutes';
 import { Box, Container, Divider, Grid, IconButton, Stack, Typography, useTheme } from '@mui/material';
 import { IconBrandFacebook, IconBrandLinkedin, IconBrandTwitter } from '@tabler/icons-react';
 import { Link } from 'react-router-dom';
@@ -6,28 +7,28 @@ const footerColumns = [
   {
     title: 'About',
     links: [
-      { text: 'Our Mission', to: '/frontend-pages/about' },
-      { text: 'How It Works', to: '/tour' },
-      { text: 'Security', to: '/frontend-pages/about' },
-      { text: 'Careers', to: '/frontend-pages/contact' },
+      { text: 'Our Mission', to: PUBLIC_ROUTES.ABOUT },
+      { text: 'How It Works', to: PUBLIC_ROUTES.TOUR },
+      { text: 'Security', to: PUBLIC_ROUTES.SECURITY },
+      { text: 'Careers', to: PUBLIC_ROUTES.CONTACT },
     ],
   },
   {
     title: 'Support',
     links: [
-      { text: 'Documentation', to: '/frontend-pages/blog' },
-      { text: 'Help Center', to: '/frontend-pages/faq' },
-      { text: 'Contact Us', to: '/frontend-pages/contact' },
-      { text: 'System Status', to: '/frontend-pages/about' },
+      { text: 'Documentation', to: PUBLIC_ROUTES.BLOG },
+      { text: 'Help Center', to: PUBLIC_ROUTES.FAQ },
+      { text: 'Contact Us', to: PUBLIC_ROUTES.CONTACT },
+      { text: 'System Status', to: PUBLIC_ROUTES.ABOUT },
     ],
   },
   {
     title: 'Legal',
     links: [
-      { text: 'Privacy Policy', to: '/frontend-pages/about' },
-      { text: 'Terms of Service', to: '/frontend-pages/about' },
-      { text: 'Cookie Policy', to: '/frontend-pages/about' },
-      { text: 'GDPR', to: '/frontend-pages/about' },
+      { text: 'Privacy Policy', to: PUBLIC_ROUTES.PRIVACY },
+      { text: 'Terms of Service', to: PUBLIC_ROUTES.TERMS },
+      { text: 'Cookie Policy', to: PUBLIC_ROUTES.PRIVACY },
+      { text: 'GDPR', to: PUBLIC_ROUTES.PRIVACY },
     ],
   },
 ];

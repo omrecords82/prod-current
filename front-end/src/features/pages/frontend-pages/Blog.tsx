@@ -25,7 +25,7 @@ const BlogPage = () => {
       <PublicSeo
         title="Blog"
         description="Guides, case studies, and notes on parish records, OCR digitization, and modernizing Orthodox church administration."
-        path="/frontend-pages/blog"
+        path={PUBLIC_ROUTES.BLOG}
       />
       {/* Hero */}
       <HeroSection
@@ -176,6 +176,8 @@ function BlogCard({ title, excerpt, category, date, t }: { title: string; excerp
 }
 
 // ── Static data ──
+// BLOG_POSTS are editorial placeholders (not loaded from CMS). Footer blog link stays
+// visible while this list is non-empty; hide the footer link only when posts are removed.
 // Article titles/excerpts intentionally stay in English (editorial content boundary).
 // Category badges are translated via CAT_KEY_MAP + t().
 

@@ -27,7 +27,7 @@ export const AdminDashboardLayout: React.FC<AdminDashboardLayoutProps> = ({
 
   // Redirect if not authenticated
   if (!authenticated) {
-    return <Navigate to="/frontend-pages/homepage" replace />;
+    return <Navigate to="/" replace />;
   }
 
   // Check super admin access if required

@@ -1,7 +1,7 @@
 import { PUBLIC_ROUTES } from '@/config/publicRoutes';
 import { useLanguage } from '@/context/LanguageContext';
 import { ArrowRight, ChevronLeft, ChevronRight, X } from 'lucide-react';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 
 const AMBIENT_KEYFRAMES = `
@@ -27,70 +27,67 @@ const AMBIENT_KEYFRAMES = `
   }
 `;
 
-const heroSlides = [
-  {
-    image: "/images/home/table-view-records.png",
-    title: "Table view for fast record management.",
-    description:
-      "Search, filter, review, and manage sacramental records from a structured table designed for parish recordkeeping workflows.",
-  },
-  {
-    image: "/images/home/cards-view-records.png",
-    title: "Cards view for focused review.",
-    description:
-      "Review individual records in a clean card layout that makes names, dates, clergy, status, and record details easier to scan.",
-  },
-  {
-    image: "/images/home/timeline-view-records.png",
-    title: "Timeline view for historical context.",
-    description:
-      "See parish records in chronological order so sacramental history becomes easier to trace, review, and understand over time.",
-  },
-  {
-    image: "/images/home/analytics-view-records.png",
-    title: "Analytics built from parish records.",
-    description:
-      "Turn sacramental record data into meaningful parish insights, including trends, completeness, clergy activity, and historical patterns.",
-  },
-  {
-    image: "/images/home/baptism-certificate.png",
-    title: "Certificates generated from verified records.",
-    description:
-      "Generate polished certificates directly from reviewed parish records, reducing duplicate work and helping clergy respond quickly to requests.",
-  },
-  {
-    image: "/images/home/original-baptism-records.png",
-    title: "From paper archives to searchable records.",
-    description:
-      "Preserve original parish record images while converting their contents into structured, searchable data for long-term use.",
-  },
-  {
-    image: "/images/home/processed-metrical-records.png",
-    title: "Real records, carefully processed.",
-    description:
-      "Actual scanned parish records are processed into Orthodox Metrics so your parish can preserve, verify, and access its sacramental history.",
-  },
-];
+const HERO_SLIDE_IMAGES = [
+  '/images/home/table-view-records.png',
+  '/images/home/cards-view-records.png',
+  '/images/home/timeline-view-records.png',
+  '/images/home/analytics-view-records.png',
+  '/images/home/baptism-certificate.png',
+  '/images/home/original-baptism-records.png',
+  '/images/home/processed-metrical-records.png',
+] as const;
+
+const HERO_SLIDE_COUNT = HERO_SLIDE_IMAGES.length;
+
+function usePrefersReducedMotion(): boolean {
+  const [reduced, setReduced] = useState(() => {
+    if (typeof window === 'undefined' || !window.matchMedia) return false;
+    return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  });
+
+  useEffect(() => {
+    const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const onChange = () => setReduced(mq.matches);
+    mq.addEventListener('change', onChange);
+    return () => mq.removeEventListener('change', onChange);
+  }, []);
+
+  return reduced;
+}
 
 const HomepageHero = () => {
   const { t } = useLanguage();
+  const prefersReducedMotion = usePrefersReducedMotion();
   const [slideIdx, setSlideIdx] = useState(0);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxIdx, setLightboxIdx] = useState(0);
 
-  // Auto-advance the hero slideshow, paused while the lightbox is open.
+  const heroSlides = useMemo(
+    () =>
+      HERO_SLIDE_IMAGES.map((image, i) => {
+        const n = i + 1;
+        return {
+          image,
+          title: t(`home.hero_slide${n}_title`),
+          description: t(`home.hero_slide${n}_desc`),
+        };
+      }),
+    [t],
+  );
+
+  // Auto-advance the hero slideshow, paused while the lightbox is open or when reduced motion is preferred.
   useEffect(() => {
-    if (lightboxOpen) return;
+    if (lightboxOpen || prefersReducedMotion) return;
     const id = setInterval(() => {
-      setSlideIdx((i) => (i + 1) % heroSlides.length);
+      setSlideIdx((i) => (i + 1) % HERO_SLIDE_COUNT);
     }, 8000);
     return () => clearInterval(id);
-  }, [lightboxOpen, slideIdx]);
+  }, [lightboxOpen, prefersReducedMotion]);
 
   const openLightbox = useCallback((i: number) => { setLightboxIdx(i); setLightboxOpen(true); }, []);
   const closeLightbox = useCallback(() => setLightboxOpen(false), []);
-  const lbPrev = useCallback(() => setLightboxIdx((i) => (i - 1 + heroSlides.length) % heroSlides.length), []);
-  const lbNext = useCallback(() => setLightboxIdx((i) => (i + 1) % heroSlides.length), []);
+  const lbPrev = useCallback(() => setLightboxIdx((i) => (i - 1 + HERO_SLIDE_COUNT) % HERO_SLIDE_COUNT), []);
+  const lbNext = useCallback(() => setLightboxIdx((i) => (i + 1) % HERO_SLIDE_COUNT), []);
 
   // Keyboard navigation while the lightbox is open.
   useEffect(() => {
@@ -115,7 +112,7 @@ const HomepageHero = () => {
           style={{
             background: 'radial-gradient(circle, rgba(218,165,32,0.9) 0%, rgba(218,165,32,0.4) 35%, transparent 65%)',
             filter: 'blur(50px)',
-            animation: 'ambientTravelRight1 60s ease-in-out infinite',
+            animation: prefersReducedMotion ? 'none' : 'ambientTravelRight1 60s ease-in-out infinite',
           }}
         />
         {/* Soft violet — right to left */}
@@ -124,7 +121,7 @@ const HomepageHero = () => {
           style={{
             background: 'radial-gradient(circle, rgba(180,140,220,1) 0%, rgba(180,140,220,0.5) 35%, transparent 65%)',
             filter: 'blur(55px)',
-            animation: 'ambientTravelLeft1 75s ease-in-out infinite',
+            animation: prefersReducedMotion ? 'none' : 'ambientTravelLeft1 75s ease-in-out infinite',
           }}
         />
         {/* Cool blue-white — left to right (slower) */}
@@ -133,7 +130,7 @@ const HomepageHero = () => {
           style={{
             background: 'radial-gradient(circle, rgba(230,240,250,0.85) 0%, rgba(230,240,250,0.4) 35%, transparent 65%)',
             filter: 'blur(60px)',
-            animation: 'ambientTravelRight2 90s ease-in-out infinite',
+            animation: prefersReducedMotion ? 'none' : 'ambientTravelRight2 90s ease-in-out infinite',
           }}
         />
         {/* Secondary golden accent — opposite direction */}
@@ -142,7 +139,7 @@ const HomepageHero = () => {
           style={{
             background: 'radial-gradient(circle, rgba(255,200,100,0.8) 0%, rgba(255,200,100,0.3) 40%, transparent 70%)',
             filter: 'blur(55px)',
-            animation: 'ambientTravelLeft2 100s ease-in-out infinite',
+            animation: prefersReducedMotion ? 'none' : 'ambientTravelLeft2 100s ease-in-out infinite',
           }}
         />
       </div>
@@ -155,7 +152,7 @@ const HomepageHero = () => {
             <div className="relative h-[180px] md:h-[220px]">
               {heroSlides.map((slide, i) => (
                 <div
-                  key={i}
+                  key={slide.image}
                   className="absolute inset-0 flex flex-col justify-center transition-all duration-700 ease-out"
                   style={{
                     opacity: i === slideIdx ? 1 : 0,
@@ -173,17 +170,17 @@ const HomepageHero = () => {
             </div>
             <div className="relative z-10 flex flex-col sm:flex-row gap-4 mt-8">
               <Link
-                to={PUBLIC_ROUTES.TOUR}
+                to={PUBLIC_ROUTES.ENROLL}
                 className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-[#d4af37] text-[#2d1b4e] rounded-lg font-['Inter'] font-medium text-[16px] hover:bg-[#c29d2f] transition-colors no-underline"
               >
-                {t('home.hero_cta_tour')}
+                {t('home.hero_cta_enroll')}
                 <ArrowRight size={20} />
               </Link>
               <Link
-                to={PUBLIC_ROUTES.ENROLL}
+                to={PUBLIC_ROUTES.TOUR}
                 className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-white/10 backdrop-blur-sm border border-white/20 text-white rounded-lg font-['Inter'] font-medium text-[16px] hover:bg-white/20 transition-colors no-underline"
               >
-                Enroll Now
+                {t('home.hero_cta_tour')}
               </Link>
             </div>
           </div>

@@ -648,7 +648,7 @@ const ForgotPassword: React.FC = () => {
                 {t.newAccount}{' '}
                 <Box
                   component={Link}
-                  to="/frontend-pages/homepage"
+                  to="/"
                   sx={{
                     color: GOLD,
                     fontWeight: 500,

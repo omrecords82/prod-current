@@ -14,7 +14,7 @@ const Enrollment = () => {
       <PublicSeo
         title="Enroll Your Parish"
         description="Enroll your Orthodox parish in Orthodox Metrics — sacramental record digitization, OCR, and modern parish administration."
-        path="/frontend-pages/enroll"
+        path="/enroll"
       />
       <OmChurchOnboarding />
     </>

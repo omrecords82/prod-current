@@ -239,8 +239,8 @@ const Samples = () => {
 
       {/* CTA */}
       <CTASection title={t('samples.cta_title')} subtitle={t('samples.cta_subtitle')} editKeyPrefix="samples.cta">
-        <Link to={PUBLIC_ROUTES.CONTACT} className="om-btn-accent">{t('samples.cta_btn_demo')}</Link>
-        <Link to={PUBLIC_ROUTES.PRICING} className="om-btn-secondary">{t('samples.cta_btn_pricing')}</Link>
+        <Link to={PUBLIC_ROUTES.ENROLL} className="om-btn-accent">{t('samples.cta_btn_enroll')}</Link>
+        <Link to={PUBLIC_ROUTES.CONTACT} className="om-btn-secondary">{t('samples.cta_btn_demo')}</Link>
       </CTASection>
     </>
   );
