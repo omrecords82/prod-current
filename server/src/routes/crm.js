@@ -237,12 +237,18 @@ router.get('/churches', requireAuth, async (req, res) => {
     const conditions = [];
     const params = [];
 
-    if (assigned_to === 'me' && req.session?.user?.id) {
-      conditions.push('uc.assigned_to = ?');
-      params.push(req.session.user.id);
+    if (assigned_to === 'me') {
+      const uid = req.session?.user?.id;
+      if (uid) {
+        conditions.push('uc.assigned_to = ?');
+        params.push(uid);
+      }
     } else if (assigned_to && assigned_to !== 'all' && assigned_to !== '') {
-      conditions.push('uc.assigned_to = ?');
-      params.push(parseInt(assigned_to, 10));
+      const aid = parseInt(String(assigned_to), 10);
+      if (!Number.isNaN(aid)) {
+        conditions.push('uc.assigned_to = ?');
+        params.push(aid);
+      }
     }
 
     if (overdue_followup === '1' || overdue_followup === 'true') {
@@ -620,23 +626,36 @@ router.get('/follow-ups', requireAuth, async (req, res) => {
       where.push('f.status = ?');
       params.push(status);
     }
-    if (assigned_to === 'me' && req.session?.user?.id) {
-      where.push('f.assigned_to = ?');
-      params.push(req.session.user.id);
+    if (assigned_to === 'me') {
+      const uid = req.session?.user?.id;
+      if (uid) {
+        where.push('f.assigned_to = ?');
+        params.push(uid);
+      }
     } else if (assigned_to && assigned_to !== 'all') {
-      where.push('f.assigned_to = ?');
-      params.push(parseInt(assigned_to, 10));
+      const aid = parseInt(String(assigned_to), 10);
+      if (!Number.isNaN(aid)) {
+        where.push('f.assigned_to = ?');
+        params.push(aid);
+      }
     }
     if (where.length) sql += ` WHERE ${where.join(' AND ')}`;
     sql += ' ORDER BY f.due_date ASC LIMIT ?';
-    params.push(parseInt(limit));
+    params.push(parseInt(String(limit), 10) || 50);
 
     const [rows] = await getPool().query(sql, params);
+
+    const dueDateStr = (d) => {
+      if (!d) return null;
+      if (d instanceof Date) return d.toISOString().split('T')[0];
+      return String(d).slice(0, 10);
+    };
 
     // Mark overdue
     const now = new Date().toISOString().split('T')[0];
     rows.forEach(r => {
-      if (r.status === 'pending' && r.due_date && r.due_date.toISOString().split('T')[0] < now) {
+      const due = dueDateStr(r.due_date);
+      if (r.status === 'pending' && due && due < now) {
         r.is_overdue = true;
       }
     });
