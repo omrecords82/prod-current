@@ -80,6 +80,30 @@ router.get('/dashboard', requireAuth, async (req, res) => {
        LIMIT 10`
     );
 
+    let myWork = null;
+    const userId = req.session?.user?.id;
+    if (userId) {
+      const [myLeads] = await pool.query(
+        'SELECT COUNT(*) as count FROM omai_crm_leads WHERE assigned_to = ?',
+        [userId]
+      );
+      const [myOverdue] = await pool.query(
+        `SELECT COUNT(*) as count FROM omai_crm_followups
+         WHERE assigned_to = ? AND status = 'pending' AND due_date < CURDATE()`,
+        [userId]
+      );
+      const [myToday] = await pool.query(
+        `SELECT COUNT(*) as count FROM omai_crm_followups
+         WHERE assigned_to = ? AND status = 'pending' AND due_date = CURDATE()`,
+        [userId]
+      );
+      myWork = {
+        assignedLeads: myLeads[0].count,
+        overdueFollowups: myOverdue[0].count,
+        todayFollowups: myToday[0].count,
+      };
+    }
+
     res.json({
       pipeline: pipelineCounts,
       overdue: overdue[0].count,
@@ -89,6 +113,7 @@ router.get('/dashboard', requireAuth, async (req, res) => {
       totalChurches: totals[0].total,
       totalClients: totals[0].clients || 0,
       activeStates,
+      myWork,
     });
   } catch (err) {
     console.error('CRM dashboard error:', err);
@@ -99,6 +124,83 @@ router.get('/dashboard', requireAuth, async (req, res) => {
 // ═══════════════════════════════════════════════════════════════
 // PIPELINE STAGES — list and manage
 // ═══════════════════════════════════════════════════════════════
+
+// Admin users eligible for lead assignment
+router.get('/assignees', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const [rows] = await getPool().query(
+      `SELECT id,
+              email,
+              COALESCE(NULLIF(TRIM(full_name), ''),
+                NULLIF(TRIM(CONCAT(COALESCE(first_name, ''), ' ', COALESCE(last_name, ''))), ''),
+                email) AS label
+       FROM users
+       WHERE role IN ('admin', 'super_admin') AND (is_active = 1 OR is_active IS NULL)
+       ORDER BY label`
+    );
+    res.json({ assignees: rows });
+  } catch (err) {
+    console.error('CRM assignees error:', err);
+    res.status(500).json({ error: 'Failed to load assignees' });
+  }
+});
+
+// Pipeline reporting — stage distribution, idle time, public funnel
+router.get('/reporting', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const pool = getPool();
+
+    const [byStage] = await pool.query(
+      `SELECT uc.pipeline_stage, ps.label, ps.color, ps.sort_order, ps.is_terminal,
+              COUNT(*) AS count,
+              ROUND(AVG(DATEDIFF(CURDATE(), COALESCE(uc.last_contacted_at, uc.created_at))), 1) AS avg_days_idle
+       FROM omai_crm_leads uc
+       LEFT JOIN omai_crm_pipeline_stages ps ON uc.pipeline_stage = ps.stage_key
+       GROUP BY uc.pipeline_stage, ps.label, ps.color, ps.sort_order, ps.is_terminal
+       ORDER BY ps.sort_order`
+    );
+
+    const [funnel] = await pool.query(
+      `SELECT
+         COUNT(*) AS total_leads,
+         SUM(is_client = 1) AS clients,
+         SUM(pipeline_stage = 'active_parish') AS active_parish,
+         SUM(pipeline_stage = 'lost') AS lost
+       FROM omai_crm_leads`
+    );
+
+    let inquiriesLast30 = 0;
+    try {
+      const [inq] = await pool.query(
+        `SELECT COUNT(*) AS count FROM omai_crm_inquiries
+         WHERE created_at >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)`
+      );
+      inquiriesLast30 = inq[0].count;
+    } catch (_) { /* table may not exist in older envs */ }
+
+    const [stageChanges] = await pool.query(
+      `SELECT COUNT(*) AS transitions
+       FROM omai_crm_activities
+       WHERE activity_type = 'stage_change'
+         AND created_at >= DATE_SUB(CURDATE(), INTERVAL 90 DAY)`
+    );
+
+    const total = funnel[0].total_leads || 0;
+    const clients = funnel[0].clients || 0;
+    const conversionPct = total > 0 ? Math.round((clients / total) * 1000) / 10 : 0;
+
+    res.json({
+      byStage,
+      funnel: funnel[0],
+      conversionPct,
+      inquiriesLast30,
+      stageChanges90d: stageChanges[0].transitions,
+    });
+  } catch (err) {
+    console.error('CRM reporting error:', err);
+    res.status(500).json({ error: 'Failed to load reporting' });
+  }
+});
 
 router.get('/pipeline-stages', requireAuth, async (req, res) => {
   try {
@@ -126,12 +228,31 @@ router.get('/churches', requireAuth, async (req, res) => {
       pipeline_stage = '',
       jurisdiction = '',
       priority = '',
+      assigned_to = '',
+      overdue_followup = '',
       sort = 'name',
       direction = 'asc',
     } = req.query;
 
     const conditions = [];
     const params = [];
+
+    if (assigned_to === 'me' && req.session?.user?.id) {
+      conditions.push('uc.assigned_to = ?');
+      params.push(req.session.user.id);
+    } else if (assigned_to && assigned_to !== 'all' && assigned_to !== '') {
+      conditions.push('uc.assigned_to = ?');
+      params.push(parseInt(assigned_to, 10));
+    }
+
+    if (overdue_followup === '1' || overdue_followup === 'true') {
+      conditions.push(
+        `EXISTS (
+          SELECT 1 FROM omai_crm_followups cf
+          WHERE cf.church_id = uc.id AND cf.status = 'pending' AND cf.due_date < CURDATE()
+        )`
+      );
+    }
 
     if (search) {
       conditions.push('(uc.name LIKE ? OR uc.city LIKE ?)');
@@ -175,12 +296,16 @@ router.get('/churches', requireAuth, async (req, res) => {
     const [rows] = await pool.query(
       `SELECT uc.*, ps.label as stage_label, ps.color as stage_color,
               j.name AS jurisdiction_name, j.abbreviation AS jurisdiction_abbr, j.calendar_type AS jurisdiction_calendar,
+              COALESCE(NULLIF(TRIM(u.full_name), ''),
+                NULLIF(TRIM(CONCAT(COALESCE(u.first_name, ''), ' ', COALESCE(u.last_name, ''))), ''),
+                u.email) AS assignee_name,
               (SELECT COUNT(*) FROM omai_crm_contacts cc WHERE cc.church_id = uc.id) as contact_count,
               (SELECT COUNT(*) FROM omai_crm_activities ca WHERE ca.church_id = uc.id) as activity_count,
               (SELECT COUNT(*) FROM omai_crm_followups cf WHERE cf.church_id = uc.id AND cf.status = 'pending') as pending_followups
        FROM omai_crm_leads uc
        LEFT JOIN omai_crm_pipeline_stages ps ON uc.pipeline_stage = ps.stage_key
        LEFT JOIN jurisdictions j ON uc.jurisdiction_id = j.id
+       LEFT JOIN users u ON uc.assigned_to = u.id
        ${whereClause}
        ORDER BY ${sortField} ${sortDir}
        LIMIT ? OFFSET ?`,
@@ -207,9 +332,13 @@ router.get('/churches/:id', requireAuth, async (req, res) => {
     const { id } = req.params;
 
     const [churchRows] = await pool.query(
-      `SELECT uc.*, ps.label as stage_label, ps.color as stage_color
+      `SELECT uc.*, ps.label as stage_label, ps.color as stage_color,
+              COALESCE(NULLIF(TRIM(u.full_name), ''),
+                NULLIF(TRIM(CONCAT(COALESCE(u.first_name, ''), ' ', COALESCE(u.last_name, ''))), ''),
+                u.email) AS assignee_name
        FROM omai_crm_leads uc
        LEFT JOIN omai_crm_pipeline_stages ps ON uc.pipeline_stage = ps.stage_key
+       LEFT JOIN users u ON uc.assigned_to = u.id
        WHERE uc.id = ?`,
       [id]
     );
@@ -480,16 +609,25 @@ router.post('/churches/:churchId/activities', requireAuth, async (req, res) => {
 
 router.get('/follow-ups', requireAuth, async (req, res) => {
   try {
-    const { status = 'pending', limit = 50 } = req.query;
+    const { status = 'pending', limit = 50, assigned_to = '' } = req.query;
     let sql = `SELECT f.*, uc.name as church_name, uc.state_code, uc.city, uc.pipeline_stage
                FROM omai_crm_followups f
                JOIN omai_crm_leads uc ON f.church_id = uc.id`;
     const params = [];
+    const where = [];
 
     if (status && status !== 'all') {
-      sql += ' WHERE f.status = ?';
+      where.push('f.status = ?');
       params.push(status);
     }
+    if (assigned_to === 'me' && req.session?.user?.id) {
+      where.push('f.assigned_to = ?');
+      params.push(req.session.user.id);
+    } else if (assigned_to && assigned_to !== 'all') {
+      where.push('f.assigned_to = ?');
+      params.push(parseInt(assigned_to, 10));
+    }
+    if (where.length) sql += ` WHERE ${where.join(' AND ')}`;
     sql += ' ORDER BY f.due_date ASC LIMIT ?';
     params.push(parseInt(limit));
 

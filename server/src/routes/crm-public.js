@@ -221,6 +221,62 @@ router.post('/inquiry', async (req, res) => {
       appointmentId = apptResult.insertId;
     }
 
+    let resolvedLeadId = churchId ? parseInt(churchId, 10) : null;
+    if (!resolvedLeadId || Number.isNaN(resolvedLeadId)) {
+      const [existing] = await pool.query(
+        `SELECT id FROM omai_crm_leads
+         WHERE LOWER(name) = LOWER(?) AND (state_code = ? OR ? IS NULL OR ? = '')
+         ORDER BY id ASC LIMIT 1`,
+        [churchName, stateCode || null, stateCode || null, stateCode || '']
+      );
+      if (existing.length) {
+        resolvedLeadId = existing[0].id;
+      } else {
+        const extId = `web-inq-${Date.now()}`;
+        const [leadIns] = await pool.query(
+          `INSERT INTO omai_crm_leads (ext_id, name, state_code, pipeline_stage, priority, crm_notes, last_contacted_at)
+           VALUES (?, ?, ?, 'prospects', 'medium', ?, NOW())`,
+          [
+            extId,
+            churchName,
+            stateCode || '',
+            `Auto-created from public web inquiry (${new Date().toISOString().slice(0, 10)})`,
+          ]
+        );
+        resolvedLeadId = leadIns.insertId;
+        await pool.query(
+          `INSERT INTO omai_crm_contacts (church_id, first_name, last_name, role, email, phone, is_primary, notes)
+           VALUES (?, ?, ?, ?, ?, ?, 1, ?)`,
+          [
+            resolvedLeadId,
+            firstName,
+            lastName || null,
+            role || 'Web inquiry',
+            email,
+            phone || null,
+            'Submitted via public CRM form',
+          ]
+        );
+        const followDue = new Date();
+        followDue.setDate(followDue.getDate() + 2);
+        const dueStr = followDue.toISOString().split('T')[0];
+        await pool.query(
+          `INSERT INTO omai_crm_followups (church_id, due_date, subject, description)
+           VALUES (?, ?, ?, ?)`,
+          [
+            resolvedLeadId,
+            dueStr,
+            `Follow up: ${churchName} web inquiry`,
+            `New public inquiry from ${firstName} ${lastName || ''} (${email}). Review and assign.`,
+          ]
+        );
+        await pool.query(
+          'UPDATE omai_crm_leads SET next_follow_up = ? WHERE id = ?',
+          [dueStr, resolvedLeadId]
+        );
+      }
+    }
+
     // Create inquiry record
     const [result] = await pool.query(
       `INSERT INTO omai_crm_inquiries
@@ -229,7 +285,7 @@ router.post('/inquiry', async (req, res) => {
         heard_about_detail, interested_digital_records, wants_meeting, appointment_id)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
-        churchId || null, churchName, stateCode || null,
+        resolvedLeadId, churchName, stateCode || null,
         firstName, lastName || null, email, phone || null, role || null,
         maintainsRecords || 'unsure', heardAbout || null, heardAboutDetail || null,
         interestedDigitalRecords || 'maybe', wantsMeeting ? 1 : 0, appointmentId,
@@ -237,24 +293,24 @@ router.post('/inquiry', async (req, res) => {
     );
 
     // Auto-create CRM activity if church matched
-    if (churchId) {
+    if (resolvedLeadId) {
       try {
         await pool.query(
           `INSERT INTO omai_crm_activities (church_id, activity_type, subject, body, metadata)
            VALUES (?, 'note', ?, ?, ?)`,
           [
-            churchId,
+            resolvedLeadId,
             `Web inquiry from ${firstName} ${lastName || ''}`.trim(),
             `Inquiry submitted via registration page.\nRole: ${role || 'N/A'}\nMaintains records: ${maintainsRecords || 'unsure'}\nInterested in digital records: ${interestedDigitalRecords || 'maybe'}${wantsMeeting ? '\nMeeting requested' : ''}`,
             JSON.stringify({ source: 'web_inquiry', inquiryId: result.insertId }),
           ]
         );
 
-        // Update pipeline stage to 'interested' if currently 'new_lead'
+        // Move prospects to engagement on inbound interest
         await pool.query(
-          `UPDATE omai_crm_leads SET pipeline_stage = 'interested', last_contacted_at = NOW()
-           WHERE id = ? AND pipeline_stage = 'new_lead'`,
-          [churchId]
+          `UPDATE omai_crm_leads SET pipeline_stage = 'engagement', last_contacted_at = NOW()
+           WHERE id = ? AND pipeline_stage IN ('prospects', 'new_lead')`,
+          [resolvedLeadId]
         );
       } catch (actErr) {
         console.error('Failed to create CRM activity:', actErr);
@@ -266,6 +322,7 @@ router.post('/inquiry', async (req, res) => {
     res.json({
       success: true,
       inquiryId: result.insertId,
+      leadId: resolvedLeadId,
       appointmentId,
       message: appointmentId
         ? 'Thank you! Your inquiry has been submitted and your meeting has been scheduled.'
