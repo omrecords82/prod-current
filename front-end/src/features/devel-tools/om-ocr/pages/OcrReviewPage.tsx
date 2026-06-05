@@ -85,6 +85,7 @@ const OcrReviewPage: React.FC = () => {
   const [selectedRecordIndex, setSelectedRecordIndex] = useState(0);
   const [needsReviewFlag, setNeedsReviewFlag] = useState(false);
   const [refinementNotes, setRefinementNotes] = useState<string | null>(null);
+  const [imageLoadFailed, setImageLoadFailed] = useState(false);
 
   const backPath = isPortal ? '/portal/upload' : '/devel/ocr-studio/upload';
   const reviewBase = churchId
@@ -92,6 +93,16 @@ const OcrReviewPage: React.FC = () => {
     : backPath;
 
   const fieldDefs = RECORD_FIELDS[recordType] || RECORD_FIELDS.baptism;
+
+  const selectedJob = useMemo(
+    () => jobs.find((j) => Number(j.id) === selectedJobId) ?? null,
+    [jobs, selectedJobId]
+  );
+
+  const jobImageUrl = useMemo(() => {
+    if (!churchId || !selectedJobId) return null;
+    return `/api/church/${churchId}/ocr/jobs/${selectedJobId}/image?original=true`;
+  }, [churchId, selectedJobId]);
 
   const loadJobs = useCallback(async () => {
     if (!churchId) return;
@@ -146,6 +157,10 @@ const OcrReviewPage: React.FC = () => {
   useEffect(() => {
     if (churchId && selectedJobId) loadExtract(selectedJobId);
   }, [churchId, selectedJobId, loadExtract]);
+
+  useEffect(() => {
+    setImageLoadFailed(false);
+  }, [selectedJobId, jobImageUrl]);
 
   const runAgentExtract = async () => {
     if (!churchId || !selectedJobId) return;
@@ -284,8 +299,9 @@ const OcrReviewPage: React.FC = () => {
           </Box>
         </Box>
 
-        {/* Confirm panel */}
-        <Box sx={{ flex: 1, minWidth: 0, overflow: 'auto', p: 2 }}>
+        {/* Confirm panel + source image */}
+        <Box sx={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: { xs: 'column', lg: 'row' }, overflow: 'hidden' }}>
+          <Box sx={{ flex: 1, minWidth: 0, overflow: 'auto', p: 2 }}>
           {!selectedJobId ? (
             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
               <Typography color="text.secondary">Select a job from the queue to review extracted fields.</Typography>
@@ -428,6 +444,65 @@ const OcrReviewPage: React.FC = () => {
                 </>
               )}
             </Stack>
+          )}
+          </Box>
+
+          {selectedJobId && jobImageUrl && (
+            <Box
+              sx={{
+                width: { xs: '100%', lg: '42%' },
+                minWidth: { lg: 300 },
+                maxWidth: { lg: 520 },
+                flexShrink: 0,
+                borderLeft: { lg: '1px solid' },
+                borderTop: { xs: '1px solid', lg: 'none' },
+                borderColor: 'divider',
+                bgcolor: 'grey.50',
+                display: 'flex',
+                flexDirection: 'column',
+                overflow: 'hidden',
+              }}
+            >
+              <Box sx={{ px: 2, py: 1.25, borderBottom: '1px solid', borderColor: 'divider', bgcolor: 'background.paper' }}>
+                <Typography variant="subtitle2" fontWeight={700}>Uploaded image</Typography>
+                <Typography variant="caption" color="text.secondary" noWrap title={selectedJob?.filename}>
+                  {selectedJob?.filename || `Job #${selectedJobId}`}
+                </Typography>
+              </Box>
+              <Box
+                sx={{
+                  flex: 1,
+                  overflow: 'auto',
+                  p: 1.5,
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  justifyContent: 'center',
+                }}
+              >
+                {!imageLoadFailed ? (
+                  <Box
+                    component="img"
+                    src={jobImageUrl}
+                    alt={selectedJob?.filename || `OCR job ${selectedJobId}`}
+                    onError={() => setImageLoadFailed(true)}
+                    sx={{
+                      maxWidth: '100%',
+                      width: 'auto',
+                      height: 'auto',
+                      objectFit: 'contain',
+                      display: 'block',
+                      borderRadius: 1,
+                      boxShadow: 1,
+                      bgcolor: 'background.paper',
+                    }}
+                  />
+                ) : (
+                  <Alert severity="warning" sx={{ m: 1 }}>
+                    Could not load the uploaded image for this job.
+                  </Alert>
+                )}
+              </Box>
+            </Box>
           )}
         </Box>
       </Box>
