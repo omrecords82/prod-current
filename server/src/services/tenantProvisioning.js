@@ -331,7 +331,7 @@ async function provisionTenantDb(churchId, pool, options = {}) {
     try {
       const dbCfg = getDbConfig();
       const escapedPassword = dbCfg.password.replace(/'/g, "'\\''");
-      const dumpCmd = `mysqldump --host=${dbCfg.host} --port=${dbCfg.port} --user=${dbCfg.user} --password='${escapedPassword}' --no-data --skip-lock-tables ${TEMPLATE_DB}`;
+      const dumpCmd = `mysqldump --column-statistics=0 --host=${dbCfg.host} --port=${dbCfg.port} --user=${dbCfg.user} --password='${escapedPassword}' --no-data --skip-lock-tables ${TEMPLATE_DB}`;
       const loadCmd = `mysql --host=${dbCfg.host} --port=${dbCfg.port} --user=${dbCfg.user} --password='${escapedPassword}' ${tenantDb}`;
 
       execSync(`${dumpCmd} 2>/dev/null | ${loadCmd} 2>/dev/null`, {
