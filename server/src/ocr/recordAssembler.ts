@@ -619,13 +619,23 @@ function extractSponsors(rows: any[]): { sponsors: string; notes: string } {
  * Unlike baptism, these typically have a single date (no birth/baptism split).
  * Strips record number prefix (e.g. "2x 4-6-69" → "4-6-69").
  */
-function extractSimpleDate(rows: any[]): string {
+function extractSimpleDate(rows: any[], recNum?: string): string {
   for (const row of rows) {
     const cells = getCells(row);
     const dateText = cells.date || '';
     if (!dateText) continue;
 
     const norm = normalizeCell(dateText);
+
+    // If we have a record number, check if the date starts with that record number
+    if (recNum) {
+      const regex = new RegExp(`^\\s*${recNum}\\s*(1[0-2]|0?[1-9])[-/\\.]\\s*([0-3]?\\d)[-/\\.]\\s*(\\d{2,4})`);
+      const m = norm.match(regex);
+      if (m) {
+        return `${m[1]}-${m[2]}-${m[3]}`;
+      }
+    }
+
     // Strip leading "Nx", "N x", "x", "ax" prefix
     const stripped = norm.replace(/^\s*\d*\s*[a-zа-я]*x?\s*/i, '').trim();
     if (!stripped) continue;
@@ -673,7 +683,7 @@ function extractFuneralRecord(rows: any[]): Record<string, string> {
   const recNum = extractRecordNumber(rows);
   if (recNum) fields.record_number = recNum;
 
-  const date = extractSimpleDate(rows);
+  const date = extractSimpleDate(rows, recNum);
   if (date) fields.date_of_death = date;
 
   const name = extractDeceasedName(rows);
@@ -705,7 +715,7 @@ function extractMarriageRecord(rows: any[]): Record<string, string> {
   const recNum = extractRecordNumber(rows);
   if (recNum) fields.record_number = recNum;
 
-  const date = extractSimpleDate(rows);
+  const date = extractSimpleDate(rows, recNum);
   if (date) fields.date_of_marriage = date;
 
   const groom = mergeColumn(rows, 'groom');
@@ -781,6 +791,9 @@ export function assembleRecords(structuredTableOutput: any): AssemblyResult {
     // Parse record number for monotonic check
     let parsedNum: number | null = null;
     let hasXmarkOnly = false; // X marker without record number
+    const expectedNum = maxNumberSeen + 1;
+
+    // 1. Try standard digit parsing
     if (numCol && NUMBER_RE.test(numCol)) {
       const m = numCol.match(/(\d+)/);
       if (m) parsedNum = parseInt(m[1], 10);
@@ -792,7 +805,29 @@ export function assembleRecords(structuredTableOutput: any): AssemblyResult {
       hasXmarkOnly = true;
     }
 
-    // Corroboration: this row or the NEXT 1-2 rows have content in key columns
+    // 2. Check for merged date + number (e.g. "45-27-88" when expectedNum is 4)
+    if (parsedNum === null && dateCol) {
+      const regex = new RegExp(`^\\s*(${expectedNum})\\s*(1[0-2]|0?[1-9])[-/\\.]\\s*([0-3]?\\d)[-/\\.]\\s*(\\d{2,4})`);
+      const m = dateCol.match(regex);
+      if (m) {
+        parsedNum = parseInt(m[1], 10);
+      }
+    }
+
+    // 3. OCR misread sequence corrector in number column
+    if (parsedNum === null && numCol) {
+      const cleaned = numCol.trim().toUpperCase().replace(/[\s\.]/g, '');
+      if (expectedNum === 5 && (cleaned === 'S' || cleaned === '5')) {
+        parsedNum = 5;
+      } else if (expectedNum === 9 && (cleaned === 'Σ' || cleaned === 'σ' || cleaned === 'O' || cleaned === '0' || cleaned === 'Q' || cleaned === '9')) {
+        parsedNum = 9;
+      } else if (expectedNum === 11 && (cleaned === 'A' || cleaned === '11' || cleaned === 'II' || cleaned === 'H')) {
+        parsedNum = 11;
+      }
+    }
+
+    // Corroboration: this row or the NEXT 1-2 rows have content in key columns.
+    // If it's the last row and we have a parsed number, force corroborate to prevent it merging into previous.
     const hasContent = config.corroborationColumns.some(col => !!cells[col]);
     let lookaheadCorroboration = false;
     if (!hasContent) {
@@ -804,7 +839,7 @@ export function assembleRecords(structuredTableOutput: any): AssemblyResult {
         }
       }
     }
-    const corroborated = hasContent || lookaheadCorroboration;
+    const corroborated = hasContent || lookaheadCorroboration || (parsedNum !== null && ri === dataRows.length - 1);
 
     // Geometry signal: large Y gap before this row
     const hasLargeGap = yGaps[ri] > gapThreshold;
@@ -844,8 +879,44 @@ export function assembleRecords(structuredTableOutput: any): AssemblyResult {
 
     if (startsNew) {
       if (currentGroup) {
-        groups.push(currentGroup);
-        currentGroup = { rows: [row], startIndex: row.row_index, endIndex: row.row_index };
+        // Look back to see if we can align name boundaries.
+        // We look for a contiguous block of preceding rows that have a name but no number.
+        const currentGroupStartRi = dataRows.indexOf(currentGroup.rows[0]);
+        let newGroupStartIdx = ri;
+        let foundName = false;
+        for (let rj = ri - 1; rj >= currentGroupStartRi; rj--) {
+          const rjRow = dataRows[rj];
+          const rjCells = getNormalizedCells(rjRow);
+          
+          if (rjCells.number) {
+            break;
+          }
+          
+          const hasName = !!rjCells[config.nameColumn];
+          if (hasName) {
+            foundName = true;
+            newGroupStartIdx = rj;
+          } else if (foundName) {
+            break;
+          }
+        }
+
+        if (newGroupStartIdx < ri) {
+          console.log(`  [RecordAssembler]   → shifting new group start back from row ${ri} to ${newGroupStartIdx} (aligning name)`);
+          
+          const stolenCount = ri - newGroupStartIdx;
+          const stolenRows = currentGroup.rows.slice(currentGroup.rows.length - stolenCount);
+          currentGroup.rows = currentGroup.rows.slice(0, currentGroup.rows.length - stolenCount);
+          currentGroup.endIndex = currentGroup.rows[currentGroup.rows.length - 1].row_index;
+          
+          if (currentGroup.rows.length > 0) {
+            groups.push(currentGroup);
+          }
+          currentGroup = { rows: [...stolenRows, row], startIndex: stolenRows[0].row_index, endIndex: row.row_index };
+        } else {
+          groups.push(currentGroup);
+          currentGroup = { rows: [row], startIndex: row.row_index, endIndex: row.row_index };
+        }
       } else if (orphanRows.length > 0) {
         // Absorb orphan rows into this new record (they're likely city/header lines)
         console.log(`  [RecordAssembler]   → absorbing ${orphanRows.length} orphan row(s) into this record`);
