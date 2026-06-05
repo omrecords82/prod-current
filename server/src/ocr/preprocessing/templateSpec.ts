@@ -153,7 +153,7 @@ const BUILTIN_TEMPLATES: TemplateSpec[] = [
     templateId: 'funeral_1950_v1',
     name: 'Funeral Ledger (1950+)',
     recordType: 'funeral',
-    headerCutNorm: 0.12,
+    headerCutNorm: 0.26,
     columns: [
       { key: 'number', x0Norm: 0.000, x1Norm: 0.060, required: true, aliases: ['no', '#'] },
       { key: 'date', x0Norm: 0.060, x1Norm: 0.150, required: true, aliases: ['date', 'ημερ', 'дата'] },
