@@ -68,7 +68,7 @@ import {
   IconZoomIn,
   IconZoomOut,
 } from '@tabler/icons-react';
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 
 type PipelineStatus =
@@ -146,6 +146,8 @@ const OcrReviewPage: React.FC = () => {
   const contentRowRef = useRef<HTMLDivElement>(null);
   const imageRef = useRef<HTMLImageElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const wrapperRef = useRef<HTMLDivElement>(null);
+  const zoomAnchorRef = useRef<{ fx: number; fy: number; vx: number; vy: number } | null>(null);
   const panRef = useRef<{ active: boolean; startX: number; startY: number; left: number; top: number; moved: boolean }>(
     { active: false, startX: 0, startY: 0, left: 0, top: 0, moved: false },
   );
@@ -359,11 +361,11 @@ const OcrReviewPage: React.FC = () => {
     const onWheel = (e: WheelEvent) => {
       if (!(e.ctrlKey || e.metaKey)) return;
       e.preventDefault();
-      setImageZoom((z) => Math.min(400, Math.max(25, z - Math.sign(e.deltaY) * 15)));
+      zoomTo(imageZoom - Math.sign(e.deltaY) * 15, e.clientX, e.clientY);
     };
     el.addEventListener('wheel', onWheel, { passive: false });
     return () => el.removeEventListener('wheel', onWheel);
-  }, [selectedJobId, jobImageUrl, imageLoadFailed]);
+  }, [selectedJobId, jobImageUrl, imageLoadFailed, imageZoom]);
 
   useEffect(() => {
     if (churchId && selectedJobId) loadJobArtifacts(selectedJobId);
@@ -419,6 +421,38 @@ const OcrReviewPage: React.FC = () => {
     dragBoundaryRef.current = null;
     panRef.current.active = false;
   };
+
+  // ── Zoom anchored to a point (cursor or viewport center) ───────────────────
+  const zoomTo = (nextZoom: number, clientX?: number, clientY?: number) => {
+    const sc = scrollRef.current;
+    const wrap = wrapperRef.current;
+    if (sc && wrap && wrap.offsetWidth > 0 && wrap.offsetHeight > 0) {
+      const scRect = sc.getBoundingClientRect();
+      const wrapRect = wrap.getBoundingClientRect();
+      const vx = clientX != null ? clientX - scRect.left : sc.clientWidth / 2;
+      const vy = clientY != null ? clientY - scRect.top : sc.clientHeight / 2;
+      // Fraction of the content currently under the anchor point.
+      const fx = (vx - (wrapRect.left - scRect.left)) / wrap.offsetWidth;
+      const fy = (vy - (wrapRect.top - scRect.top)) / wrap.offsetHeight;
+      zoomAnchorRef.current = { fx, fy, vx, vy };
+    }
+    setImageZoom(Math.min(500, Math.max(25, Math.round(nextZoom))));
+  };
+
+  // Re-anchor scroll after the zoom changes the content size.
+  useLayoutEffect(() => {
+    const a = zoomAnchorRef.current;
+    const sc = scrollRef.current;
+    const wrap = wrapperRef.current;
+    if (!a || !sc || !wrap) return;
+    const scRect = sc.getBoundingClientRect();
+    const wrapRect = wrap.getBoundingClientRect();
+    const curX = (wrapRect.left - scRect.left) + a.fx * wrap.offsetWidth;
+    const curY = (wrapRect.top - scRect.top) + a.fy * wrap.offsetHeight;
+    sc.scrollLeft += curX - a.vx;
+    sc.scrollTop += curY - a.vy;
+    zoomAnchorRef.current = null;
+  }, [imageZoom]);
 
   // ── Resize the image panel via the splitter ────────────────────────────────
   const startImagePanelResize = (e: React.MouseEvent) => {
@@ -1011,26 +1045,26 @@ const OcrReviewPage: React.FC = () => {
                 }}
               >
                 <Tooltip title="Zoom out">
-                  <IconButton size="small" onClick={() => setImageZoom((z) => Math.max(25, z - 25))}>
+                  <IconButton size="small" onClick={() => zoomTo(imageZoom - 25)}>
                     <IconZoomOut size={16} />
                   </IconButton>
                 </Tooltip>
                 <Slider
                   value={imageZoom}
-                  onChange={(_, v) => setImageZoom(v as number)}
+                  onChange={(_, v) => zoomTo(v as number)}
                   min={25}
-                  max={400}
+                  max={500}
                   step={5}
                   sx={{ width: 90 }}
                   size="small"
                 />
                 <Tooltip title="Zoom in">
-                  <IconButton size="small" onClick={() => setImageZoom((z) => Math.min(400, z + 25))}>
+                  <IconButton size="small" onClick={() => zoomTo(imageZoom + 25)}>
                     <IconZoomIn size={16} />
                   </IconButton>
                 </Tooltip>
                 <Tooltip title="Fit to panel">
-                  <IconButton size="small" onClick={() => setImageZoom(100)}>
+                  <IconButton size="small" onClick={() => { zoomAnchorRef.current = null; setImageZoom(100); }}>
                     <IconMaximize size={16} />
                   </IconButton>
                 </Tooltip>
@@ -1047,9 +1081,6 @@ const OcrReviewPage: React.FC = () => {
                   overflow: 'auto',
                   p: 1.5,
                   pt: 6,
-                  display: 'flex',
-                  justifyContent: 'center',
-                  alignItems: 'flex-start',
                   cursor: 'grab',
                   '&:active': { cursor: 'grabbing' },
                 }}
@@ -1061,12 +1092,13 @@ const OcrReviewPage: React.FC = () => {
                 )}
                 {!imageLoadFailed ? (
                   <Box
+                    ref={wrapperRef}
                     onMouseDown={onImageMouseDown}
                     sx={{
                       position: 'relative',
                       width: `${imageZoom}%`,
                       maxWidth: 'none',
-                      flexShrink: 0,
+                      mx: 'auto',
                     }}
                   >
                     <Box
