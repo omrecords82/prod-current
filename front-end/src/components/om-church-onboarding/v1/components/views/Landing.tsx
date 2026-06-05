@@ -1,4 +1,5 @@
 import SiteFooter from '@/components/frontend-pages/shared/footer/SiteFooter';
+import { useEffect, useState } from "react";
 import {
   ArrowRight,
   ClipboardCheck,
@@ -21,51 +22,115 @@ type Props = {
   onToggleTheme: () => void;
 };
 
-/** Figma: baptism-small-footer 1 (node 65:24) — stacked sacrament illustrations */
+/** Figma: baptism-small-footer 1 (node 65:24) — sacrament illustrations */
 const SACRAMENT_ILLUSTRATIONS = [
   { key: "baptism", label: "Baptism Records", width: 233 },
   { key: "marriage", label: "Marriage Records", width: 233 },
   { key: "funeral", label: "Funeral Records", width: 292 },
 ] as const;
 
-function SacramentIllustrationStack() {
+const SACRAMENT_ROTATE_MS = 5000;
+const SACRAMENT_VIEWPORT_HEIGHT = 275;
+
+function SacramentIllustrationRotator({
+  onSlideChange,
+}: {
+  onSlideChange?: (index: number) => void;
+}) {
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [paused, setPaused] = useState(false);
+
+  useEffect(() => {
+    onSlideChange?.(activeIndex);
+  }, [activeIndex, onSlideChange]);
+
+  useEffect(() => {
+    if (paused) return;
+    const prefersReduced =
+      typeof window !== "undefined" &&
+      window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    if (prefersReduced) return;
+
+    const id = window.setInterval(() => {
+      setActiveIndex((i) => (i + 1) % SACRAMENT_ILLUSTRATIONS.length);
+    }, SACRAMENT_ROTATE_MS);
+
+    return () => window.clearInterval(id);
+  }, [paused]);
+
+  const active = SACRAMENT_ILLUSTRATIONS[activeIndex];
+
   return (
     <div
-      className="flex flex-col items-center gap-[10px] w-[345px] max-w-full min-h-[885px] mx-auto"
-      role="group"
-      aria-label="Sacramental record types: baptism, marriage, and funeral"
+      className="relative mx-auto w-full max-w-[292px]"
+      style={{ height: SACRAMENT_VIEWPORT_HEIGHT }}
+      role="region"
+      aria-roledescription="carousel"
+      aria-label="Sacramental record illustrations"
+      aria-live="polite"
+      onMouseEnter={() => setPaused(true)}
+      onMouseLeave={() => setPaused(false)}
+      onFocusCapture={() => setPaused(true)}
+      onBlurCapture={(e) => {
+        if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setPaused(false);
+      }}
     >
-      {SACRAMENT_ILLUSTRATIONS.map(({ key, label, width }) => (
-        <div
-          key={key}
-          className="relative shrink-0 w-full flex justify-center"
-          style={{ maxWidth: width, height: 275 }}
-        >
-          <img
-            src={`/images/enroll/${key}-enroll-light.png`}
-            alt={label}
-            width={width}
-            height={275}
-            className="max-w-full h-full w-auto object-contain object-center dark:hidden"
-            loading="lazy"
-            decoding="async"
+      {SACRAMENT_ILLUSTRATIONS.map(({ key, label, width }, i) => {
+        const isActive = i === activeIndex;
+        return (
+          <div
+            key={key}
+            className={`absolute inset-0 flex items-center justify-center transition-opacity duration-500 ease-in-out ${
+              isActive ? "opacity-100 z-10" : "opacity-0 z-0 pointer-events-none"
+            }`}
+            aria-hidden={!isActive}
+          >
+            <img
+              src={`/images/enroll/${key}-enroll-light.png`}
+              alt={isActive ? label : ""}
+              width={width}
+              height={SACRAMENT_VIEWPORT_HEIGHT}
+              className="max-h-full max-w-full w-auto object-contain object-center dark:hidden"
+              loading={i === 0 ? "eager" : "lazy"}
+              decoding="async"
+            />
+            <img
+              src={`/images/enroll/${key}-enroll-dark.png`}
+              alt={isActive ? label : ""}
+              width={width}
+              height={SACRAMENT_VIEWPORT_HEIGHT}
+              className="max-h-full max-w-full w-auto object-contain object-center hidden dark:block"
+              loading={i === 0 ? "eager" : "lazy"}
+              decoding="async"
+            />
+          </div>
+        );
+      })}
+      <p className="sr-only">Now showing: {active.label}</p>
+      <div className="absolute -bottom-8 left-0 right-0 flex justify-center gap-2" role="tablist" aria-label="Sacrament slides">
+        {SACRAMENT_ILLUSTRATIONS.map(({ label }, i) => (
+          <button
+            key={label}
+            type="button"
+            role="tab"
+            aria-selected={i === activeIndex}
+            aria-label={label}
+            onClick={() => setActiveIndex(i)}
+            className={`h-2 rounded-full transition-all ${
+              i === activeIndex
+                ? "w-8 bg-[#2d1b4e] dark:bg-[#d4af37]"
+                : "w-2 bg-[rgba(45,27,78,0.2)] dark:bg-white/25"
+            }`}
           />
-          <img
-            src={`/images/enroll/${key}-enroll-dark.png`}
-            alt={label}
-            width={width}
-            height={275}
-            className="max-w-full h-full w-auto object-contain object-center hidden dark:block"
-            loading="lazy"
-            decoding="async"
-          />
-        </div>
-      ))}
+        ))}
+      </div>
     </div>
   );
 }
 
 export function Landing({ onStart, onAdmin, theme, onToggleTheme }: Props) {
+  const [activeSacrament, setActiveSacrament] = useState(0);
+
   return (
     <div className="flex-1 w-full bg-background text-foreground flex flex-col">
       <header className="border-b border-border bg-card/60 backdrop-blur sticky top-0 z-10">
@@ -170,11 +235,16 @@ export function Landing({ onStart, onAdmin, theme, onToggleTheme }: Props) {
       </section>
 
       <section className="border-t border-border bg-white dark:bg-[#0d1117]">
-        <div className="max-w-6xl mx-auto px-6 py-16 grid lg:grid-cols-[345px_1fr] gap-12 lg:gap-16 items-start">
-          <SacramentIllustrationStack />
-          <div className="space-y-8 pt-4 lg:pt-8">
-            {SACRAMENT_ILLUSTRATIONS.map(({ key, label }) => (
-              <div key={key}>
+        <div className="max-w-6xl mx-auto px-6 py-16 pb-20 grid lg:grid-cols-[345px_1fr] gap-12 lg:gap-16 items-start">
+          <SacramentIllustrationRotator onSlideChange={setActiveSacrament} />
+          <div className="space-y-8 pt-4 lg:pt-8 min-h-[275px]">
+            {SACRAMENT_ILLUSTRATIONS.map(({ key, label }, i) => (
+              <div
+                key={key}
+                className={`transition-opacity duration-500 ${
+                  i === activeSacrament ? "opacity-100" : "opacity-40"
+                }`}
+              >
                 <h3 className="font-['Georgia'] text-xl text-[#2d1b4e] dark:text-[#d4af37] mb-1">
                   {label}
                 </h3>
