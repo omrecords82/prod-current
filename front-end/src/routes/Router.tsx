@@ -762,19 +762,7 @@ const Router = [
       },
       {
         path: '/apps/ocr-upload',
-        element: (
-          <ProtectedRoute requiredRole={['super_admin', 'admin', 'church_admin', 'priest']}>
-            <AdminErrorBoundary>
-              <EnvironmentAwarePage
-                featureId="ocr-studio"
-                priority={4}
-                featureName="OCR Upload"
-              >
-                <OCRStudioPage />
-              </EnvironmentAwarePage>
-            </AdminErrorBoundary>
-          </ProtectedRoute>
-        )
+        element: <Navigate to="/devel/ocr-studio/upload" replace />,
       },
       {
         path: '/records/ocr-uploader',

@@ -472,3 +472,26 @@ export function normalizeTranscription(
   };
 }
 
+export interface OcrCorrectionEntry {
+  incorrect_value: string;
+  correct_value: string;
+}
+
+/**
+ * Apply learned/global OCR corrections to raw text (word-boundary safe).
+ */
+export function applyCorrectionDictionary(text: string, corrections: OcrCorrectionEntry[]): string {
+  if (!text || corrections.length === 0) return text;
+
+  let result = text;
+  const sorted = [...corrections]
+    .filter((c) => c.incorrect_value && c.correct_value && c.incorrect_value !== c.correct_value)
+    .sort((a, b) => b.incorrect_value.length - a.incorrect_value.length);
+
+  for (const { incorrect_value, correct_value } of sorted) {
+    const escaped = incorrect_value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    result = result.replace(new RegExp(`\\b${escaped}\\b`, 'g'), correct_value);
+  }
+  return result;
+}
+

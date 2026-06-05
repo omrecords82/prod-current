@@ -11,7 +11,8 @@ import {
 import {
     featureRoute,
     guardedFeatureRoute,
-    guardedRoute
+    guardedRoute,
+    redirectRoute,
 } from './routeConfigHelpers';
 
 /* ── Lazy imports ── */
@@ -44,4 +45,7 @@ export const develRoutes = [
   guardedRoute('/devel/ocr-studio/table-extractor', <OcrTableExtractorPage />, ROLE_SUPER),
   guardedRoute('/devel/ocr-studio/layout-templates', <LayoutTemplateEditorPage />, ROLE_SUPER),
   guardedRoute('/devel/ocr-studio/settings', <OCRSettingsPage />, ROLE_STAFF),
+  // Legacy OCR routes → canonical OCR Studio paths
+  redirectRoute('/devel/enhanced-ocr-uploader', '/devel/ocr-studio/upload'),
+  redirectRoute('/devel/om-ocr-studio', '/devel/ocr-studio'),
 ];

@@ -161,7 +161,7 @@ const appsLink: appsLinkType[] = [
     avatar: ddIcon7,
   },
   {
-    href: '/apps/ocr-upload',
+    href: '/devel/ocr-studio/upload',
     title: 'OCR Upload',
     subtext: 'Document processing',
     avatar: ddIcon5,

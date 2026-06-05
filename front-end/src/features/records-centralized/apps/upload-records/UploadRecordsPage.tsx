@@ -13,6 +13,7 @@
  */
 
 import { useAuth } from '@/context/AuthContext';
+import OcrSetupGate from '@/features/devel-tools/om-ocr/components/OcrSetupGate';
 import OcrWorkbench from '@/features/devel-tools/om-ocr/components/workbench/OcrWorkbench';
 import { WorkbenchProvider } from '@/features/devel-tools/om-ocr/context/WorkbenchContext';
 import { apiClient } from '@/shared/lib/axiosInstance';
@@ -89,6 +90,16 @@ const uid = () => `urf_${++_uid}_${Date.now()}`;
 
 const ACCEPTED_RE = /\.(jpe?g|png|tiff?)$/i;
 const ACCEPTED_TYPES = '.jpg,.jpeg,.png,.tif,.tiff';
+const RECORD_TYPES = ['custom', 'baptism', 'marriage', 'funeral'] as const;
+type UploadRecordType = typeof RECORD_TYPES[number];
+
+const normalizeOcrLanguage = (raw?: string | null): string => {
+  if (!raw) return 'en';
+  const code = raw.toLowerCase().trim();
+  if (code.length === 2) return code;
+  const map: Record<string, string> = { eng: 'en', gre: 'el', ell: 'el', rus: 'ru', ara: 'ar', ron: 'ro' };
+  return map[code] || code.slice(0, 2);
+};
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Review status config
@@ -209,6 +220,11 @@ const UploadRecordsPage: React.FC = () => {
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historyFilter, setHistoryFilter] = useState<string>('all');
 
+  // Church OCR settings (language + record type for uploads)
+  const [ocrLanguage, setOcrLanguage] = useState('en');
+  const [recordType, setRecordType] = useState<UploadRecordType>('custom');
+  const [settingsLoading, setSettingsLoading] = useState(false);
+
   // Derived upload stats
   const hasActiveJobs = queue.some((f) => ['queued', 'processing', 'uploading'].includes(f.status));
   const allDone = queue.length > 0 && queue.every((f) => ['completed', 'failed', 'error'].includes(f.status));
@@ -234,6 +250,34 @@ const UploadRecordsPage: React.FC = () => {
       } catch { setChurches([]); }
     })();
   }, [isAdmin]);
+
+  // ─── Load church OCR settings ──
+  useEffect(() => {
+    if (!effectiveChurchId) return;
+    let cancelled = false;
+    (async () => {
+      setSettingsLoading(true);
+      try {
+        const res: any = await apiClient.get(`/api/church/${effectiveChurchId}/ocr/settings`);
+        const data = res?.data ?? res;
+        if (cancelled) return;
+        const lang = normalizeOcrLanguage(data?.defaultLanguage || data?.language);
+        setOcrLanguage(lang);
+        const savedType = data?.documentProcessing?.defaultRecordType;
+        if (savedType && RECORD_TYPES.includes(savedType)) {
+          setRecordType(savedType);
+        }
+      } catch {
+        if (!cancelled) {
+          setOcrLanguage('en');
+          setRecordType('custom');
+        }
+      } finally {
+        if (!cancelled) setSettingsLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [effectiveChurchId]);
 
   // ─── Fetch upload history ──
   const fetchHistory = useCallback(async () => {
@@ -316,8 +360,8 @@ const UploadRecordsPage: React.FC = () => {
         const formData = new FormData();
         formData.append('files', item.file);
         formData.append('churchId', effectiveChurchId.toString());
-        formData.append('recordType', 'custom');
-        formData.append('language', 'en');
+        formData.append('recordType', recordType);
+        formData.append('language', ocrLanguage);
         const response: any = await apiClient.post('/api/ocr/jobs/upload', formData);
         const jobs = response.data?.jobs || response.jobs || [];
         const jobId = jobs.length > 0 ? String(jobs[0].id) : undefined;
@@ -334,7 +378,7 @@ const UploadRecordsPage: React.FC = () => {
       }
     }
     setIsUploading(false);
-  }, [effectiveChurchId, queue]);
+  }, [effectiveChurchId, queue, recordType, ocrLanguage]);
 
   // ─── Admin: update review status ──
   const updateReviewStatus = useCallback(async (jobId: string, review_status: ReviewStatus, review_notes?: string) => {
@@ -363,6 +407,7 @@ const UploadRecordsPage: React.FC = () => {
   // ═══════════════════════════════════════════════════════════════════════════
 
   return (
+    <OcrSetupGate churchId={effectiveChurchId}>
     <Box sx={{ py: 3, px: { xs: 1.5, md: 3 }, maxWidth: 1100, mx: 'auto' }}>
       {/* Page header */}
       <Box sx={{ mb: 3 }}>
@@ -416,6 +461,50 @@ const UploadRecordsPage: React.FC = () => {
           {/* ════════════ TAB 0: UPLOAD ════════════ */}
           {activeTab === 0 && (
             <Box>
+              <Paper variant="outlined" sx={{ p: 2, mb: 2, display: 'flex', flexWrap: 'wrap', gap: 2 }}>
+                <FormControl size="small" sx={{ minWidth: 160 }}>
+                  <InputLabel>Record Type</InputLabel>
+                  <Select
+                    value={recordType}
+                    label="Record Type"
+                    onChange={(e) => setRecordType(e.target.value as UploadRecordType)}
+                  >
+                    <MenuItem value="custom">Auto-detect</MenuItem>
+                    <MenuItem value="baptism">Baptism</MenuItem>
+                    <MenuItem value="marriage">Marriage</MenuItem>
+                    <MenuItem value="funeral">Funeral</MenuItem>
+                  </Select>
+                </FormControl>
+                <FormControl size="small" sx={{ minWidth: 140 }}>
+                  <InputLabel>Language</InputLabel>
+                  <Select
+                    value={ocrLanguage}
+                    label="Language"
+                    disabled={settingsLoading}
+                    onChange={(e) => setOcrLanguage(e.target.value)}
+                  >
+                    <MenuItem value="en">English</MenuItem>
+                    <MenuItem value="el">Greek</MenuItem>
+                    <MenuItem value="ru">Russian</MenuItem>
+                    <MenuItem value="ar">Arabic</MenuItem>
+                    <MenuItem value="ro">Romanian</MenuItem>
+                  </Select>
+                </FormControl>
+                <Box sx={{ flex: 1, minWidth: 200, display: 'flex', alignItems: 'center' }}>
+                  <Typography variant="caption" color="text.secondary">
+                    Defaults from church OCR settings. Change in{' '}
+                    <Button
+                      size="small"
+                      variant="text"
+                      sx={{ p: 0, minWidth: 0, verticalAlign: 'baseline', textTransform: 'none' }}
+                      href={`/devel/ocr-studio/settings?church_id=${effectiveChurchId}`}
+                    >
+                      OCR Settings
+                    </Button>
+                  </Typography>
+                </Box>
+              </Paper>
+
               {/* Drop zone */}
               <Paper
                 variant="outlined"
@@ -667,6 +756,7 @@ const UploadRecordsPage: React.FC = () => {
         </>
       )}
     </Box>
+    </OcrSetupGate>
   );
 };
 

@@ -240,9 +240,9 @@ export const SuperAdminMenuTemplate: MenuTemplateItem[] = [
       },
       {
         id: 'church.ocr-uploader',
-        title: 'OCR Enhanced Uploader',
+        title: 'OCR Upload',
         icon: IconFileDescription,
-        href: '/devel/enhanced-ocr-uploader',
+        href: '/devel/ocr-studio/upload',
       },
     ],
   },
@@ -335,9 +335,9 @@ export const SuperAdminMenuTemplate: MenuTemplateItem[] = [
       },
       {
         id: 'devel.ocr-uploader',
-        title: 'Enhanced OCR Uploader',
+        title: 'OCR Upload',
         icon: IconFileDescription,
-        href: '/devel/enhanced-ocr-uploader',
+        href: '/devel/ocr-studio/upload',
       },
       {
         id: 'devel.ocr-settings',

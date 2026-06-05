@@ -225,11 +225,9 @@ const ADMIN_MAP: SiteNode[] = [
   },
   {
     label: 'OCR Studio', icon: <OcrIcon />, roles: ['admin', 'super_admin'], children: [
-      { label: 'OCR Upload', path: '/apps/ocr-upload', icon: <ScanIcon />, badge: 'SDLC' },
       { label: 'OCR Studio', path: '/devel/ocr-studio', icon: <OcrIcon />, badge: 'SDLC' },
-      { label: 'OCR Uploader', path: '/records/ocr-uploader', icon: <ScanIcon /> },
-      { label: 'OM OCR Studio', path: '/devel/om-ocr-studio', icon: <OcrIcon /> },
-      { label: 'OCR Studio Upload', path: '/devel/ocr-studio/upload', icon: <ScanIcon /> },
+      { label: 'OCR Upload', path: '/devel/ocr-studio/upload', icon: <ScanIcon />, badge: 'SDLC' },
+      { label: 'Portal OCR Uploader', path: '/records/ocr-uploader', icon: <ScanIcon /> },
       { label: 'OCR Setup Wizard', path: '/devel/ocr-setup-wizard', icon: <OcrIcon /> },
       { label: 'OCR Activity Monitor', path: '/devel/ocr-activity-monitor', icon: <AnalyticsIcon />, roles: ['super_admin'] },
       { label: 'OCR Jobs', path: '/devel/ocr-studio/jobs', icon: <OcrIcon />, roles: ['super_admin'] },

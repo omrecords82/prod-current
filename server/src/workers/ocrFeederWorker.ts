@@ -58,6 +58,41 @@ const readFile = promisify(fs.readFile);
 const writeFile = promisify(fs.writeFile);
 const mkdirp = (dir: string) => fs.mkdirSync(dir, { recursive: true });
 
+// ── Global OCR corrections (cached) ─────────────────────────────────────────
+type CorrectionPair = { incorrect_value: string; correct_value: string };
+let globalCorrectionsCache: { loadedAt: number; byType: Map<string, CorrectionPair[]> } | null = null;
+const CORRECTIONS_CACHE_TTL_MS = 5 * 60 * 1000;
+
+async function loadGlobalCorrections(recordType: string): Promise<CorrectionPair[]> {
+  const now = Date.now();
+  if (!globalCorrectionsCache || now - globalCorrectionsCache.loadedAt > CORRECTIONS_CACHE_TTL_MS) {
+    const byType = new Map<string, CorrectionPair[]>();
+    try {
+      const [rows] = await platformPool.query(
+        `SELECT record_type, incorrect_value, correct_value
+         FROM ocr_global_corrections
+         ORDER BY correction_count DESC
+         LIMIT 2000`
+      ) as any[];
+      for (const row of rows || []) {
+        const key = row.record_type || 'custom';
+        if (!byType.has(key)) byType.set(key, []);
+        byType.get(key)!.push({
+          incorrect_value: String(row.incorrect_value),
+          correct_value: String(row.correct_value),
+        });
+      }
+      globalCorrectionsCache = { loadedAt: now, byType };
+    } catch (err: any) {
+      console.warn(`[OCR Worker] Global corrections load failed: ${err.message}`);
+      return [];
+    }
+  }
+  const specific = globalCorrectionsCache!.byType.get(recordType) || [];
+  const fallback = globalCorrectionsCache!.byType.get('custom') || [];
+  return [...specific, ...fallback];
+}
+
 // ── Graceful shutdown support ───────────────────────────────────────────────
 let _shutdownRequested = false;
 
@@ -1786,13 +1821,15 @@ async function processPage(tenantPool: Pool, page: PageRow): Promise<void> {
     let templateHeaderY: number | null = null;
 
     try {
-      // Look up job's record_type from platform DB
+      // Look up job's record_type and church_id from platform DB
+      let jobChurchId: number | null = null;
       try {
         const [jobRows] = await platformPool.query(
-          `SELECT record_type FROM ocr_jobs WHERE id = ?`, [page.job_id]
+          `SELECT record_type, church_id FROM ocr_jobs WHERE id = ?`, [page.job_id]
         ) as any[];
-        if (jobRows.length > 0 && jobRows[0].record_type) {
-          recordType = jobRows[0].record_type;
+        if (jobRows.length > 0) {
+          if (jobRows[0].record_type) recordType = jobRows[0].record_type;
+          if (jobRows[0].church_id) jobChurchId = Number(jobRows[0].church_id);
         }
       } catch (_: any) { /* best effort */ }
 
@@ -1823,13 +1860,21 @@ async function processPage(tenantPool: Pool, page: PageRow): Promise<void> {
         ) as any[];
         templateId = tplJobRows[0]?.layout_template_id || null;
 
-        // Fallback: find default template for this record_type
+        // Fallback: church-specific default template, then global default
         if (!templateId) {
+          const tplParams: any[] = [recordType];
+          let churchClause = '';
+          if (jobChurchId) {
+            churchClause = ' AND (church_id IS NULL OR church_id = ?)';
+            tplParams.push(jobChurchId);
+          }
           const [defaultRows] = await platformPool.query(
             `SELECT id, extraction_mode, column_bands, header_y_threshold, record_regions, learned_params
              FROM ocr_extractors
-             WHERE record_type = ? AND is_default = 1 LIMIT 1`,
-            [recordType]
+             WHERE record_type = ? AND is_default = 1${churchClause}
+             ORDER BY (church_id IS NOT NULL) DESC
+             LIMIT 1`,
+            tplParams
           ) as any[];
           if (defaultRows.length > 0) {
             templateId = defaultRows[0].id;
@@ -2559,82 +2604,23 @@ async function processJob(job: JobRow): Promise<void> {
   const tenantPool: Pool = getTenantPool(churchId);
   console.log(`OCR_TENANT_READY ${JSON.stringify({ jobId, tenantSchema: schema })}`);
 
-  // Get pages for this job from TENANT DB
-  const [pages] = await tenantPool.execute<PageRow[]>(
+  // Get pages for this job from TENANT DB (seed if missing — legacy jobs)
+  let [pages] = await tenantPool.execute<PageRow[]>(
     `SELECT * FROM ocr_feeder_pages WHERE job_id = ? ORDER BY page_index ASC`,
     [jobId]
   );
 
   if (pages.length === 0) {
-    console.log(`  No feeder pages for job ${jobId} — processing job image directly via processOcrJobAsync`);
-
-    // Delegate to processOcrJobAsync — pass PLATFORM pool so it writes to orthodoxmetrics_db.ocr_jobs
-    const { processOcrJobAsync } = require('../ocr/processOcrJobAsync');
-    if (typeof processOcrJobAsync === 'function') {
-      await processOcrJobAsync(platformPool, jobId, filePath, {
-        churchId,
-        engine: 'google-vision',
-        language: language || 'en',
-        recordType: record_type || 'baptism',
-      });
-
-      // Read back final state for logging + run classifier
-      const [finalRows] = await platformPool.query(
-        `SELECT status, confidence_score, ocr_text, LENGTH(ocr_text) as ocr_text_len FROM ocr_jobs WHERE id = ?`, [jobId]
-      ) as any[];
-      const final = finalRows[0];
-      if (final?.status === 'complete') {
-        console.log(`OCR_JOB_COMPLETE ${JSON.stringify({ jobId, confidenceScore: final.confidence_score, ocrTextLen: final.ocr_text_len })}`);
-        dbLogger.success('OCR:Worker', `Job ${jobId} completed (direct processing)`, {
-          jobId, churchId, confidenceScore: final.confidence_score, ocrTextLen: final.ocr_text_len
-        }, null, 'ocr-worker');
-
-        // Run classifier on OCR text
-        if (final.ocr_text) {
-          try {
-            const classResult = classifyRecordType(final.ocr_text);
-            await platformPool.query(
-              `UPDATE ocr_jobs SET classifier_suggested_type = ?, classifier_confidence = ? WHERE id = ?`,
-              [classResult.suggested_type, classResult.confidence, jobId]
-            );
-            console.log(`OCR_CLASSIFIER ${JSON.stringify({ jobId, suggested: classResult.suggested_type, confidence: classResult.confidence })}`);
-          } catch (classErr: any) {
-            console.warn(`[OCR Worker] Classifier failed for job ${jobId}: ${classErr.message}`);
-          }
-        }
-
-        // Store raw_text as artifact in tenant DB
-        try {
-          const [pageRows] = await tenantPool.execute(
-            `SELECT id FROM ocr_feeder_pages WHERE job_id = ? LIMIT 1`, [jobId]
-          ) as any[];
-          if (pageRows.length > 0) {
-            await tenantPool.execute(
-              `INSERT INTO ocr_feeder_artifacts (page_id, type, json_blob, meta_json, created_at)
-               VALUES (?, 'raw_text', ?, ?, NOW())`,
-              [pageRows[0].id, final.ocr_text?.substring(0, 65000) || '', JSON.stringify({ source: 'processOcrJobAsync', jobId })]
-            );
-          }
-        } catch (_: any) { /* best effort artifact storage */ }
-
-        // Sync completion back to church DB (so GET /api/church/:id/ocr/jobs sees it)
-        try {
-          await tenantPool.execute(
-            `UPDATE ocr_jobs SET status = 'complete', confidence_score = ?, ocr_text = ?, updated_at = NOW()
-             WHERE church_id = ? AND filename = ? AND status IN ('queued', 'processing')`,
-            [final.confidence_score, final.ocr_text, churchId, filename]
-          );
-          console.log(`OCR_CHURCH_DB_SYNC job=${jobId} church=${churchId} filename=${filename}`);
-        } catch (syncErr: any) {
-          console.warn(`[OCR Worker] Church DB sync failed (non-blocking): ${syncErr.message}`);
-        }
-      } else {
-        console.log(`OCR_JOB_ERROR ${JSON.stringify({ jobId, code: 'PROCESS_RESULT', message: `Job ended with status=${final?.status}` })}`);
-      }
-    } else {
-      throw new Error('processOcrJobAsync not available from server/src/ocr/processOcrJobAsync');
-    }
-    return;
+    console.log(`  No feeder pages for job ${jobId} — seeding page from source image`);
+    await tenantPool.execute(
+      `INSERT INTO ocr_feeder_pages (job_id, page_index, status, input_path, created_at, updated_at)
+       VALUES (?, 0, 'queued', ?, NOW(), NOW())`,
+      [jobId, filePath]
+    );
+    [pages] = await tenantPool.execute<PageRow[]>(
+      `SELECT * FROM ocr_feeder_pages WHERE job_id = ? ORDER BY page_index ASC`,
+      [jobId]
+    );
   }
 
   // ── Feeder page pipeline ──────────────────────────────────────────────────
@@ -2721,6 +2707,23 @@ async function processJob(job: JobRow): Promise<void> {
     }
     if (confCount > 0) avgConfidence = confSum / confCount;
   } catch (_) { /* best effort */ }
+
+  // Apply global correction dictionary to combined OCR text
+  if (combinedText.trim()) {
+    try {
+      const { applyCorrectionDictionary } = require('../ocr/transcription/normalizeTranscription');
+      const corrections = await loadGlobalCorrections(record_type || 'custom');
+      if (corrections.length > 0) {
+        const corrected = applyCorrectionDictionary(combinedText, corrections);
+        if (corrected !== combinedText) {
+          console.log(`  Applied ${corrections.length} global corrections for job ${jobId}`);
+          combinedText = corrected;
+        }
+      }
+    } catch (corrErr: any) {
+      console.warn(`[OCR Worker] Global corrections skipped for job ${jobId}: ${corrErr.message}`);
+    }
+  }
 
   // Write results back to PLATFORM DB — only valid columns
   try {
