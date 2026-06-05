@@ -154,25 +154,14 @@ const TourInteractiveDemo = () => {
       };
 
   return (
-    <section className="py-20 om-section-base" aria-label="Interactive product demo">
+    <section className="py-12 md:py-16 om-section-base" aria-label="Interactive product demo">
       <div className="max-w-7xl mx-auto px-6">
-        {/* Section header */}
-        <div className="text-center mb-12">
-          <div className="om-badge-primary mb-4 inline-flex">
-            <EditableText contentKey="tour.demo.badge" as="span" className="om-text-primary text-[14px]">
-              {tx(translations,'tour.demo_badge', 'See It In Action')}
-            </EditableText>
-          </div>
-          <EditableText contentKey="tour.demo.heading" as="h1" className="om-heading-primary mb-3">
-            {tx(translations,'tour.demo_heading', 'How Orthodox Metrics Works')}
-          </EditableText>
-          <EditableText contentKey="tour.demo.subheading" as="p" className="om-text-body max-w-2xl mx-auto">
-            {tx(translations,'tour.demo_subheading', 'Experience the complete workflow — from paper records to parish insights — in four simple steps.')}
-          </EditableText>
-        </div>
+        <p className="sr-only">
+          {tx(translations,'tour.demo_subheading', 'Experience the complete workflow — from paper records to parish insights — in four simple steps.')}
+        </p>
 
         {/* Step indicator pills */}
-        <div className="flex items-center justify-center gap-2 mb-10" role="tablist" aria-label="Demo steps">
+        <div className="flex flex-wrap items-center justify-center gap-2 mb-8 md:mb-10 px-1" role="tablist" aria-label="Demo steps">
           {STEPS.map((s, i) => {
             const Icon = s.icon;
             const isActive = i === activeStep;

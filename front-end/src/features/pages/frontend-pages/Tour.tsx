@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import { Shield, Users, FileText, Calendar } from '@/ui/icons';
 import { PUBLIC_ROUTES } from '@/config/publicRoutes';
-import { CTASection, HeroSection } from '@/components/frontend-pages/shared/sections';
+import { HeroSection } from '@/components/frontend-pages/shared/sections';
 import EditableText from '@/components/frontend-pages/shared/EditableText';
 import { TourInteractiveDemo } from '@/components/frontend-pages/tour';
 import PublicSeo from '@/components/seo/PublicSeo';
@@ -55,12 +55,6 @@ const Tour = () => {
           </div>
         </div>
       </section>
-
-      {/* CTA */}
-      <CTASection title={t('tour.cta_title')} subtitle={t('tour.cta_subtitle')} editKeyPrefix="tour.cta">
-        <Link to={PUBLIC_ROUTES.ENROLL} className="om-btn-accent">{t('common.enroll_parish')}</Link>
-        <Link to={PUBLIC_ROUTES.CONTACT} className="om-btn-secondary">{t('common.contact_us')}</Link>
-      </CTASection>
     </>
   );
 };

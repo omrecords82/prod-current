@@ -332,9 +332,23 @@ export function Onboarding({ onCancel, onComplete, theme, onToggleTheme }: Props
 
   const selectedModules = Object.entries(modules).filter(([, v]) => v).map(([k]) => k);
 
+  const stepButtonClass = (done: boolean, active: boolean) =>
+    active
+      ? "bg-[#2d1b4e] dark:bg-[#1e2a3a] dark:border-l-2 dark:border-l-[#d4af37] text-white"
+      : done
+        ? "text-foreground hover:bg-muted dark:hover:bg-[#1e2a3a]/60"
+        : "text-muted-foreground";
+
+  const stepBadgeClass = (done: boolean, active: boolean) =>
+    active
+      ? "bg-[#d4af37] text-[#2d1b4e]"
+      : done
+        ? "bg-[#d4af37]/30 text-[#2d1b4e] dark:text-[#d4af37]"
+        : "border border-border";
+
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      <header className="border-b border-border bg-card">
+    <div className="flex-1 w-full bg-background text-foreground flex flex-col">
+      <header className="border-b border-border bg-card shrink-0">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           <a href="/" className="flex items-center no-underline">
             <Logo colorScheme={theme} size="md" />
@@ -348,8 +362,41 @@ export function Onboarding({ onCancel, onComplete, theme, onToggleTheme }: Props
         </div>
       </header>
 
-      <div className="max-w-7xl mx-auto px-6 py-10 grid lg:grid-cols-[260px_1fr] gap-10">
-        <aside>
+      <div className="flex-1 max-w-7xl mx-auto px-6 py-6 lg:py-10 w-full">
+        <nav
+          className="lg:hidden -mx-6 px-4 mb-6 overflow-x-auto overscroll-x-contain"
+          aria-label="Enrollment progress"
+        >
+          <ol className="flex gap-2 min-w-max pb-1">
+            {steps.map((s, i) => {
+              const done = i < stepIndex;
+              const active = i === stepIndex;
+              return (
+                <li key={s.key} className="shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => { if (i <= stepIndex) { setTriedNext(false); setStep(s.key); } }}
+                    disabled={i > stepIndex}
+                    aria-current={active ? "step" : undefined}
+                    className={`flex items-center gap-2 px-3 py-2 rounded-full text-left transition-colors whitespace-nowrap ${stepButtonClass(done, active)} ${
+                      i > stepIndex ? "opacity-50 cursor-not-allowed" : ""
+                    }`}
+                  >
+                    <span
+                      className={`h-7 w-7 rounded-full flex items-center justify-center text-xs shrink-0 ${stepBadgeClass(done, active)}`}
+                    >
+                      {done ? <Check className="h-3.5 w-3.5" /> : s.n}
+                    </span>
+                    <span className="text-xs font-medium max-w-[7rem] truncate sm:max-w-none">{s.label}</span>
+                  </button>
+                </li>
+              );
+            })}
+          </ol>
+        </nav>
+
+        <div className="grid lg:grid-cols-[260px_1fr] gap-10">
+        <aside className="hidden lg:block">
           <div className="text-xs uppercase tracking-[0.18em] text-muted-foreground mb-1">
             Onboarding Wizard
           </div>
@@ -368,23 +415,12 @@ export function Onboarding({ onCancel, onComplete, theme, onToggleTheme }: Props
               return (
                 <li key={s.key}>
                   <button
+                    type="button"
                     onClick={() => { if (i <= stepIndex) { setTriedNext(false); setStep(s.key); } }}
-                    className={`w-full flex items-center gap-3 px-3 py-3 rounded-md text-left transition-colors ${
-                      active
-                        ? "bg-[#2d1b4e] dark:bg-[#1e2a3a] dark:border-l-2 dark:border-l-[#d4af37] text-white"
-                        : done
-                          ? "text-foreground hover:bg-muted dark:hover:bg-[#1e2a3a]/60"
-                          : "text-muted-foreground"
-                    }`}
+                    className={`w-full flex items-center gap-3 px-3 py-3 rounded-md text-left transition-colors ${stepButtonClass(done, active)}`}
                   >
                     <span
-                      className={`h-6 w-6 rounded-full flex items-center justify-center text-xs shrink-0 ${
-                        active
-                          ? "bg-[#d4af37] text-[#2d1b4e]"
-                          : done
-                            ? "bg-[#d4af37]/30 text-[#2d1b4e] dark:text-[#d4af37]"
-                            : "border border-border"
-                      }`}
+                      className={`h-6 w-6 rounded-full flex items-center justify-center text-xs shrink-0 ${stepBadgeClass(done, active)}`}
                     >
                       {done ? <Check className="h-3.5 w-3.5" /> : s.n}
                     </span>
@@ -399,7 +435,7 @@ export function Onboarding({ onCancel, onComplete, theme, onToggleTheme }: Props
           </ol>
         </aside>
 
-        <div className="space-y-6">
+        <div className="space-y-6 min-w-0">
           {step === "find-parish" && (
             <FindParishStep parish={parish} setParish={setParish} theme={theme} />
           )}
@@ -508,6 +544,7 @@ export function Onboarding({ onCancel, onComplete, theme, onToggleTheme }: Props
               </div>
             </div>
           )}
+        </div>
         </div>
       </div>
       <SiteFooter />

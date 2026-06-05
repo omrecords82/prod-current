@@ -9,9 +9,9 @@ const SiteFooter = () => {
   return (
     <footer className="bg-[#2d1b4e] dark:bg-[#0d1117] text-white">
       <div className="max-w-7xl mx-auto px-6 py-8">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-5 gap-x-6 gap-y-8">
           {/* Brand */}
-          <div className="col-span-1">
+          <div className="col-span-2 lg:col-span-1">
             <a
               href={PUBLIC_ROUTES.HOME}
               className="no-underline inline-block mb-4"

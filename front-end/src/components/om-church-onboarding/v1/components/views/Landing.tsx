@@ -23,7 +23,7 @@ type Props = {
 
 export function Landing({ onStart, onAdmin, theme, onToggleTheme }: Props) {
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div className="flex-1 w-full bg-background text-foreground flex flex-col">
       <header className="border-b border-border bg-card/60 backdrop-blur sticky top-0 z-10">
         <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
           <a href="/" className="flex items-center no-underline">

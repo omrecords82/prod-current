@@ -14,25 +14,29 @@ export default function App() {
   const toggleTheme = () => setActiveMode(activeMode === "dark" ? "light" : "dark");
 
   return (
-    <div className={`om-cornerstone-scope min-h-screen ${theme === "dark" ? "dark" : ""}`}>
+    <div className={`om-cornerstone-scope min-h-screen flex flex-col ${theme === "dark" ? "dark" : ""}`}>
       {view === "landing" && (
-        <Landing
-          theme={theme}
-          onToggleTheme={toggleTheme}
-          onStart={() => setView("onboarding")}
-          onAdmin={() => {
-            window.location.href = "/auth/login";
-          }}
-        />
+        <div className="flex-1 flex flex-col min-h-0">
+          <Landing
+            theme={theme}
+            onToggleTheme={toggleTheme}
+            onStart={() => setView("onboarding")}
+            onAdmin={() => {
+              window.location.href = "/auth/login";
+            }}
+          />
+        </div>
       )}
 
       {view === "onboarding" && (
-        <Onboarding
-          theme={theme}
-          onToggleTheme={toggleTheme}
-          onCancel={() => setView("landing")}
-          onComplete={() => setView("complete")}
-        />
+        <div className="flex-1 flex flex-col min-h-0">
+          <Onboarding
+            theme={theme}
+            onToggleTheme={toggleTheme}
+            onCancel={() => setView("landing")}
+            onComplete={() => setView("complete")}
+          />
+        </div>
       )}
 
       {view === "complete" && (
