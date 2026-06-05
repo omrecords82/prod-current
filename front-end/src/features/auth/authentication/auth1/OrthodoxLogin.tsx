@@ -34,9 +34,20 @@ const OrthodoxLogin: React.FC = () => {
         setError('');
 
         try {
-            const result = await login('', '');
+            const result = await login(email, password);
             if (result && typeof result === 'object' && 'pendingRedirect' in result && (result as { pendingRedirect?: boolean }).pendingRedirect) {
                 return;
+            }
+            const storedUserStr = localStorage.getItem('auth_user');
+            const currentUser = storedUserStr ? JSON.parse(storedUserStr) : null;
+            if (currentUser?.role === 'priest' && currentUser?.church_id) {
+                navigate(`/apps/records/baptism?church_id=${currentUser.church_id}`);
+                return;
+            }
+            if (result && typeof result === 'object' && 'redirectUrl' in result && result.redirectUrl) {
+                navigate(result.redirectUrl);
+            } else {
+                navigate('/');
             }
         } catch (err: any) {
             setError(err.message || 'Login failed');

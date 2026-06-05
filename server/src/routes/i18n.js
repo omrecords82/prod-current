@@ -665,6 +665,9 @@ const ENGLISH_DEFAULTS = {
   // Form fields
   'auth.label_email': 'Email or Username',
   'auth.label_password': 'Password',
+  'auth.label_otp': 'Authenticator code',
+  'auth.otp_placeholder': '6-digit code (if enabled)',
+  'auth.setup_authenticator': 'Set up authenticator app',
   'auth.remember_device': 'Remember this Device',
   'auth.forgot_password': 'Forgot Password?',
   'auth.btn_sign_in': 'Sign In',

@@ -170,11 +170,19 @@ function AuthProvider({ children }: AuthProviderProps) {
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Login failed';
       setError(errorMessage);
-      // Clear any partial auth state on failure
       setUser(null);
       localStorage.removeItem('auth_user');
       localStorage.removeItem('access_token');
-      throw new Error(errorMessage);
+      const wrapped = new Error(errorMessage) as Error & { setupUrl?: string; code?: string };
+      if (err && typeof err === 'object') {
+        if ('setupUrl' in err && typeof (err as { setupUrl?: string }).setupUrl === 'string') {
+          wrapped.setupUrl = (err as { setupUrl: string }).setupUrl;
+        }
+        if ('code' in err && typeof (err as { code?: string }).code === 'string') {
+          wrapped.code = (err as { code: string }).code;
+        }
+      }
+      throw wrapped;
     } finally {
       if (!awaitingOidcRedirect) {
         setLoading(false);
