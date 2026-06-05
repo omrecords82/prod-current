@@ -170,9 +170,45 @@ const OcrReviewPage: React.FC = () => {
     [jobs, selectedJobId]
   );
 
+  // The agent's record array order does not always line up with the table
+  // candidates (truncation, single confirmed record, LLM reordering). Resolve
+  // the candidate (image row) that actually matches the displayed record so the
+  // snippet/highlights track the fields, not just the array position.
+  const candidateIndex = useMemo(() => {
+    const cands = recordCandidates?.candidates;
+    if (!Array.isArray(cands) || !cands.length) return selectedRecordIndex;
+    const rec = allRecords[selectedRecordIndex] || fields || {};
+
+    const rn = (rec.record_number || '').toString().trim();
+    if (rn) {
+      const byNum = cands.findIndex(
+        (c: any) => ((c?.fields?.record_number ?? '').toString().trim()) === rn,
+      );
+      if (byNum >= 0) return byNum;
+    }
+
+    const nameKeys = ['child_name', 'groom_name', 'deceased_name', 'bride_name'];
+    const recName = nameKeys.map((k) => rec[k]).find(Boolean);
+    if (recName) {
+      const tokens = recName.toUpperCase().split(/\s+/).filter((t: string) => t.length > 2);
+      let best = -1;
+      let bestScore = 0;
+      cands.forEach((c: any, i: number) => {
+        const cn = nameKeys.map((k) => c?.fields?.[k]).filter(Boolean).join(' ').toUpperCase();
+        if (!cn) return;
+        let s = 0;
+        tokens.forEach((t: string) => { if (cn.includes(t)) s += 1; });
+        if (s > bestScore) { bestScore = s; best = i; }
+      });
+      if (best >= 0 && bestScore > 0) return best;
+    }
+
+    return Math.min(selectedRecordIndex, cands.length - 1);
+  }, [recordCandidates, allRecords, selectedRecordIndex, fields]);
+
   const reviewCropBbox = useMemo(
-    () => computeReviewCropBbox(tableExtractionJson, recordCandidates, selectedRecordIndex),
-    [tableExtractionJson, recordCandidates, selectedRecordIndex],
+    () => computeReviewCropBbox(tableExtractionJson, recordCandidates, candidateIndex),
+    [tableExtractionJson, recordCandidates, candidateIndex],
   );
 
   const useRecordSnippet = !!reviewCropBbox && !useFullPageImage;
@@ -186,10 +222,10 @@ const OcrReviewPage: React.FC = () => {
   const jobImageUrl = useMemo(() => {
     if (!churchId || !selectedJobId) return null;
     if (useRecordSnippet) {
-      return `/api/church/${churchId}/ocr/jobs/${selectedJobId}/record-crop/${selectedRecordIndex}?mode=review`;
+      return `/api/church/${churchId}/ocr/jobs/${selectedJobId}/record-crop/${candidateIndex}?mode=review`;
     }
     return fullPageImageUrl;
-  }, [churchId, selectedJobId, selectedRecordIndex, useRecordSnippet, fullPageImageUrl]);
+  }, [churchId, selectedJobId, candidateIndex, useRecordSnippet, fullPageImageUrl]);
 
   const loadJobArtifacts = useCallback(async (jobId: number) => {
     if (!churchId) return;
@@ -224,18 +260,18 @@ const OcrReviewPage: React.FC = () => {
     const regions = computeFieldRegions({
       tableExtractionJson,
       recordCandidates,
-      selectedRecordIndex,
+      selectedRecordIndex: candidateIndex,
       fieldKeys: fieldDefs.map((d) => d.name),
       columnBands: effectiveBands,
     });
     return fieldRegionsToBoxes(regions, pageDims, focusedField, activeCropBbox);
-  }, [tableExtractionJson, recordCandidates, selectedRecordIndex, focusedField, fieldDefs, effectiveBands, activeCropBbox]);
+  }, [tableExtractionJson, recordCandidates, candidateIndex, focusedField, fieldDefs, effectiveBands, activeCropBbox]);
 
   // Clickable per-cell tokens (only meaningful while a field is focused = map mode)
   const cellTokenOverlays = useMemo(() => {
     if (!mapMode || !tableExtractionJson?.page_dimensions) return [];
     const pageDims = tableExtractionJson.page_dimensions;
-    const tokens = computeCellTokens({ tableExtractionJson, recordCandidates, selectedRecordIndex });
+    const tokens = computeCellTokens({ tableExtractionJson, recordCandidates, selectedRecordIndex: candidateIndex });
     let boxes = tokens.map((t) => ({
       bbox: cellBboxToVision(t.frac, pageDims),
       color: '#1976d2',
@@ -243,7 +279,7 @@ const OcrReviewPage: React.FC = () => {
     }));
     if (activeCropBbox) boxes = adjustHighlightBoxesForCrop(boxes, pageDims, activeCropBbox);
     return boxes.map((b, i) => ({ id: `tok-${i}`, text: b.label as string, bbox: b.bbox }));
-  }, [mapMode, tableExtractionJson, recordCandidates, selectedRecordIndex, activeCropBbox]);
+  }, [mapMode, tableExtractionJson, recordCandidates, candidateIndex, activeCropBbox]);
 
   // Column guides live on the snippet (preprocessed crop). Band edges are
   // full-page fractions, so convert them into snippet-relative x.
@@ -1137,7 +1173,7 @@ const OcrReviewPage: React.FC = () => {
 
                     {imageReady && useRecordSnippet && visionPageSize.width > 0 && (fieldHighlightBoxes.length > 0 || cellTokenOverlays.length > 0) && (
                       <FusionOverlay
-                        key={`${selectedJobId}-${selectedRecordIndex}-${imageZoom}-${focusedField}-${columnBandsOverride ? 'ov' : 'def'}`}
+                        key={`${selectedJobId}-${candidateIndex}-${imageZoom}-${focusedField}-${columnBandsOverride ? 'ov' : 'def'}`}
                         boxes={fieldHighlightBoxes}
                         ocrTokens={mapMode ? cellTokenOverlays : []}
                         onTokenClick={handleTokenClick}
