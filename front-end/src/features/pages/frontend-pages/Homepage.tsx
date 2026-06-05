@@ -27,6 +27,10 @@ import { Link } from 'react-router-dom';
 const HIGHLIGHT_SLIDE_COUNT = 3;
 const HIGHLIGHT_AUTO_MS = 8000;
 
+/** Fixed viewport — tallest slide (features grid) sets height; inner slides scroll if needed. */
+const HIGHLIGHT_VIEWPORT_CLASS =
+  'relative h-[min(78vh,920px)] sm:h-[min(72vh,840px)] md:h-[620px] lg:h-[580px] overflow-hidden';
+
 function usePrefersReducedMotion(): boolean {
   const [reduced, setReduced] = useState(() => {
     if (typeof window === 'undefined' || !window.matchMedia) return false;
@@ -184,7 +188,7 @@ function HomepageHighlightCarousel() {
   const { t } = useLanguage();
   const prefersReducedMotion = usePrefersReducedMotion();
   const [slide, setSlide] = useState(0);
-  const [paused, setPaused] = useState(false);
+  const [hovered, setHovered] = useState(false);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const slideLabels = [
@@ -201,28 +205,25 @@ function HomepageHighlightCarousel() {
     setSlide((s) => (s + delta + HIGHLIGHT_SLIDE_COUNT) % HIGHLIGHT_SLIDE_COUNT);
   }, []);
 
-  const startAuto = useCallback(() => {
+  useEffect(() => {
     if (timerRef.current) clearInterval(timerRef.current);
+    if (!hovered || prefersReducedMotion) return;
     timerRef.current = setInterval(() => {
       setSlide((s) => (s + 1) % HIGHLIGHT_SLIDE_COUNT);
     }, HIGHLIGHT_AUTO_MS);
-  }, []);
-
-  useEffect(() => {
-    if (paused || prefersReducedMotion) {
-      if (timerRef.current) clearInterval(timerRef.current);
-      return;
-    }
-    startAuto();
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
-  }, [paused, prefersReducedMotion, startAuto]);
+  }, [hovered, prefersReducedMotion]);
 
   const handleManual = (delta: number) => {
     goRelative(delta);
-    startAuto();
   };
+
+  const slideLayerClass = (active: boolean) =>
+    `absolute inset-0 overflow-y-auto overscroll-contain px-2 md:px-8 transition-opacity duration-500 ease-in-out ${
+      active ? 'opacity-100 z-10 pointer-events-auto' : 'opacity-0 z-0 pointer-events-none'
+    }`;
 
   const arrowClass =
     'absolute top-1/2 -translate-y-1/2 z-20 flex h-11 w-11 items-center justify-center rounded-full border border-[rgba(45,27,78,0.15)] dark:border-white/15 bg-white dark:bg-[#161b22] text-[#2d1b4e] dark:text-[#d4af37] shadow-md hover:bg-[#f9fafb] dark:hover:bg-[#1e2a3a] transition-colors';
@@ -232,14 +233,16 @@ function HomepageHighlightCarousel() {
       className="py-20 bg-[#f9fafb] dark:bg-[#0d1117] relative"
       aria-roledescription="carousel"
       aria-label="What we do, process, and features"
-      onMouseEnter={() => setPaused(true)}
-      onMouseLeave={() => setPaused(false)}
-      onFocusCapture={() => setPaused(true)}
-      onBlurCapture={(e) => {
-        if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setPaused(false);
-      }}
     >
-      <div className="max-w-7xl mx-auto px-6 md:px-14 relative">
+      <div
+        className="max-w-7xl mx-auto px-6 md:px-14 relative"
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
+        onFocusCapture={() => setHovered(true)}
+        onBlurCapture={(e) => {
+          if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setHovered(false);
+        }}
+      >
         <button
           type="button"
           className={`${arrowClass} left-0 md:-left-2`}
@@ -257,29 +260,14 @@ function HomepageHighlightCarousel() {
           <ChevronRight size={24} />
         </button>
 
-        <div className="relative min-h-[420px] md:min-h-[480px] px-2 md:px-8">
-          <div
-            className={`transition-opacity duration-500 ease-in-out ${
-              slide === 0 ? 'opacity-100 relative z-10' : 'opacity-0 absolute inset-0 pointer-events-none z-0'
-            }`}
-            aria-hidden={slide !== 0}
-          >
+        <div className={HIGHLIGHT_VIEWPORT_CLASS}>
+          <div className={slideLayerClass(slide === 0)} aria-hidden={slide !== 0}>
             <WhatWeDoPanel />
           </div>
-          <div
-            className={`transition-opacity duration-500 ease-in-out ${
-              slide === 1 ? 'opacity-100 relative z-10' : 'opacity-0 absolute inset-0 pointer-events-none z-0'
-            }`}
-            aria-hidden={slide !== 1}
-          >
+          <div className={slideLayerClass(slide === 1)} aria-hidden={slide !== 1}>
             <SimpleProcessPanel />
           </div>
-          <div
-            className={`transition-opacity duration-500 ease-in-out ${
-              slide === 2 ? 'opacity-100 relative z-10' : 'opacity-0 absolute inset-0 pointer-events-none z-0'
-            }`}
-            aria-hidden={slide !== 2}
-          >
+          <div className={slideLayerClass(slide === 2)} aria-hidden={slide !== 2}>
             <FeaturesPanel />
           </div>
         </div>
@@ -292,10 +280,7 @@ function HomepageHighlightCarousel() {
               role="tab"
               aria-selected={slide === i}
               aria-label={label}
-              onClick={() => {
-                goTo(i);
-                startAuto();
-              }}
+              onClick={() => goTo(i)}
               className={`h-2 rounded-full transition-all ${
                 slide === i
                   ? 'w-8 bg-[#2d1b4e] dark:bg-[#d4af37]'
