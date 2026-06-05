@@ -35,7 +35,7 @@ function createRouters(upload: any) {
                record_type, language,
                confidence_score, ocr_text, ocr_result, error_regions,
                agent_status, ready_to_seed, seeded_at,
-               created_at, source_pipeline
+               created_at, source_pipeline, agent_extract_json
         FROM ocr_jobs
         WHERE church_id = ?
         ORDER BY created_at DESC
@@ -97,6 +97,29 @@ function createRouters(upload: any) {
           ocrTextPreview = '[OCR text available - click to view]';
         }
 
+        // Parse agent_extract_json to count records and confirmed ones
+        let recordsCount = null;
+        let confirmedCount = null;
+        if (job.agent_extract_json) {
+          try {
+            const parsed = typeof job.agent_extract_json === 'string'
+              ? JSON.parse(job.agent_extract_json)
+              : job.agent_extract_json;
+            if (parsed && typeof parsed === 'object') {
+              if (Array.isArray(parsed.records)) {
+                recordsCount = parsed.records.length;
+              } else if (parsed.fields && typeof parsed.fields === 'object') {
+                recordsCount = 1;
+              }
+              if (Array.isArray(parsed.confirmed_indexes)) {
+                confirmedCount = parsed.confirmed_indexes.length;
+              }
+            }
+          } catch (e: any) {
+            console.error(`[OCR Jobs GET] Error parsing agent_extract_json for job ${job.id}:`, e.message);
+          }
+        }
+
         return {
           id: job.id?.toString() || '',
           church_id: job.church_id?.toString() || churchId.toString(),
@@ -117,6 +140,8 @@ function createRouters(upload: any) {
           agent_status: job.agent_status || null,
           ready_to_seed: !!job.ready_to_seed,
           seeded_at: job.seeded_at || null,
+          records_count: recordsCount,
+          confirmed_count: confirmedCount,
         };
       });
 
@@ -260,7 +285,7 @@ function createRouters(upload: any) {
         `SELECT id, church_id, filename, status, review_status, record_type, language,
                 confidence_score, ocr_text, ocr_result, error_regions,
                 agent_status, agent_extract_json, ready_to_seed, seeded_at, variation_id,
-                created_at
+                created_at, layout_classification_json
          FROM ocr_jobs WHERE id = ? AND church_id = ?`,
         [jobId, churchId]
       );
@@ -450,6 +475,17 @@ function createRouters(upload: any) {
       // Override ocr_text with feeder data when available
       const finalOcrText = feederRawText || ocrText;
 
+      let parsedLayout = null;
+      if (job.layout_classification_json) {
+        try {
+          parsedLayout = typeof job.layout_classification_json === 'string'
+            ? JSON.parse(job.layout_classification_json)
+            : job.layout_classification_json;
+        } catch (e) {
+          console.warn('[Job Detail API] Failed to parse layout_classification_json:', e);
+        }
+      }
+
       res.json({
         id: job.id.toString(),
         original_filename: job.filename,
@@ -467,6 +503,7 @@ function createRouters(upload: any) {
         has_bundle: hasBundle,
         pages: pages.length > 0 ? pages : undefined,
         feeder_source: feederSource || undefined,
+        layout_classification_json: parsedLayout,
       });
     } catch (error: any) {
       console.error('[OCR Job Detail] Error:', error);
@@ -2380,6 +2417,142 @@ function createRouters(upload: any) {
     }
   });
 
+  // POST /jobs/:jobId/re-extract — Re-run extraction with custom column bands directly
+  churchJobsRouter.post('/jobs/:jobId/re-extract', async (req: any, res: any) => {
+    try {
+      const churchId = parseInt(req.params.churchId);
+      const jobId = parseInt(req.params.jobId);
+      const { columnBands, headerYThreshold } = req.body;
+
+      if (!churchId || !jobId) return res.status(400).json({ error: 'churchId and jobId required' });
+      if (!columnBands) return res.status(400).json({ error: 'columnBands required in body' });
+
+      // 1. Resolve column bands
+      let bands = columnBands;
+      if (typeof bands === 'string') bands = JSON.parse(bands);
+      // If bands is an array (which custom extractors sometimes save), convert to record format
+      let bandsObj: any = {};
+      if (Array.isArray(bands)) {
+        bands.forEach((b: any, i: number) => {
+          bandsObj[b.key || `col_${i}`] = b;
+        });
+      } else {
+        bandsObj = bands;
+      }
+
+      const headerY = headerYThreshold !== undefined ? Number(headerYThreshold) : 0.15;
+
+      // 2. Load existing Vision JSON (DB ocr_result or feeder disk file)
+      const [jobRows] = await promisePool.query('SELECT ocr_result, ocr_text, record_type FROM ocr_jobs WHERE id = ?', [jobId]);
+      if (!(jobRows as any[]).length) return res.status(404).json({ error: 'Job not found' });
+
+      let visionJsonStr = (jobRows as any[])[0].ocr_result;
+      const recordType = (jobRows as any[])[0].record_type || 'unknown';
+      const ocrText = (jobRows as any[])[0].ocr_text || '';
+
+      // Fallback to disk
+      if (!visionJsonStr) {
+        const feederPath = path.join(
+          '/var/www/orthodoxmetrics/prod/server/storage/feeder',
+          `job_${jobId}`, 'page_0', 'vision_result.json'
+        );
+        if (fs.existsSync(feederPath)) {
+          visionJsonStr = fs.readFileSync(feederPath, 'utf8');
+        }
+      }
+
+      if (!visionJsonStr) {
+        return res.status(400).json({ error: 'No OCR result available for this job' });
+      }
+
+      const visionJson = typeof visionJsonStr === 'string' ? JSON.parse(visionJsonStr) : visionJsonStr;
+
+      // 3. Run extractGenericTable with custom bands
+      const { extractGenericTable, tableToStructuredText } = require('../../ocr/layouts/generic_table');
+      const tableExtractionResult = extractGenericTable(visionJson, {
+        pageIndex: 0,
+        headerY,
+        columnBands: bandsObj,
+      });
+
+      // 4. Run extractRecordCandidates
+      const { extractRecordCandidates } = require('../../ocr/columnMapper');
+      const rawText = ocrText || '';
+      const rcResult = extractRecordCandidates(tableExtractionResult, rawText, recordType);
+
+      console.log(`[ReExtract] Job ${jobId} with custom bands → ${tableExtractionResult.data_rows} rows, ${rcResult.candidates.length} candidates`);
+
+      // 5. Save artifacts to disk + ocr_feeder_artifacts table
+      const timestamp = Date.now();
+      const resolvedTenant = await resolveChurchDb(churchId);
+      if (!resolvedTenant) return res.status(404).json({ error: 'Church not found' });
+      const tenantPool = resolvedTenant.db;
+
+      // Find page row
+      const [pageRows] = await tenantPool.query(
+        `SELECT id AS page_id, storage_dir FROM ocr_feeder_pages WHERE job_id = ? LIMIT 1`,
+        [jobId]
+      );
+
+      if ((pageRows as any[]).length > 0) {
+        const pageId = (pageRows as any[])[0].page_id;
+        const pageStorageDir = (pageRows as any[])[0].storage_dir;
+
+        if (pageStorageDir && fs.existsSync(pageStorageDir)) {
+          // Save table extraction JSON
+          const tableJsonPath = path.join(pageStorageDir, `table_extraction_custom_${timestamp}.json`);
+          fs.writeFileSync(tableJsonPath, JSON.stringify(tableExtractionResult, null, 2));
+
+          const structuredText = tableToStructuredText(tableExtractionResult);
+          if (structuredText) {
+            const structuredTxtPath = path.join(pageStorageDir, `_structured_custom_${timestamp}.txt`);
+            fs.writeFileSync(structuredTxtPath, structuredText);
+
+            await tenantPool.query(
+              `INSERT INTO ocr_feeder_artifacts (page_id, type, storage_path, meta_json, created_at)
+               VALUES (?, 'table_extraction', ?, ?, NOW())`,
+              [pageId, structuredTxtPath, JSON.stringify({
+                layout_id: tableExtractionResult.layout_id,
+                data_rows: tableExtractionResult.data_rows,
+                columns_detected: tableExtractionResult.columns_detected,
+                custom_bands: true,
+                appliedAt: new Date().toISOString(),
+              })]
+            );
+          }
+
+          // Save record candidates JSON
+          const candidatesPath = path.join(pageStorageDir, `record_candidates_custom_${timestamp}.json`);
+          fs.writeFileSync(candidatesPath, JSON.stringify(rcResult, null, 2));
+
+          await tenantPool.query(
+            `INSERT INTO ocr_feeder_artifacts (page_id, type, storage_path, json_blob, meta_json, created_at)
+             VALUES (?, 'record_candidates', ?, ?, ?, NOW())`,
+            [
+              pageId,
+              candidatesPath,
+              JSON.stringify(rcResult),
+              JSON.stringify({
+                candidateCount: rcResult.candidates.length,
+                custom_bands: true,
+                appliedAt: new Date().toISOString(),
+              })
+            ]
+          );
+        }
+      }
+
+      res.json({
+        success: true,
+        tableExtraction: tableExtractionResult,
+        recordCandidates: rcResult
+      });
+    } catch (error: any) {
+      console.error('[ReExtract] Error:', error);
+      res.status(500).json({ error: 'Re-extraction failed', message: error.message });
+    }
+  });
+
   // -----------------------------------------------------------------------
   // POST /jobs/:jobId/auto-extract — Auto-detect records without a template
   // -----------------------------------------------------------------------
@@ -3381,7 +3554,7 @@ function createRouters(upload: any) {
       const [rows] = await promisePool.query(`
         SELECT id, church_id, filename, status, record_type, language,
                confidence_score, error_regions, created_at,
-               classifier_suggested_type, classifier_confidence
+               classifier_suggested_type, classifier_confidence, layout_classification_json
         FROM ocr_jobs
         WHERE church_id = ?
         ORDER BY created_at DESC
@@ -3390,6 +3563,16 @@ function createRouters(upload: any) {
 
       const jobs = (rows as any[]).map((r: any) => {
         const extractionPath = path.join('/var/www/orthodoxmetrics/prod/server/var/ocr_artifacts', String(r.id), 'table_extraction.json');
+        let parsedLayout = null;
+        if (r.layout_classification_json) {
+          try {
+            parsedLayout = typeof r.layout_classification_json === 'string'
+              ? JSON.parse(r.layout_classification_json)
+              : r.layout_classification_json;
+          } catch (e) {
+            console.warn('[Jobs API] Failed to parse layout_classification_json:', e);
+          }
+        }
         return {
           id: r.id,
           filename: r.filename,
@@ -3402,6 +3585,7 @@ function createRouters(upload: any) {
           has_table_extraction: fs.existsSync(extractionPath),
           classifier_suggested_type: r.classifier_suggested_type || null,
           classifier_confidence: r.classifier_confidence || null,
+          layout_classification_json: parsedLayout,
         };
       });
 
@@ -3423,7 +3607,7 @@ function createRouters(upload: any) {
       const [rows] = await promisePool.query(
         `SELECT id, church_id, filename, status, record_type, language,
                 confidence_score, error_regions, ocr_text, ocr_result, created_at,
-                classifier_suggested_type, classifier_confidence
+                classifier_suggested_type, classifier_confidence, layout_classification_json
          FROM ocr_jobs WHERE id = ?`, [jobId]
       );
       if (!(rows as any[]).length) return res.status(404).json({ error: 'Job not found' });
@@ -3433,6 +3617,17 @@ function createRouters(upload: any) {
       if (job.ocr_result) {
         try { ocrResult = typeof job.ocr_result === 'string' ? JSON.parse(job.ocr_result) : job.ocr_result; }
         catch { ocrResult = job.ocr_result; }
+      }
+
+      let parsedLayout = null;
+      if (job.layout_classification_json) {
+        try {
+          parsedLayout = typeof job.layout_classification_json === 'string'
+            ? JSON.parse(job.layout_classification_json)
+            : job.layout_classification_json;
+        } catch (e) {
+          console.warn('[Job Detail API] Failed to parse layout_classification_json:', e);
+        }
       }
 
       // Check for table extraction artifact
@@ -3470,6 +3665,7 @@ function createRouters(upload: any) {
         artifacts,
         classifier_suggested_type: job.classifier_suggested_type || null,
         classifier_confidence: job.classifier_confidence || null,
+        layout_classification_json: parsedLayout,
       });
     } catch (error: any) {
       console.error('[OCR Job Detail] Error:', error.message);
@@ -3485,7 +3681,7 @@ function createRouters(upload: any) {
       const jobId = parseInt(req.params.jobId);
       if (!jobId) return res.status(400).json({ error: 'Invalid jobId' });
 
-      const { record_type } = req.body;
+      const { record_type, layout_classification_json } = req.body;
 
       const updates: string[] = [];
       const values: any[] = [];
@@ -3497,6 +3693,11 @@ function createRouters(upload: any) {
         }
         updates.push('record_type = ?');
         values.push(record_type);
+      }
+
+      if (layout_classification_json) {
+        updates.push('layout_classification_json = ?');
+        values.push(typeof layout_classification_json === 'string' ? layout_classification_json : JSON.stringify(layout_classification_json));
       }
 
       if (updates.length === 0) {
@@ -3513,7 +3714,7 @@ function createRouters(upload: any) {
         return res.status(404).json({ error: 'Job not found' });
       }
 
-      res.json({ success: true, message: 'Job updated', record_type });
+      res.json({ success: true, message: 'Job updated', record_type, layout_classification_json });
     } catch (error: any) {
       console.error('[OCR Job PATCH Platform] Error:', error);
       res.status(500).json({ error: 'Failed to update job', message: error.message });

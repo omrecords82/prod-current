@@ -8,7 +8,7 @@
 const express = require('express');
 const router = express.Router({ mergeParams: true });
 import { resolveChurchDb, promisePool, mapFieldsToDbColumns, buildInsertQuery } from './helpers';
-import { extractAgentFieldsForJob } from '../../utils/ocrClassifier';
+import { extractAgentFieldsForJob, normalizeBaptismDates } from '../../utils/ocrClassifier';
 
 // ---------------------------------------------------------------------------
 // POST /jobs/:jobId/review/finalize
@@ -540,6 +540,12 @@ router.post('/jobs/:jobId/confirm-extract', async (req: any, res: any) => {
 
     if (!confirmedRecords?.length) {
       return res.status(400).json({ error: 'fields or records array is required' });
+    }
+
+    if (recordType === 'baptism') {
+      for (const rec of confirmedRecords) {
+        normalizeBaptismDates(rec);
+      }
     }
 
     // finalize defaults to true for backward compatibility. When false, the job

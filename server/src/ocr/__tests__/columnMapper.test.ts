@@ -7,7 +7,7 @@
  * Exits non-zero on any failure (CI-friendly).
  */
 
-import { extractRecordCandidates } from '../columnMapper';
+import { extractRecordCandidates, clusterTokensIntoLines, assignDefaultSuggestedFields } from '../columnMapper';
 
 let passed = 0;
 let failed = 0;
@@ -316,6 +316,108 @@ function testParsedAtFormat(): void {
   );
 }
 
+function testTokenLineClustering(): void {
+  console.log('\n[Token Line Clustering]');
+
+  // 1. One-line column
+  const oneLineTokens = [
+    { text: 'John', x_min: 0.1, y_min: 0.2, x_max: 0.15, y_max: 0.22, x_center: 0.125, y_center: 0.21, height: 0.02, confidence: 0.95 },
+    { text: 'Smith', x_min: 0.16, y_min: 0.2, x_max: 0.22, y_max: 0.22, x_center: 0.19, y_center: 0.21, height: 0.02, confidence: 0.97 }
+  ];
+  const oneLineRes = clusterTokensIntoLines(oneLineTokens);
+  assertEq(oneLineRes.length, 1, 'One-line column produces 1 line');
+  assertEq(oneLineRes[0].text, 'John Smith', 'Tokens merged in reading order');
+  assert(Math.abs(oneLineRes[0].confidence! - 0.96) < 0.001, 'Confidence averaged');
+
+  // 2. Two clearly stacked lines
+  const twoLineTokens = [
+    { text: 'Line1', x_min: 0.1, y_min: 0.2, x_max: 0.2, y_max: 0.22, x_center: 0.15, y_center: 0.21, height: 0.02, confidence: 0.9 },
+    { text: 'Line2', x_min: 0.1, y_min: 0.25, x_max: 0.2, y_max: 0.27, x_center: 0.15, y_center: 0.26, height: 0.02, confidence: 0.8 }
+  ];
+  const twoLineRes = clusterTokensIntoLines(twoLineTokens);
+  assertEq(twoLineRes.length, 2, 'Two clearly stacked lines produces 2 lines');
+  assertEq(twoLineRes[0].text, 'Line1', 'First line is top');
+  assertEq(twoLineRes[1].text, 'Line2', 'Second line is bottom');
+
+  // 3. Multiline wrapped name
+  const wrappedNameTokens = [
+    { text: 'First', x_min: 0.1, y_min: 0.2, x_max: 0.15, y_max: 0.22, x_center: 0.125, y_center: 0.21, height: 0.02 },
+    { text: 'Middle', x_min: 0.16, y_min: 0.2, x_max: 0.22, y_max: 0.22, x_center: 0.19, y_center: 0.21, height: 0.02 },
+    { text: 'Lastname', x_min: 0.1, y_min: 0.24, x_max: 0.25, y_max: 0.26, x_center: 0.175, y_center: 0.25, height: 0.02 }
+  ];
+  const wrappedRes = clusterTokensIntoLines(wrappedNameTokens);
+  assertEq(wrappedRes.length, 2, 'Wrapped name produces 2 lines');
+  assertEq(wrappedRes[0].text, 'First Middle', 'First line contains First Middle');
+  assertEq(wrappedRes[1].text, 'Lastname', 'Second line contains Lastname');
+
+  // 4. Uneven token heights
+  const unevenTokens = [
+    { text: 'HugeText', x_min: 0.1, y_min: 0.2, x_max: 0.25, y_max: 0.25, x_center: 0.175, y_center: 0.225, height: 0.05 },
+    { text: 'TinySub', x_min: 0.1, y_min: 0.27, x_max: 0.15, y_max: 0.28, x_center: 0.125, y_center: 0.275, height: 0.01 }
+  ];
+  const unevenRes = clusterTokensIntoLines(unevenTokens);
+  assertEq(unevenRes.length, 2, 'Uneven token heights produces 2 lines');
+  assertEq(unevenRes[0].text, 'HugeText', 'Huge text line');
+  assertEq(unevenRes[1].text, 'TinySub', 'Tiny sub text line');
+
+  // 5. Closely spaced lines
+  const closeTokens = [
+    { text: 'Top', x_min: 0.1, y_min: 0.2, x_max: 0.2, y_max: 0.22, x_center: 0.15, y_center: 0.21, height: 0.02 },
+    { text: 'Mid', x_min: 0.1, y_min: 0.23, x_max: 0.2, y_max: 0.25, x_center: 0.15, y_center: 0.24, height: 0.02 }
+  ];
+  const closeRes = clusterTokensIntoLines(closeTokens);
+  assertEq(closeRes.length, 2, 'Closely spaced lines resolved as 2 lines');
+
+  // 6. Empty column
+  const emptyRes = clusterTokensIntoLines([]);
+  assertEq(emptyRes.length, 0, 'Empty token list produces 0 lines');
+
+  // 7. Tokens near neighboring row boundaries
+  const cell1Tokens = [{ text: 'Row1', x_center: 0.1, y_center: 0.2, height: 0.02, x_min: 0.1, y_min: 0.19, x_max: 0.2, y_max: 0.21 }];
+  const cell2Tokens = [{ text: 'Row2', x_center: 0.1, y_center: 0.3, height: 0.02, x_min: 0.1, y_min: 0.29, x_max: 0.2, y_max: 0.31 }];
+  const cell1Res = clusterTokensIntoLines(cell1Tokens);
+  const cell2Res = clusterTokensIntoLines(cell2Tokens);
+  assertEq(cell1Res[0].text, 'Row1', 'Row 1 isolated');
+  assertEq(cell2Res[0].text, 'Row2', 'Row 2 isolated');
+
+  // 8. Ambiguous three-line content
+  const threeLineTokens = [
+    { text: 'Line1', x_center: 0.15, y_center: 0.21, height: 0.02, x_min: 0.1, y_min: 0.2, x_max: 0.2, y_max: 0.22 },
+    { text: 'Line2', x_center: 0.15, y_center: 0.26, height: 0.02, x_min: 0.1, y_min: 0.25, x_max: 0.2, y_max: 0.27 },
+    { text: 'Line3', x_center: 0.15, y_center: 0.31, height: 0.02, x_min: 0.1, y_min: 0.3, x_max: 0.2, y_max: 0.32 }
+  ];
+  const threeLineRes = clusterTokensIntoLines(threeLineTokens);
+  assertEq(threeLineRes.length, 3, 'Ambiguous 3 lines detected correctly');
+
+  // 9. Baptism date and parent default mappings
+  assignDefaultSuggestedFields(twoLineRes, 'date_of_birth', 'baptism');
+  assertEq(twoLineRes[0].suggested_field, 'date_of_birth', 'Line 0 -> date_of_birth');
+  assertEq(twoLineRes[1].suggested_field, 'date_of_baptism', 'Line 1 -> date_of_baptism');
+
+  const parentLines: CellLine[] = [
+    { line_index: 0, text: 'Father', bbox: [], confidence: null, suggested_field: null },
+    { line_index: 1, text: 'Mother', bbox: [], confidence: null, suggested_field: null }
+  ];
+  assignDefaultSuggestedFields(parentLines, 'father_name', 'baptism');
+  assertEq(parentLines[0].suggested_field, 'father_name', 'Line 0 -> father_name');
+  assertEq(parentLines[1].suggested_field, 'mother_name', 'Line 1 -> mother_name');
+
+  // 10. Funeral date default mappings
+  const funeralDateLines: CellLine[] = [
+    { line_index: 0, text: 'Died', bbox: [], confidence: null, suggested_field: null },
+    { line_index: 1, text: 'Buried', bbox: [], confidence: null, suggested_field: null }
+  ];
+  assignDefaultSuggestedFields(funeralDateLines, 'deceased_date', 'funeral');
+  assertEq(funeralDateLines[0].suggested_field, 'deceased_date', 'Line 0 -> deceased_date');
+  assertEq(funeralDateLines[1].suggested_field, 'burial_date', 'Line 1 -> burial_date');
+
+  // Check ambiguity
+  assignDefaultSuggestedFields(threeLineRes, 'date_of_birth', 'baptism');
+  assertEq(threeLineRes[0].suggested_field, null, '3-line DOB is ambiguous (Line 0)');
+  assertEq(threeLineRes[1].suggested_field, null, '3-line DOB is ambiguous (Line 1)');
+  assertEq(threeLineRes[2].suggested_field, null, '3-line DOB is ambiguous (Line 2)');
+}
+
 // ── Main runner ──────────────────────────────────────────────────────────────
 
 function main(): void {
@@ -333,6 +435,7 @@ function main(): void {
   testEmptyTablesArray();
   testEmptyRowsSkipped();
   testParsedAtFormat();
+  testTokenLineClustering();
 
   console.log(`\n=== Results: ${passed} passed, ${failed} failed ===`);
   process.exit(failed > 0 ? 1 : 0);

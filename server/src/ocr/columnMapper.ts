@@ -84,6 +84,113 @@ const HEADER_HINTS_BY_TYPE: Record<string, Record<string, string[]>> = {
   funeral: FUNERAL_HEADER_HINTS,
 };
 
+// ── Structured Cell Lines and Token-Line Clustering ──────────────────────────
+
+export interface CellLine {
+  line_index: number;
+  text: string;
+  bbox: number[];
+  confidence: number | null;
+  suggested_field: string | null;
+}
+
+export function clusterTokensIntoLines(tokens: any[]): CellLine[] {
+  if (!tokens || tokens.length === 0) return [];
+
+  // Sort tokens by y_center first
+  const sorted = [...tokens].sort((a, b) => a.y_center - b.y_center);
+
+  const linesOfTokens: any[][] = [];
+  
+  for (const t of sorted) {
+    let merged = false;
+    // Try to merge with an existing line if it fits vertical center overlap
+    for (const line of linesOfTokens) {
+      const lineAvgHeight = line.reduce((sum, tok) => sum + ((tok.y_max - tok.y_min) || tok.height || 0.01), 0) / line.length;
+      const tokHeight = (t.y_max - t.y_min) || t.height || 0.01;
+      const tolerance = Math.max(lineAvgHeight, tokHeight) * 0.75;
+      
+      const lineYCenter = line.reduce((sum, tok) => sum + tok.y_center, 0) / line.length;
+      if (Math.abs(t.y_center - lineYCenter) <= tolerance) {
+        line.push(t);
+        merged = true;
+        break;
+      }
+    }
+    if (!merged) {
+      linesOfTokens.push([t]);
+    }
+  }
+
+  // Sort lines from top to bottom (based on average y_center)
+  linesOfTokens.sort((a, b) => {
+    const avgA = a.reduce((sum, t) => sum + t.y_center, 0) / a.length;
+    const avgB = b.reduce((sum, t) => sum + t.y_center, 0) / b.length;
+    return avgA - avgB;
+  });
+
+  // Convert each token group to a structured CellLine
+  return linesOfTokens.map((lineTokens, idx) => {
+    // Sort tokens within the line from left to right (x_center)
+    lineTokens.sort((a, b) => a.x_center - b.x_center);
+
+    const text = lineTokens.map(t => t.text).join(' ');
+    
+    const confs = lineTokens.map(t => t.confidence).filter(c => c != null && typeof c === 'number') as number[];
+    const avgConf = confs.length > 0
+      ? Math.round((confs.reduce((sum, c) => sum + c, 0) / confs.length) * 100) / 100
+      : null;
+
+    const bbox = [
+      Math.min(...lineTokens.map(t => t.x_min ?? t.x0 ?? 0)),
+      Math.min(...lineTokens.map(t => t.y_min ?? t.y0 ?? 0)),
+      Math.max(...lineTokens.map(t => t.x_max ?? t.x1 ?? 1)),
+      Math.max(...lineTokens.map(t => t.y_max ?? t.y1 ?? 1)),
+    ];
+
+    return {
+      line_index: idx,
+      text,
+      bbox,
+      confidence: avgConf,
+      suggested_field: null,
+    };
+  });
+}
+
+export function assignDefaultSuggestedFields(
+  lines: CellLine[],
+  mappedField: string | undefined,
+  recordType: string
+): void {
+  if (!lines || lines.length === 0) return;
+
+  if (recordType === 'baptism') {
+    // Baptism Date Column: expected exactly 2 lines
+    if (mappedField === 'date_of_birth' || mappedField === 'date_of_baptism') {
+      if (lines.length === 2) {
+        lines[0].suggested_field = 'date_of_birth';
+        lines[1].suggested_field = 'date_of_baptism';
+      }
+    }
+    // Baptism Parents Column: expected exactly 2 lines
+    if (mappedField === 'father_name' || mappedField === 'mother_name') {
+      if (lines.length === 2) {
+        lines[0].suggested_field = 'father_name';
+        lines[1].suggested_field = 'mother_name';
+      }
+    }
+  } else if (recordType === 'funeral') {
+    // Funeral Date Column: expected exactly 2 lines
+    if (mappedField === 'date_of_death' || mappedField === 'date_of_burial' || mappedField === 'deceased_date') {
+      if (lines.length === 2) {
+        lines[0].suggested_field = 'deceased_date';
+        lines[1].suggested_field = 'burial_date';
+      }
+    }
+  }
+}
+
 // ── Helper: Get cells from a row as a map ────────────────────────────────────
 
 function rowCellMap(row: any): Record<string, string> {
@@ -148,6 +255,20 @@ function mapMarriageLedger(tableResult: any, detectedType: string): {
       if (!mergedRows[row.row_index]) {
         mergedRows[row.row_index] = {};
         rowConfidences[row.row_index] = [];
+      }
+
+      // Add clustering here to cells inside table.rows
+      for (const cell of (row.cells || [])) {
+        const idx = cell.column_index ?? 0;
+        const name = colNames[idx] || `col_${idx}`;
+        const mappedField = MARRIAGE_COLUMN_MAP[name];
+
+        const cellLines = clusterTokensIntoLines(cell.tokens || []);
+        assignDefaultSuggestedFields(cellLines, mappedField, detectedType);
+        if (cellLines.length > 0) {
+          cell.lines = cellLines;
+        }
+        delete cell.tokens;
       }
 
       const cellMap = marriageRowCellMap(row, colNames);
@@ -296,6 +417,19 @@ function mapGenericTable(tableResult: any, detectedType: string): {
   for (const table of tables) {
     for (const row of (table.rows || [])) {
       if (row.type === 'header') continue;
+
+      // Add clustering here to cells inside table.rows
+      for (const cell of (row.cells || [])) {
+        const colKey = cell.column_key || `col_${cell.column_index}`;
+        const mappedField = columnMapping[colKey];
+
+        const cellLines = clusterTokensIntoLines(cell.tokens || []);
+        assignDefaultSuggestedFields(cellLines, mappedField, detectedType);
+        if (cellLines.length > 0) {
+          cell.lines = cellLines;
+        }
+        delete cell.tokens;
+      }
 
       const cellMap = rowCellMap(row);
       const fields: Record<string, string> = {};

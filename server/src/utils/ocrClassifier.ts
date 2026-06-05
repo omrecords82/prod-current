@@ -405,16 +405,31 @@ function unionRowBbox(tableJson: any, rowStart: number, rowEnd: number, pad = 0.
 }
 
 function buildRecordRowContext(tableJson: any, rowStart: number, rowEnd: number) {
-  const rows: Array<{ row_index: number; cells: Record<string, string> }> = [];
+  const rows: Array<{ row_index: number; cells: Record<string, any> }> = [];
   for (const table of tableJson?.tables || []) {
     for (const row of table.rows || []) {
       if (row.type === 'header') continue;
       if (row.row_index < rowStart || row.row_index > rowEnd) continue;
-      const cells: Record<string, string> = {};
+      const cells: Record<string, any> = {};
       for (const cell of row.cells || []) {
         const key = cell.column_key || `col_${cell.column_index}`;
         const val = (cell.content || '').trim();
-        if (val) cells[key] = val;
+        if (val) {
+          if (cell.lines && cell.lines.length > 0) {
+            cells[key] = {
+              content: val,
+              lines: cell.lines.map((l: any) => ({
+                line_index: l.line_index,
+                text: l.text,
+                bbox: l.bbox,
+                confidence: l.confidence,
+                suggested_field: l.suggested_field
+              }))
+            };
+          } else {
+            cells[key] = val;
+          }
+        }
       }
       if (Object.keys(cells).length) rows.push({ row_index: row.row_index, cells });
     }
@@ -433,23 +448,95 @@ function extractDatesFromText(text: string): string[] {
   return out;
 }
 
+function cleanDateString(s: string): string {
+  if (!s) return '';
+  let clean = s.trim();
+  // Clean trailing digit from 3-digit year (e.g. 11-16-702 -> 11-16-70)
+  clean = clean.replace(/\b(\d{1,2})([\/\.\-\s]+)(\d{1,2})([\/\.\-\s]+)(\d{2})(\d)\b/g, '$1$2$3$4$5');
+  // Clean trailing digit from 5-digit year (e.g. 11-16-19702 -> 11-16-1970)
+  clean = clean.replace(/\b(\d{1,2})([\/\.\-\s]+)(\d{1,2})([\/\.\-\s]+)(\d{4})(\d+)\b/g, '$1$2$3$4$5');
+  return clean;
+}
+
 function parseLedgerDateValue(s: string): number | null {
-  const m = (s || '').trim().match(/^(\d{1,2})[\/\.\-\s]+(\d{1,2})[\/\.\-\s]+(\d{2,4})$/);
-  if (!m) return null;
+  const str = (s || '').trim();
+  const m = str.match(/^(\d{1,2})[\/\.\-\s]+(\d{1,2})[\/\.\-\s]+(\d{2,4})$/);
+  if (!m) {
+    const yearMatch = str.match(/^(\d{4})$/);
+    if (yearMatch) {
+      return new Date(parseInt(yearMatch[1], 10), 0, 1).getTime();
+    }
+    return null;
+  }
   let y = parseInt(m[3], 10);
   if (y < 100) y += 1900;
   return new Date(y, parseInt(m[1], 10) - 1, parseInt(m[2], 10)).getTime();
 }
 
-function normalizeBaptismDates(fields: Record<string, string>): void {
-  const dob = fields.date_of_birth?.trim();
-  const bapt = fields.date_of_baptism?.trim();
+export function normalizeBaptismDates(fields: Record<string, string>): void {
+  let dob = fields.date_of_birth?.trim();
+  let bapt = fields.date_of_baptism?.trim();
+
+  if (dob) {
+    dob = cleanDateString(dob);
+    fields.date_of_birth = dob;
+  }
+  if (bapt) {
+    bapt = cleanDateString(bapt);
+    fields.date_of_baptism = bapt;
+  }
+
   if (!dob || !bapt) return;
+
   const tBirth = parseLedgerDateValue(dob);
   const tBapt = parseLedgerDateValue(bapt);
-  if (tBirth && tBapt && tBirth > tBapt) {
-    fields.date_of_birth = bapt;
-    fields.date_of_baptism = dob;
+
+  if (tBirth && tBapt) {
+    const isBaptYearOnly = /^\d{4}$/.test(bapt);
+    const isBirthYearOnly = /^\d{4}$/.test(dob);
+
+    const getYear = (str: string, ts: number) => {
+      if (/^\d{4}$/.test(str)) return parseInt(str, 10);
+      const parsed = str.match(/\d{2,4}$/);
+      if (parsed) {
+        let y = parseInt(parsed[0], 10);
+        if (y < 100) y += 1900;
+        return y;
+      }
+      return new Date(ts).getFullYear();
+    };
+
+    const birthYear = getYear(dob, tBirth);
+    const baptYear = getYear(bapt, tBapt);
+
+    if (isBaptYearOnly && !isBirthYearOnly) {
+      if (birthYear > baptYear) {
+        fields.date_of_birth = bapt;
+        fields.date_of_baptism = dob;
+      }
+    } else if (!isBaptYearOnly && isBirthYearOnly) {
+      if (birthYear > baptYear) {
+        fields.date_of_birth = bapt;
+        fields.date_of_baptism = dob;
+      }
+    } else if (isBaptYearOnly && isBirthYearOnly) {
+      if (birthYear > baptYear) {
+        fields.date_of_birth = bapt;
+        fields.date_of_baptism = dob;
+      }
+    } else {
+      if (tBirth > tBapt) {
+        fields.date_of_birth = bapt;
+        fields.date_of_baptism = dob;
+      } else if (tBirth === tBapt) {
+        // Date of birth and date of baptism cannot be the same!
+        // Increment baptism date by 1 day
+        const d = new Date(tBapt);
+        d.setDate(d.getDate() + 1);
+        const separator = bapt.includes('/') ? '/' : (bapt.includes('.') ? '.' : '-');
+        fields.date_of_baptism = `${d.getMonth() + 1}${separator}${d.getDate()}${separator}${d.getFullYear()}`;
+      }
+    }
   }
 }
 
@@ -580,6 +667,30 @@ function normalizeBaptismRecord(
   return out;
 }
 
+function normalizeFuneralDates(fields: Record<string, string>): void {
+  const dod = fields.date_of_death?.trim() || fields.deceased_date?.trim();
+  const bur = fields.date_of_burial?.trim() || fields.date_of_funeral?.trim() || fields.burial_date?.trim();
+  if (!dod || !bur) return;
+  const tDeath = parseLedgerDateValue(dod);
+  const tBurial = parseLedgerDateValue(bur);
+  if (tDeath && tBurial && tDeath > tBurial) {
+    if (fields.date_of_death) fields.date_of_death = bur;
+    if (fields.deceased_date) fields.deceased_date = bur;
+    if (fields.date_of_burial) fields.date_of_burial = dod;
+    if (fields.date_of_funeral) fields.date_of_funeral = dod;
+    if (fields.burial_date) fields.burial_date = dod;
+  }
+}
+
+function normalizeFuneralRecord(
+  fields: Record<string, string>,
+  rowContext?: ReturnType<typeof buildRecordRowContext>,
+): Record<string, string> {
+  const out = { ...fields };
+  normalizeFuneralDates(out);
+  return out;
+}
+
 async function cropImageToFractionalBbox(imagePath: string, bbox: number[]): Promise<Buffer> {
   const sharp = require('sharp');
   const [fx0, fy0, fx1, fy1] = bbox;
@@ -621,6 +732,10 @@ function visionSystemPrompt(recordType: AgentExtractResult['record_type']): stri
     'Extract exactly ONE ledger entry from the image crop — never merge adjacent entries.',
     'Use uppercase names as written. Dates in M-D-YY or M/D/YY as shown.',
     'Leave fields blank when not visible — do not guess.',
+    'You are receiving ocr_row_hints. If a cell contains a "lines" array, it represents vertically stacked text lines within that column.',
+    'Carefully inspect the image to transcribe these lines and map them correctly to the target schema.',
+    'Use the lines array as evidence for stacked fields. Compare the handwriting in the image against the provided line text and bounding boxes.',
+    'If the visual evidence contradicts the suggested_field order, or if the suggested_field is null, map them based on the actual handwriting in the image.',
     'Respond only via submit_record_fields with exactly one record in the records array.',
   ];
   if (recordType === 'baptism') {
@@ -640,7 +755,13 @@ function visionSystemPrompt(recordType: AgentExtractResult['record_type']): stri
     return [...common, 'Marriage ledger: groom, bride, date, witnesses, officiant.'].join('\n');
   }
   if (recordType === 'funeral') {
-    return [...common, 'Funeral ledger: deceased name, death date, burial, age, cause, officiant.'].join('\n');
+    return [
+      ...common,
+      'Funeral ledger columns: deceased name, death date, burial date, age, cause, officiant.',
+      'CRITICAL DATE RULES: The FIRST date is date_of_death / deceased_date. The SECOND date is date_of_burial.',
+      'Death date always comes before burial date chronologically.',
+      'Deceased name should be mapped to deceased_name.',
+    ].join('\n');
   }
   return common.join('\n');
 }
@@ -693,9 +814,12 @@ async function extractSingleRecordVision(
   const fields = sanitizeFieldMap(rec.fields, recordType);
   if (!Object.keys(fields).length) return null;
 
-  const normalized = recordType === 'baptism'
-    ? normalizeBaptismRecord(fields, rowContext)
-    : fields;
+  let normalized = fields;
+  if (recordType === 'baptism') {
+    normalized = normalizeBaptismRecord(fields, rowContext);
+  } else if (recordType === 'funeral') {
+    normalized = normalizeFuneralRecord(fields, rowContext);
+  }
 
   return {
     fields: normalized,
@@ -747,9 +871,12 @@ async function extractRecordsWithVision(
         reviewFlags.push(result.needs_review);
         if (result.note) notes.push(`#${i + 1}: ${result.note}`);
       } else {
-        const fallback = draft.record_type === 'baptism'
-          ? normalizeBaptismRecord(sanitizeFieldMap(draftFields, draft.record_type), rowContext)
-          : sanitizeFieldMap(draftFields, draft.record_type);
+        let fallback = sanitizeFieldMap(draftFields, draft.record_type);
+        if (draft.record_type === 'baptism') {
+          fallback = normalizeBaptismRecord(fallback, rowContext);
+        } else if (draft.record_type === 'funeral') {
+          fallback = normalizeFuneralRecord(fallback, rowContext);
+        }
         records.push(fallback);
         confidences.push(0.4);
         reviewFlags.push(true);
@@ -1002,5 +1129,158 @@ export function extractAgentFields(ocrText: string, recordTypeHint?: string): Ag
     records: Object.keys(fields).length ? [fields] : [],
     confidence,
     method: 'heuristic',
+  };
+}
+
+export interface LayoutClassification {
+  detectedLayoutType: 'tabular' | 'form' | 'narrative';
+  layoutConfidence: number;
+  classificationSignals: {
+    horizontalAlignmentScore: number;
+    formLabelDensity: number;
+    narrativeContinuityScore: number;
+  };
+  userOverridden: boolean;
+}
+
+export function classifyLayout(visionPages: any[]): LayoutClassification {
+  let totalWords = 0;
+  let alignedWords = 0;
+  let totalLines = 0;
+  let totalLineSpan = 0;
+  let formLabelMatches = 0;
+
+  const formLabelRegex = /\b(name of|date of|place of|born at|baptized on|father|mother|godparent|sponsor|witness|priest|repose|deceased|age at|cause of|informant|signature|residence|occupation|street|baptis[me]|christening|godparent|godmother|godfather|sponsor|wedding|bride|groom|crowning|funeral|death|burial|deceased|repose|age|cause|signature|address|born|baptized)\b/i;
+
+  for (const page of visionPages) {
+    if (!page || !page.width || !page.height) continue;
+    const pageWidth = page.width;
+
+    // Collect all words on this page
+    const words: any[] = [];
+    if (page.blocks) {
+      for (const block of page.blocks) {
+        if (block.paragraphs) {
+          for (const paragraph of block.paragraphs) {
+            if (paragraph.words) {
+              for (const word of paragraph.words) {
+                // Get word bounding box
+                const box = word.boundingBox;
+                if (!box || !box.vertices || box.vertices.length < 4) continue;
+                // Compute bounding box extents
+                const xs = box.vertices.map((v: any) => v.x ?? 0);
+                const ys = box.vertices.map((v: any) => v.y ?? 0);
+                const minX = Math.min(...xs);
+                const maxX = Math.max(...xs);
+                const minY = Math.min(...ys);
+                const maxY = Math.max(...ys);
+                const cy = (minY + maxY) / 2;
+                const h = maxY - minY;
+                const w = maxX - minX;
+
+                words.push({
+                  text: word.text || '',
+                  minX,
+                  maxX,
+                  minY,
+                  maxY,
+                  cy,
+                  h,
+                  w
+                });
+              }
+            }
+          }
+        }
+      }
+    }
+
+    if (words.length === 0) continue;
+    totalWords += words.length;
+
+    // Compute average word height
+    const avgWordHeight = words.reduce((sum, w) => sum + w.h, 0) / words.length;
+
+    // Group words into lines using Y-clustering (tolerance = avgWordHeight * 0.75)
+    // Sort words by Y-center
+    words.sort((a, b) => a.cy - b.cy);
+    const lines: any[][] = [];
+    for (const word of words) {
+      let added = false;
+      const tol = Math.max(avgWordHeight, word.h) * 0.75;
+      for (const line of lines) {
+        // Compute average cy of the line
+        const lineCy = line.reduce((sum, w) => sum + w.cy, 0) / line.length;
+        if (Math.abs(word.cy - lineCy) <= tol) {
+          line.push(word);
+          added = true;
+          break;
+        }
+      }
+      if (!added) {
+        lines.push([word]);
+      }
+    }
+
+    totalLines += lines.length;
+
+    // For horizontal alignment score: count words in lines with at least 3 words
+    for (const line of lines) {
+      if (line.length >= 3) {
+        alignedWords += line.length;
+      }
+
+      // Compute line horizontal span
+      const xs = line.map(w => w.minX).concat(line.map(w => w.maxX));
+      const minX = Math.min(...xs);
+      const maxX = Math.max(...xs);
+      const span = (maxX - minX) / pageWidth;
+      totalLineSpan += span;
+
+      // Check form labels in line text
+      const lineText = line.map(w => w.text).join(' ');
+      if (formLabelRegex.test(lineText)) {
+        formLabelMatches++;
+      }
+    }
+  }
+
+  const horizontalAlignmentScore = totalWords > 0 ? alignedWords / totalWords : 0;
+  const formLabelDensity = totalLines > 0 ? formLabelMatches / totalLines : 0;
+  const narrativeContinuityScore = totalLines > 0 ? totalLineSpan / totalLines : 0;
+  const wordsPerLine = totalLines > 0 ? totalWords / totalLines : 0;
+
+  // Let's make sure scores are bounded [0, 1]
+  const clamp = (val: number) => Math.min(Math.max(val, 0), 1);
+
+  // Classification heuristics
+  let detectedLayoutType: 'tabular' | 'form' | 'narrative' = 'tabular';
+  let layoutConfidence = 0.5;
+
+  // 1. Form layout has short scattered lines (low continuity score) and/or high density of label words
+  if (formLabelDensity > 0.25 || (formLabelDensity > 0.12 && narrativeContinuityScore < 0.55)) {
+    detectedLayoutType = 'form';
+    layoutConfidence = clamp(0.5 + (formLabelDensity * 2));
+  }
+  // 2. Narrative layout has very high continuity (lines span the page), high words per line, and few form labels
+  else if (narrativeContinuityScore > 0.7 && wordsPerLine > 6 && formLabelDensity < 0.12) {
+    detectedLayoutType = 'narrative';
+    layoutConfidence = clamp(0.5 + (narrativeContinuityScore - 0.5));
+  }
+  // 3. Tabular layout is default, has moderate to high continuity but low label density, and high words per line
+  else {
+    detectedLayoutType = 'tabular';
+    layoutConfidence = clamp(0.6 + (horizontalAlignmentScore * 0.3));
+  }
+
+  return {
+    detectedLayoutType,
+    layoutConfidence: parseFloat(layoutConfidence.toFixed(2)),
+    classificationSignals: {
+      horizontalAlignmentScore: parseFloat(horizontalAlignmentScore.toFixed(2)),
+      formLabelDensity: parseFloat(formLabelDensity.toFixed(2)),
+      narrativeContinuityScore: parseFloat(narrativeContinuityScore.toFixed(2))
+    },
+    userOverridden: false
   };
 }

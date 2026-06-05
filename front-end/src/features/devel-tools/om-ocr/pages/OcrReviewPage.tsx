@@ -49,6 +49,10 @@ import {
   TextField,
   Tooltip,
   Typography,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from '@mui/material';
 import {
   IconArrowLeft,
@@ -85,6 +89,8 @@ interface OcrJobRow {
   seeded_at: string | null;
   has_ocr_text: boolean;
   created_at: string;
+  records_count?: number | null;
+  confirmed_count?: number | null;
 }
 
 const STATUS_LABELS: Record<string, { label: string; color: 'default' | 'primary' | 'success' | 'warning' | 'info' }> = {
@@ -95,6 +101,96 @@ const STATUS_LABELS: Record<string, { label: string; color: 'default' | 'primary
   seeded: { label: 'In Records DB', color: 'success' },
   returned: { label: 'Returned', color: 'default' },
 };
+
+function cleanDateString(s: string): string {
+  if (!s) return '';
+  let clean = s.trim();
+  // Clean trailing digit from 3-digit year (e.g. 11-16-702 -> 11-16-70)
+  clean = clean.replace(/\b(\d{1,2})([\/\.\-\s]+)(\d{1,2})([\/\.\-\s]+)(\d{2})(\d)\b/g, '$1$2$3$4$5');
+  // Clean trailing digit from 5-digit year (e.g. 11-16-19702 -> 11-16-1970)
+  clean = clean.replace(/\b(\d{1,2})([\/\.\-\s]+)(\d{1,2})([\/\.\-\s]+)(\d{4})(\d+)\b/g, '$1$2$3$4$5');
+  return clean;
+}
+
+function parseLedgerDateValue(s: string): number | null {
+  const str = (s || '').trim();
+  const m = str.match(/^(\d{1,2})[\/\.\-\s]+(\d{1,2})[\/\.\-\s]+(\d{2,4})$/);
+  if (!m) {
+    const yearMatch = str.match(/^(\d{4})$/);
+    if (yearMatch) {
+      return new Date(parseInt(yearMatch[1], 10), 0, 1).getTime();
+    }
+    return null;
+  }
+  let y = parseInt(m[3], 10);
+  if (y < 100) y += 1900;
+  return new Date(y, parseInt(m[1], 10) - 1, parseInt(m[2], 10)).getTime();
+}
+
+function normalizeBaptismDates(fields: Record<string, string>): void {
+  let dob = fields.date_of_birth?.trim();
+  let bapt = fields.date_of_baptism?.trim();
+
+  if (dob) {
+    dob = cleanDateString(dob);
+    fields.date_of_birth = dob;
+  }
+  if (bapt) {
+    bapt = cleanDateString(bapt);
+    fields.date_of_baptism = bapt;
+  }
+
+  if (!dob || !bapt) return;
+
+  const tBirth = parseLedgerDateValue(dob);
+  const tBapt = parseLedgerDateValue(bapt);
+
+  if (tBirth && tBapt) {
+    const isBaptYearOnly = /^\d{4}$/.test(bapt);
+    const isBirthYearOnly = /^\d{4}$/.test(dob);
+
+    const getYear = (str: string, ts: number) => {
+      if (/^\d{4}$/.test(str)) return parseInt(str, 10);
+      const parsed = str.match(/\d{2,4}$/);
+      if (parsed) {
+        let y = parseInt(parsed[0], 10);
+        if (y < 100) y += 1900;
+        return y;
+      }
+      return new Date(ts).getFullYear();
+    };
+
+    const birthYear = getYear(dob, tBirth);
+    const baptYear = getYear(bapt, tBapt);
+
+    if (isBaptYearOnly && !isBirthYearOnly) {
+      if (birthYear > baptYear) {
+        fields.date_of_birth = bapt;
+        fields.date_of_baptism = dob;
+      }
+    } else if (!isBaptYearOnly && isBirthYearOnly) {
+      if (birthYear > baptYear) {
+        fields.date_of_birth = bapt;
+        fields.date_of_baptism = dob;
+      }
+    } else if (isBaptYearOnly && isBirthYearOnly) {
+      if (birthYear > baptYear) {
+        fields.date_of_birth = bapt;
+        fields.date_of_baptism = dob;
+      }
+    } else {
+      if (tBirth > tBapt) {
+        fields.date_of_birth = bapt;
+        fields.date_of_baptism = dob;
+      } else if (tBirth === tBapt) {
+        const d = new Date(tBapt);
+        d.setDate(d.getDate() + 1);
+        const separator = bapt.includes('/') ? '/' : (bapt.includes('.') ? '.' : '-');
+        fields.date_of_baptism = `${d.getMonth() + 1}${separator}${d.getDate()}${separator}${d.getFullYear()}`;
+      }
+    }
+  }
+}
 
 const OcrReviewPage: React.FC = () => {
   const navigate = useNavigate();
@@ -140,6 +236,9 @@ const OcrReviewPage: React.FC = () => {
   const [columnBandsOverride, setColumnBandsOverride] = useState<ColumnBands | null>(null);
   const [confirmedIndexes, setConfirmedIndexes] = useState<Set<number>>(new Set());
   const [showColumnGuides, setShowColumnGuides] = useState(true);
+  const [layoutClassification, setLayoutClassification] = useState<any>(null);
+  const [saveTemplateDialogOpen, setSaveTemplateDialogOpen] = useState(false);
+  const [templateName, setTemplateName] = useState('');
   const [mapHint, setMapHint] = useState<string | null>(null);
   const [jobsCollapsed, setJobsCollapsed] = useState(false);
   const [imagePanelWidth, setImagePanelWidth] = useState(560);
@@ -237,10 +336,12 @@ const OcrReviewPage: React.FC = () => {
       setTableExtractionJson(page?.tableExtractionJson ?? null);
       setRecordCandidates(page?.recordCandidates ?? null);
       setScoringV2(page?.scoringV2 ?? null);
+      setLayoutClassification(data?.layout_classification_json ?? null);
     } catch {
       setTableExtractionJson(null);
       setRecordCandidates(null);
       setScoringV2(null);
+      setLayoutClassification(null);
     } finally {
       setArtifactsLoading(false);
     }
@@ -312,7 +413,7 @@ const OcrReviewPage: React.FC = () => {
     try {
       const res: any = await apiClient.get(`/api/church/${churchId}/ocr/jobs?limit=100`);
       const list: OcrJobRow[] = res?.data?.jobs || res?.jobs || [];
-      setJobs(list.filter((j) => j.review_status !== 'seeded' || j.id === String(selectedJobId)));
+      setJobs(list);
     } catch {
       setJobs([]);
     } finally {
@@ -564,9 +665,16 @@ const OcrReviewPage: React.FC = () => {
 
   const confirmFields = async () => {
     if (!churchId || !selectedJobId) return;
+
+    const currentFields = { ...fields };
+    if (recordType === 'baptism') {
+      normalizeBaptismDates(currentFields);
+      setFields(currentFields);
+    }
+
     const updated = [...allRecords];
-    if (updated.length) updated[selectedRecordIndex] = { ...fields };
-    else updated.push({ ...fields });
+    if (updated.length) updated[selectedRecordIndex] = currentFields;
+    else updated.push(currentFields);
 
     const newConfirmed = new Set(confirmedIndexes);
     newConfirmed.add(selectedRecordIndex);
@@ -585,9 +693,41 @@ const OcrReviewPage: React.FC = () => {
       setAllRecords(updated);
       setConfirmedIndexes(newConfirmed);
 
+      // Update list of jobs locally so it immediately shows up under correct section with counts
+      setJobs((prevJobs) =>
+        prevJobs.map((j) =>
+          Number(j.id) === selectedJobId
+            ? {
+                ...j,
+                confirmed_count: newConfirmed.size,
+                records_count: total,
+                review_status: allDone ? 'ready_to_seed' : j.review_status,
+              }
+            : j
+        )
+      );
+
       if (allDone) {
         setReviewStatus('ready_to_seed');
         setMapHint('All records confirmed — ready to seed.');
+
+        // Prompt
+        setTimeout(() => {
+          const continueWork = window.confirm("All records on this page are confirmed!\n\nContinue working on records?");
+          if (continueWork) {
+            // Find next job awaiting review
+            const nextJob = jobs.find((j) => {
+              const isSelf = Number(j.id) === selectedJobId;
+              const isAwaiting = j.review_status !== 'ready_to_seed' && j.review_status !== 'seeded';
+              return !isSelf && isAwaiting;
+            });
+            if (nextJob) {
+              navigate(`${reviewBase}/${nextJob.id}`);
+            } else {
+              alert("No more jobs awaiting review!");
+            }
+          }
+        }, 100);
       } else {
         let next = -1;
         for (let step = 1; step <= total; step++) {
@@ -627,6 +767,74 @@ const OcrReviewPage: React.FC = () => {
     }
   };
 
+  const handleLayoutOverride = async (newLayout: 'tabular' | 'form' | 'narrative') => {
+    if (!churchId || !selectedJobId) return;
+    try {
+      const updatedLayout = {
+        ...layoutClassification,
+        detectedLayoutType: newLayout,
+        userOverridden: true
+      };
+      await apiClient.patch(`/api/church/${churchId}/ocr/jobs/${selectedJobId}`, {
+        layout_classification_json: updatedLayout
+      });
+      setLayoutClassification(updatedLayout);
+    } catch (err: any) {
+      console.error('Failed to override layout classification:', err);
+    }
+  };
+
+  const handleApplyColumnOverride = () => {
+    setMapHint("Columns applied to active preview.");
+  };
+
+  const [rerunLoading, setRerunLoading] = useState(false);
+  const handleRerunExtraction = async () => {
+    if (!churchId || !selectedJobId || !columnBandsOverride) return;
+    setRerunLoading(true);
+    try {
+      const res: any = await apiClient.post(`/api/church/${churchId}/ocr/jobs/${selectedJobId}/re-extract`, {
+        columnBands: columnBandsOverride,
+        headerYThreshold: tableExtractionJson?.header_y_threshold || 0.15
+      });
+      const data = res?.data ?? res;
+      if (data.success) {
+        setTableExtractionJson(data.tableExtraction || null);
+        setRecordCandidates(data.recordCandidates || null);
+        setColumnBandsOverride(null);
+        setMapHint("Re-extraction complete. Page parsed with custom columns.");
+        loadExtract(selectedJobId);
+      }
+    } catch (err: any) {
+      setError(err?.response?.data?.error || err?.message || 'Re-extraction failed');
+    } finally {
+      setRerunLoading(false);
+    }
+  };
+
+  const [saveTemplateLoading, setSaveTemplateLoading] = useState(false);
+  const handleSaveTemplate = async () => {
+    if (!churchId || !templateName.trim() || !columnBandsOverride) return;
+    setSaveTemplateLoading(true);
+    try {
+      const res: any = await apiClient.post(`/api/church/${churchId}/ocr/templates`, {
+        name: templateName,
+        recordType,
+        columnBands: columnBandsOverride,
+        headerYThreshold: tableExtractionJson?.header_y_threshold || 0.15
+      });
+      const data = res?.data ?? res;
+      if (data.success) {
+        setSaveTemplateDialogOpen(false);
+        setMapHint(`Template "${templateName}" saved successfully.`);
+      }
+    } catch (err: any) {
+      setError(err?.response?.data?.error || err?.message || 'Failed to save template');
+    } finally {
+      setSaveTemplateLoading(false);
+    }
+  };
+
   if (!churchId) {
     return (
       <Box sx={{ p: 4, textAlign: 'center' }}>
@@ -637,6 +845,14 @@ const OcrReviewPage: React.FC = () => {
   }
 
   const statusCfg = STATUS_LABELS[reviewStatus] || { label: reviewStatus, color: 'default' as const };
+
+  const awaitingJobs = useMemo(() => {
+    return jobs.filter((j) => j.review_status !== 'ready_to_seed' && j.review_status !== 'seeded');
+  }, [jobs]);
+
+  const completedJobs = useMemo(() => {
+    return jobs.filter((j) => j.review_status === 'ready_to_seed' || j.review_status === 'seeded');
+  }, [jobs]);
 
   return (
     <Box sx={{ height: 'calc(100vh - 64px)', display: 'flex', flexDirection: 'column' }}>
@@ -713,13 +929,14 @@ const OcrReviewPage: React.FC = () => {
               </Tooltip>
             </Stack>
             {jobsLoading && <CircularProgress size={24} />}
-            {!jobsLoading && jobs.length === 0 && (
-              <Alert severity="info">No jobs in the pipeline. Upload images first.</Alert>
+            {!jobsLoading && awaitingJobs.length === 0 && (
+              <Alert severity="info" sx={{ py: 0.5, px: 1, fontSize: '0.75rem' }}>No jobs awaiting review.</Alert>
             )}
-            <List dense disablePadding>
-              {jobs.map((j) => {
+            <List dense disablePadding sx={{ mb: 3 }}>
+              {awaitingJobs.map((j) => {
                 const cfg = STATUS_LABELS[j.review_status] || { label: j.review_status, color: 'default' as const };
                 const active = selectedJobId === Number(j.id);
+                const countStr = typeof j.records_count === 'number' ? `${j.confirmed_count || 0}/${j.records_count} ` : '';
                 return (
                   <ListItemButton
                     key={j.id}
@@ -728,7 +945,34 @@ const OcrReviewPage: React.FC = () => {
                     sx={{ borderRadius: 1, mb: 0.5 }}
                   >
                     <ListItemText
-                      primary={j.filename || `Job #${j.id}`}
+                      primary={`${countStr}${j.filename || `Job #${j.id}`}`}
+                      secondary={new Date(j.created_at).toLocaleString()}
+                      primaryTypographyProps={{ noWrap: true, fontSize: '0.85rem', fontWeight: active ? 700 : 500 }}
+                    />
+                    <Chip label={cfg.label} size="small" color={cfg.color} variant="outlined" />
+                  </ListItemButton>
+                );
+              })}
+            </List>
+
+            <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1 }}>Jobs complete</Typography>
+            {!jobsLoading && completedJobs.length === 0 && (
+              <Alert severity="info" sx={{ py: 0.5, px: 1, fontSize: '0.75rem' }}>No completed jobs.</Alert>
+            )}
+            <List dense disablePadding>
+              {completedJobs.map((j) => {
+                const cfg = STATUS_LABELS[j.review_status] || { label: j.review_status, color: 'default' as const };
+                const active = selectedJobId === Number(j.id);
+                const countStr = typeof j.records_count === 'number' ? `${j.confirmed_count || 0}/${j.records_count} ` : '';
+                return (
+                  <ListItemButton
+                    key={j.id}
+                    selected={active}
+                    onClick={() => navigate(`${reviewBase}/${j.id}`)}
+                    sx={{ borderRadius: 1, mb: 0.5 }}
+                  >
+                    <ListItemText
+                      primary={`${countStr}${j.filename || `Job #${j.id}`}`}
                       secondary={new Date(j.created_at).toLocaleString()}
                       primaryTypographyProps={{ noWrap: true, fontSize: '0.85rem', fontWeight: active ? 700 : 500 }}
                     />
@@ -763,6 +1007,30 @@ const OcrReviewPage: React.FC = () => {
                   />
                 )}
               </Stack>
+
+              {layoutClassification && (
+                <Paper variant="outlined" sx={{ p: 1.5, bgcolor: 'background.default', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 1.5 }}>
+                  <Stack direction="row" spacing={1} alignItems="center">
+                    <IconRobot size={20} color="#1976d2" />
+                    <Typography variant="body2">
+                      Detected Layout: <strong>{layoutClassification.detectedLayoutType.toUpperCase()}</strong> · {Math.round(layoutClassification.layoutConfidence * 100)}% confidence
+                    </Typography>
+                  </Stack>
+                  <FormControl size="small" sx={{ minWidth: 150 }}>
+                    <InputLabel id="layout-override-label">Change Layout</InputLabel>
+                    <Select
+                      labelId="layout-override-label"
+                      label="Change Layout"
+                      value={layoutClassification.detectedLayoutType}
+                      onChange={(e) => handleLayoutOverride(e.target.value as any)}
+                    >
+                      <MenuItem value="tabular">Tabular Ledger</MenuItem>
+                      <MenuItem value="form">Pre-printed Form</MenuItem>
+                      <MenuItem value="narrative">Narrative</MenuItem>
+                    </Select>
+                  </FormControl>
+                </Paper>
+              )}
 
               {allRecords.length > 1 && (
                 <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
@@ -1024,6 +1292,46 @@ const OcrReviewPage: React.FC = () => {
                 </Stack>
               </Box>
 
+              {columnBandsOverride && (
+                <Box sx={{ px: 2, py: 1, borderBottom: '1px solid', borderColor: 'divider', bgcolor: 'warning.light', color: 'warning.contrastText', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 1 }}>
+                  <Typography variant="caption" fontWeight={700} sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                    ⚠️ Layout modified · Not saved
+                  </Typography>
+                  <Stack direction="row" spacing={1}>
+                    <Button
+                      size="small"
+                      variant="contained"
+                      color="primary"
+                      onClick={handleApplyColumnOverride}
+                      sx={{ textTransform: 'none', py: 0.25 }}
+                    >
+                      Apply
+                    </Button>
+                    <Button
+                      size="small"
+                      variant="contained"
+                      color="secondary"
+                      onClick={handleRerunExtraction}
+                      disabled={rerunLoading}
+                      sx={{ textTransform: 'none', py: 0.25 }}
+                    >
+                      {rerunLoading ? <CircularProgress size={16} /> : 'Re-run'}
+                    </Button>
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      onClick={() => {
+                        setTemplateName(`${recordType} Custom Template`);
+                        setSaveTemplateDialogOpen(true);
+                      }}
+                      sx={{ textTransform: 'none', py: 0.25, bgcolor: 'background.paper' }}
+                    >
+                      Save as Template
+                    </Button>
+                  </Stack>
+                </Box>
+              )}
+
               {fieldHighlightBoxes.length > 0 && (
                 <Box sx={{ px: 1.5, py: 1, borderBottom: '1px solid', borderColor: 'divider', bgcolor: 'background.paper', display: 'flex', flexWrap: 'wrap', gap: 0.75 }}>
                   {fieldDefs
@@ -1223,6 +1531,27 @@ const OcrReviewPage: React.FC = () => {
           )}
         </Box>
       </Box>
+
+      <Dialog open={saveTemplateDialogOpen} onClose={() => setSaveTemplateDialogOpen(false)}>
+        <DialogTitle>Save as Reusable Template</DialogTitle>
+        <DialogContent>
+          <Box sx={{ pt: 1, minWidth: 300 }}>
+            <TextField
+              fullWidth
+              label="Template Name"
+              value={templateName}
+              onChange={(e) => setTemplateName(e.target.value)}
+              disabled={saveTemplateLoading}
+            />
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setSaveTemplateDialogOpen(false)} disabled={saveTemplateLoading}>Cancel</Button>
+          <Button onClick={handleSaveTemplate} variant="contained" disabled={saveTemplateLoading || !templateName.trim()}>
+            {saveTemplateLoading ? <CircularProgress size={24} /> : 'Save'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };

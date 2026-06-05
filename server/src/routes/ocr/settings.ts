@@ -489,4 +489,43 @@ router.put('/record-fields', async (req: any, res: any) => {
   }
 });
 
+// POST /api/church/:churchId/ocr/templates
+router.post('/templates', async (req: any, res: any) => {
+  try {
+    const churchId = parseInt(req.params.churchId);
+    const { name, recordType, columnBands, headerYThreshold, learnedParams } = req.body;
+
+    if (!name || !recordType || !columnBands) {
+      return res.status(400).json({ error: 'Missing required fields: name, recordType, columnBands' });
+    }
+
+    const { getAppPool } = require('../../config/db');
+    const appPool = getAppPool();
+
+    // Ensure the column_bands is saved as a JSON array or object
+    const columnBandsStr = typeof columnBands === 'string' ? columnBands : JSON.stringify(columnBands);
+    const learnedParamsStr = learnedParams ? (typeof learnedParams === 'string' ? learnedParams : JSON.stringify(learnedParams)) : null;
+
+    const [insertResult] = await appPool.query(
+      `INSERT INTO ocr_extractors (name, record_type, church_id, column_bands, header_y_threshold, learned_params, is_default, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, 0, NOW(), NOW())`,
+      [
+        name,
+        recordType,
+        churchId,
+        columnBandsStr,
+        headerYThreshold || 0.15,
+        learnedParamsStr
+      ]
+    );
+
+    const templateId = (insertResult as any).insertId;
+    console.log(`[OCR Settings] Saved template #${templateId} for church ${churchId}`);
+    res.json({ success: true, templateId });
+  } catch (error: any) {
+    console.error('[OCR Settings] Error saving template:', error);
+    res.status(500).json({ error: 'Failed to save template', message: error.message });
+  }
+});
+
 module.exports = router;

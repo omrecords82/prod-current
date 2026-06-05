@@ -213,7 +213,7 @@ function detectColumns(tokenRows, minGapWidth = 0.02) {
 function extractCell(rowTokens, xStart, xEnd) {
   const inBand = rowTokens.filter(t => t.x_center >= xStart && t.x_center < xEnd);
   if (inBand.length === 0) {
-    return { text: '', confidence: null, token_count: 0, bbox: null };
+    return { text: '', confidence: null, token_count: 0, bbox: null, tokens: [] };
   }
 
   inBand.sort((a, b) => {
@@ -240,6 +240,7 @@ function extractCell(rowTokens, xStart, xEnd) {
     confidence: avgConf != null ? Math.round(avgConf * 100) / 100 : null,
     token_count: inBand.length,
     bbox,
+    tokens: inBand,
   };
 }
 

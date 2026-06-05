@@ -2766,11 +2766,51 @@ async function processJob(job: JobRow): Promise<void> {
     if (combinedText) {
       try {
         const classResult = classifyRecordType(combinedText);
+
+        // Load layout classification
+        let layoutClassification: any = null;
+        try {
+          const [visionArtifacts] = await tenantPool.execute<RowDataPacket[]>(
+            `SELECT a.storage_path
+             FROM ocr_feeder_artifacts a
+             JOIN ocr_feeder_pages p ON a.page_id = p.id
+             WHERE p.job_id = ? AND a.type = 'vision_json'
+             ORDER BY p.page_index ASC`,
+            [jobId]
+          );
+          const visionPages: any[] = [];
+          for (const row of visionArtifacts) {
+            if (fs.existsSync(row.storage_path)) {
+              const fileContent = fs.readFileSync(row.storage_path, 'utf8');
+              const parsed = JSON.parse(fileContent);
+              if (parsed && Array.isArray(parsed.pages)) {
+                visionPages.push(...parsed.pages);
+              }
+            }
+          }
+          if (visionPages.length > 0) {
+            const { classifyLayout } = require('../utils/ocrClassifier');
+            layoutClassification = classifyLayout(visionPages);
+          }
+        } catch (layoutErr: any) {
+          console.warn(`[OCR Worker] Layout classification failed for job ${jobId}: ${layoutErr.message}`);
+        }
+
         await platformPool.query(
-          `UPDATE ocr_jobs SET classifier_suggested_type = ?, classifier_confidence = ?, review_status = 'ocr_complete' WHERE id = ?`,
-          [classResult.suggested_type, classResult.confidence, jobId]
+          `UPDATE ocr_jobs SET
+             classifier_suggested_type = ?,
+             classifier_confidence = ?,
+             layout_classification_json = ?,
+             review_status = 'ocr_complete'
+           WHERE id = ?`,
+          [
+            classResult.suggested_type,
+            classResult.confidence,
+            layoutClassification ? JSON.stringify(layoutClassification) : null,
+            jobId
+          ]
         );
-        console.log(`OCR_CLASSIFIER ${JSON.stringify({ jobId, suggested: classResult.suggested_type, confidence: classResult.confidence })}`);
+        console.log(`OCR_CLASSIFIER ${JSON.stringify({ jobId, suggested: classResult.suggested_type, confidence: classResult.confidence, layout: layoutClassification?.detectedLayoutType })}`);
 
         const hintType = record_type && record_type !== 'custom' ? record_type : classResult.suggested_type;
         const extract = await extractAgentFieldsForJob(jobId, combinedText, hintType !== 'unknown' ? hintType : record_type);
@@ -2889,7 +2929,8 @@ async function workerLoop(): Promise<void> {
   try {
     await platformPool.query(`ALTER TABLE ocr_jobs ADD COLUMN IF NOT EXISTS classifier_suggested_type VARCHAR(32) NULL`);
     await platformPool.query(`ALTER TABLE ocr_jobs ADD COLUMN IF NOT EXISTS classifier_confidence DECIMAL(5,3) NULL`);
-    console.log(`OCR_WORKER_SCHEMA_OK classifier columns ensured`);
+    await platformPool.query(`ALTER TABLE ocr_jobs ADD COLUMN IF NOT EXISTS layout_classification_json TEXT NULL`);
+    console.log(`OCR_WORKER_SCHEMA_OK classifier and layout columns ensured`);
   } catch (schemaErr: any) {
     if (schemaErr.code !== 'ER_DUP_FIELDNAME') {
       console.warn(`[OCR Worker] Schema migration warning: ${schemaErr.message}`);
