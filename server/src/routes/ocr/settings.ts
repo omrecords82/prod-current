@@ -358,7 +358,7 @@ const DEFAULT_RECORD_FIELD_CONFIG: Record<string, Array<{
     { key: 'record_number', label: 'Record #', headerLabel: 'NUMBER', required: false, visible: true, sortOrder: 0, type: 'text' },
     { key: 'deceased_name', label: 'Name of Deceased', headerLabel: 'NAME OF DECEASED', required: true, visible: true, sortOrder: 1, type: 'text' },
     { key: 'date_of_death', label: 'Date of Death', headerLabel: 'DATE OF DEATH', required: false, visible: true, sortOrder: 2, type: 'date' },
-    { key: 'date_of_funeral', label: 'Date of Funeral', headerLabel: 'DATE OF FUNERAL', required: false, visible: true, sortOrder: 3, type: 'date' },
+    { key: 'date_of_funeral', label: 'Date of Funeral', headerLabel: 'DATE OF FUNERAL', required: false, visible: false, sortOrder: 3, type: 'date' },
     { key: 'date_of_burial', label: 'Date of Burial', headerLabel: 'DATE OF BURIAL', required: false, visible: true, sortOrder: 4, type: 'date' },
     { key: 'place_of_burial', label: 'Place of Burial', headerLabel: 'PLACE OF BURIAL', required: false, visible: true, sortOrder: 5, type: 'text' },
     { key: 'age_at_death', label: 'Age at Death', headerLabel: 'AGE', required: false, visible: true, sortOrder: 6, type: 'text' },

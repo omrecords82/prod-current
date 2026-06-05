@@ -65,7 +65,7 @@ export const RECORD_FIELDS: Record<string, FieldDefinition[]> = {
     { name: 'record_number', label: 'Record #', required: false, type: 'text', headerLabel: 'NUMBER', visible: true, sortOrder: 0 },
     { name: 'deceased_name', label: 'Name of Deceased', required: true, type: 'text', headerLabel: 'NAME OF DECEASED', visible: true, sortOrder: 1 },
     { name: 'date_of_death', label: 'Date of Death', required: false, type: 'date', headerLabel: 'DATE OF DEATH', visible: true, sortOrder: 2 },
-    { name: 'date_of_funeral', label: 'Date of Funeral', required: false, type: 'date', headerLabel: 'DATE OF FUNERAL', visible: true, sortOrder: 3 },
+    { name: 'date_of_funeral', label: 'Date of Funeral', required: false, type: 'date', headerLabel: 'DATE OF FUNERAL', visible: false, sortOrder: 3 },
     { name: 'date_of_burial', label: 'Date of Burial', required: false, type: 'date', headerLabel: 'DATE OF BURIAL', visible: true, sortOrder: 4 },
     { name: 'place_of_burial', label: 'Place of Burial', required: false, type: 'text', headerLabel: 'PLACE OF BURIAL', visible: true, sortOrder: 5 },
     { name: 'age_at_death', label: 'Age at Death', required: false, type: 'text', headerLabel: 'AGE', visible: true, sortOrder: 6 },
