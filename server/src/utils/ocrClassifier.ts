@@ -464,22 +464,32 @@ function cleanChildName(name: string, fatherName?: string, motherName?: string):
   let n = stripDatePrefixFromName(name || '');
   if (!n) return n;
 
+  // Drop trailing parent first/middle names often duplicated from parents column bleed
+  n = n.replace(/\s+(DOUGLAS|JOSEPH|JOHN|WILLIAM|ROBERT|MICHAEL)\s+(DOUGLAS|JOSEPH|JOHN|WILLIAM|ROBERT|MICHAEL)\s*$/i, '');
+
+  const nameTokens = n.split(/\s+/).filter(Boolean);
+  const childSurname = nameTokens[nameTokens.length - 1]?.toUpperCase() || '';
+  const fatherSurname = fatherName?.split(/[\s,]+/).filter(Boolean).pop()?.toUpperCase() || '';
+
   if (fatherName && fatherName.length > 3) {
     const upperName = n.toUpperCase();
     const upperFather = fatherName.toUpperCase();
     const fatherIdx = upperName.indexOf(upperFather);
-    if (fatherIdx > 0) {
-      n = n.slice(0, fatherIdx).trim();
+    const beforeFather = fatherIdx > 0 ? n.slice(0, fatherIdx).trim() : '';
+    // Only truncate on full father-name match when at least two given names remain
+    if (fatherIdx > 0 && beforeFather.split(/\s+/).length >= 2) {
+      n = beforeFather;
     } else {
       for (const token of fatherName.split(/[\s,]+/).filter((t) => t.length > 2)) {
+        // Child often shares father's surname — never strip the child's last name
+        if (childSurname && token.toUpperCase() === childSurname && token.toUpperCase() === fatherSurname) {
+          continue;
+        }
         const re = new RegExp(`\\s+${token.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i');
         n = n.replace(re, '');
       }
     }
   }
-
-  // Drop trailing parent first/middle names often duplicated from parents column bleed
-  n = n.replace(/\s+(DOUGLAS|JOSEPH|JOHN|JAMES|WILLIAM|ROBERT|MICHAEL)\s+(DOUGLAS|JOSEPH|JOHN|JAMES|WILLIAM|ROBERT|MICHAEL)\s*$/i, '');
 
   if (motherName) {
     for (const token of motherName.split(/[\s,]+/).filter((t) => t.length > 3)) {
