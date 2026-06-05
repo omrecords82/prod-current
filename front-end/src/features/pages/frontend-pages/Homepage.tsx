@@ -4,7 +4,6 @@ import HomepageRecordsTransformSection from '@/components/frontend-pages/homepag
 import EditableText from '@/components/frontend-pages/shared/EditableText';
 import RichEditableText from '@/components/frontend-pages/shared/RichEditableText';
 import PublicSeo from '@/components/seo/PublicSeo';
-import { PUBLIC_ROUTES } from '@/config/publicRoutes';
 import { useLanguage } from '@/context/LanguageContext';
 import {
   ArrowRight,
@@ -22,6 +21,7 @@ import {
   type LucideIcon,
 } from '@/ui/icons';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { ParishRecordsAssessment } from '@/components/frontend-pages/shared/sections';
 import { Link } from 'react-router-dom';
 
 const HIGHLIGHT_SLIDE_COUNT = 3;
@@ -124,32 +124,7 @@ const Homepage = () => {
         </div>
       </section>
 
-      {/* CTA */}
-      <section className="py-20 bg-gradient-to-br from-[#2d1b4e] via-[#3a2461] to-[#4a2f74] dark:from-gray-950 dark:via-gray-900 dark:to-gray-800 text-white">
-        <div className="max-w-4xl mx-auto px-6 text-center">
-          <RichEditableText contentKey="cta.title" as="h2" className="font-['Georgia'] text-4xl md:text-5xl mb-6">
-            {t('home.cta_title')}
-          </RichEditableText>
-          <RichEditableText contentKey="cta.subtitle" as="p" className="font-['Inter'] text-xl text-[rgba(255,255,255,0.9)] mb-8">
-            {t('home.cta_subtitle')}
-          </RichEditableText>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link
-              to={PUBLIC_ROUTES.ENROLL}
-              className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-[#d4af37] text-[#2d1b4e] rounded-lg font-['Inter'] font-medium text-[16px] hover:bg-[#c29d2f] transition-colors no-underline"
-            >
-              {t('common.enroll_parish')}
-              <ArrowRight size={20} />
-            </Link>
-            <Link
-              to={PUBLIC_ROUTES.CONTACT}
-              className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-white/10 backdrop-blur-sm border border-white/20 text-white rounded-lg font-['Inter'] font-medium text-[16px] hover:bg-white/20 transition-colors no-underline"
-            >
-              {t('common.contact_us')}
-            </Link>
-          </div>
-        </div>
-      </section>
+      <ParishRecordsAssessment />
     </>
   );
 };

@@ -37,9 +37,12 @@ const Contact = () => {
 
   useEffect(() => {
     const enquiry = searchParams.get('enquiry');
-    if (enquiry && VALID_ENQUIRY_TYPES.has(enquiry)) {
-      setForm((prev) => ({ ...prev, enquiryType: enquiry }));
-    }
+    const message = searchParams.get('message');
+    setForm((prev) => ({
+      ...prev,
+      ...(enquiry && VALID_ENQUIRY_TYPES.has(enquiry) ? { enquiryType: enquiry } : {}),
+      ...(message ? { message } : {}),
+    }));
   }, [searchParams]);
 
   const handleChange = (field: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
