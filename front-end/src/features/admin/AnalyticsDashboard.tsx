@@ -16,12 +16,17 @@ import {
 import {
   IconArrowDown, IconArrowUp, IconDownload, IconMapPin, IconMinus,
 } from '@tabler/icons-react';
+import Map, { Marker, Popup, NavigationControl } from 'react-map-gl';
+import 'mapbox-gl/dist/mapbox-gl.css';
+
 import PageContainer from '@/shared/ui/PageContainer';
 import { apiClient } from '@/api/utils/axiosInstance';
 import {
   DIOCESAN_PALETTE, DIOCESE_PERIODS, DIOCESE_RECORD_TYPES, DIOCESE_PARISH_SIZES, DIOCESE_OPTIONS,
   type DiocesanParishRow, type VsAverage,
 } from '@/features/records-centralized/components/records/analyticsConfig';
+
+const MAPBOX_TOKEN = import.meta.env.VITE_APP_MAPBOX_ACCESS_TOKEN;
 
 /* ── Types ── */
 
@@ -189,6 +194,57 @@ const AnalyticsDashboard: React.FC = () => {
   useEffect(() => { fetchDashboard(); }, [fetchDashboard]);
 
   const parishes = data?.parishes ?? [];
+  const [mapPopup, setMapPopup] = useState<any | null>(null);
+
+  const center = useMemo(() => {
+    const geo = data?.charts.geoParishes ?? [];
+    if (!geo.length) return { latitude: 40.7128, longitude: -74.0060, zoom: 7 };
+    const lats = geo.map((g) => g.latitude).filter(Boolean);
+    const lngs = geo.map((g) => g.longitude).filter(Boolean);
+    if (!lats.length || !lngs.length) return { latitude: 40.7128, longitude: -74.0060, zoom: 7 };
+    const avgLat = lats.reduce((a, b) => a + b, 0) / lats.length;
+    const avgLng = lngs.reduce((a, b) => a + b, 0) / lngs.length;
+    return { latitude: avgLat, longitude: avgLng, zoom: 7.5 };
+  }, [data?.charts.geoParishes]);
+
+  const sacramentalRatioStats = useMemo(() => {
+    const reporting = parishes.filter((p) => p.records.total > 0);
+    if (!reporting.length) return { avgRatio: 0, highest: null, lowest: null };
+
+    let totalB = 0;
+    let totalF = 0;
+    let highestRatio = -1;
+    let highestParish: DiocesanParishRow | null = null;
+    let lowestRatio = 9999;
+    let lowestParish: DiocesanParishRow | null = null;
+
+    reporting.forEach((p) => {
+      const b = p.records.baptism ?? 0;
+      const f = p.records.funeral ?? 0;
+      totalB += b;
+      totalF += f;
+
+      if (f > 0) {
+        const ratio = b / f;
+        if (ratio > highestRatio) {
+          highestRatio = ratio;
+          highestParish = p;
+        }
+        if (ratio < lowestRatio) {
+          lowestRatio = ratio;
+          lowestParish = p;
+        }
+      }
+    });
+
+    const avgRatio = totalF > 0 ? totalB / totalF : 0;
+    return {
+      avgRatio: parseFloat(avgRatio.toFixed(2)),
+      highest: highestParish ? { name: highestParish.name, ratio: parseFloat(highestRatio.toFixed(2)) } : null,
+      lowest: lowestParish ? { name: lowestParish.name, ratio: parseFloat(lowestRatio.toFixed(2)) } : null,
+    };
+  }, [parishes]);
+
   const topParishesChart = useMemo(
     () => (data?.charts.recordsByParish ?? []).slice(0, 20),
     [data?.charts.recordsByParish],
@@ -551,46 +607,208 @@ const AnalyticsDashboard: React.FC = () => {
               </ChartShell>
 
               <ChartShell
-                title="Geographic Parish Overview"
-                subtitle="Marker size reflects record volume · coordinates from parish directory"
+                title="Geographic Parish Overview Map"
+                subtitle="Marker size reflects record volume · Powered by Mapbox GL"
                 className="lg:col-span-2"
               >
-                {data.charts.geoParishes.length > 0 ? (
-                  <ResponsiveContainer width="100%" height={320}>
-                    <ScatterChart margin={{ top: 10, right: 20, bottom: 10, left: 10 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke={gridStroke} />
-                      <XAxis type="number" dataKey="longitude" name="Longitude" tick={{ fill: axisColor, fontSize: 10 }} domain={['auto', 'auto']} />
-                      <YAxis type="number" dataKey="latitude" name="Latitude" tick={{ fill: axisColor, fontSize: 10 }} domain={['auto', 'auto']} />
-                      <ZAxis type="number" dataKey="total" range={[40, 400]} />
-                      <Tooltip
-                        cursor={{ strokeDasharray: '3 3' }}
-                        content={({ active, payload }) => {
-                          if (!active || !payload?.length) return null;
-                          const d = payload[0].payload;
-                          return (
-                            <div className={`rounded-lg shadow-lg border px-3 py-2 text-xs ${isDark ? 'bg-slate-800 border-slate-600 text-slate-100' : 'bg-white border-slate-200'}`}>
-                              <p className="font-semibold">{d.name}</p>
-                              <p>{d.city}, {d.state}</p>
-                              <p>{d.total?.toLocaleString()} records · {d.changePercent}% growth</p>
-                            </div>
-                          );
-                        }}
-                      />
-                      <Scatter
-                        data={data.charts.geoParishes}
-                        fill={DIOCESAN_PALETTE.gold}
-                        onClick={(d: any) => {
-                          const hit = parishes.find((p) => p.churchId === d.churchId);
-                          if (hit) setSelectedParish(hit);
-                        }}
-                      />
-                    </ScatterChart>
-                  </ResponsiveContainer>
+                {MAPBOX_TOKEN && data.charts.geoParishes.length > 0 ? (
+                  <Box sx={{ position: 'relative', width: '100%', height: 420, borderRadius: '8px', overflow: 'hidden' }}>
+                    <Map
+                      initialViewState={{
+                        latitude: center.latitude,
+                        longitude: center.longitude,
+                        zoom: center.zoom,
+                      }}
+                      mapboxAccessToken={MAPBOX_TOKEN}
+                      mapStyle={isDark ? 'mapbox://styles/mapbox/dark-v10' : 'mapbox://styles/mapbox/light-v10'}
+                      style={{ width: '100%', height: '100%' }}
+                      attributionControl={false}
+                    >
+                      <NavigationControl position="top-left" showCompass={false} />
+                      
+                      {data.charts.geoParishes.map((p) => {
+                        const markerSize = Math.max(20, Math.min(50, Math.round(p.total / 150) + 18));
+                        return (
+                          <Marker
+                            key={p.churchId}
+                            latitude={p.latitude}
+                            longitude={p.longitude}
+                            anchor="center"
+                          >
+                            <Box
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setMapPopup(p);
+                              }}
+                              sx={{
+                                width: markerSize,
+                                height: markerSize,
+                                borderRadius: '50%',
+                                bgcolor: isDark ? 'rgba(201, 161, 74, 0.85)' : 'rgba(26, 54, 93, 0.85)',
+                                border: '2px solid white',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                color: 'white',
+                                fontWeight: 'bold',
+                                fontSize: `${Math.max(9, Math.min(13, Math.round(p.total / 500) + 9))}px`,
+                                cursor: 'pointer',
+                                transition: 'all 0.2s',
+                                '&:hover': {
+                                  transform: 'scale(1.15)',
+                                  bgcolor: '#c9a14a',
+                                  zIndex: 10,
+                                },
+                                boxShadow: '0 4px 6px rgba(0,0,0,0.15)',
+                              }}
+                            >
+                              {p.total >= 1000 ? `${(p.total / 1000).toFixed(1)}k` : p.total}
+                            </Box>
+                          </Marker>
+                        );
+                      })}
+
+                      {mapPopup && (
+                        <Popup
+                          latitude={mapPopup.latitude}
+                          longitude={mapPopup.longitude}
+                          onClose={() => setMapPopup(null)}
+                          closeButton={true}
+                          closeOnClick={false}
+                          anchor="top"
+                          maxWidth="280px"
+                        >
+                          <Box sx={{ p: 1, color: '#1a202c', fontFamily: 'Inter' }}>
+                            <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 0.5 }}>
+                              {mapPopup.name}
+                            </Typography>
+                            <Typography variant="body2" color="textSecondary" sx={{ mb: 1, fontSize: '11px' }}>
+                              {mapPopup.city}, {mapPopup.state}
+                            </Typography>
+                            <Divider sx={{ my: 0.5 }} />
+                            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, mt: 1, fontSize: '11px' }}>
+                              <div><strong>Total Registers:</strong> {mapPopup.total.toLocaleString()}</div>
+                              <div><strong>Added (Period):</strong> {mapPopup.addedInPeriod}</div>
+                              <div>
+                                <strong>Growth:</strong>{' '}
+                                <span style={{ color: mapPopup.changePercent >= 0 ? 'green' : 'red', fontWeight: 600 }}>
+                                  {mapPopup.changePercent >= 0 ? '+' : ''}{mapPopup.changePercent}%
+                                </span>
+                              </div>
+                            </Box>
+                            <Button
+                              size="small"
+                              variant="contained"
+                              fullWidth
+                              onClick={() => {
+                                const hit = parishes.find((parish) => parish.churchId === mapPopup.churchId);
+                                if (hit) setSelectedParish(hit);
+                                setMapPopup(null);
+                              }}
+                              sx={{ mt: 1.5, py: 0.5, fontSize: '10px', bgcolor: '#1a365d', '&:hover': { bgcolor: '#2c5282' } }}
+                            >
+                              Explore Parish Details
+                            </Button>
+                          </Box>
+                        </Popup>
+                      )}
+                    </Map>
+                  </Box>
                 ) : (
-                  <div className={`flex items-center justify-center h-48 gap-2 text-sm ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
-                    <IconMapPin size={18} /> No geocoded parishes in this selection
-                  </div>
+                  <Box
+                    sx={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justify',
+                      justifyContent: 'center',
+                      height: 420,
+                      borderRadius: '8px',
+                      border: '1px dashed border.main',
+                      bgcolor: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)',
+                      p: 3,
+                      textAlign: 'center',
+                    }}
+                  >
+                    <IconMapPin size={36} color="#c9a14a" style={{ marginBottom: '12px' }} />
+                    <Typography variant="subtitle1" fontWeight={600} gutterBottom>
+                      Mapbox Access Token Required
+                    </Typography>
+                    <Typography variant="body2" color="textSecondary" sx={{ maxWidth: 300, mx: 'auto', mb: 2 }}>
+                      Configure `VITE_APP_MAPBOX_ACCESS_TOKEN` in your environment files to display the interactive geographic map.
+                    </Typography>
+                  </Box>
                 )}
+              </ChartShell>
+
+              {/* Additional useful statistics - Demographic Vitality Panel */}
+              <ChartShell
+                title="Sacramental & Vitality Benchmarks"
+                subtitle="Demographic growth trends based on sacrament registries"
+                className="lg:col-span-2"
+              >
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 h-full">
+                  <div className={`rounded-xl border p-4 flex flex-col justify-between ${isDark ? 'bg-slate-800/50 border-slate-700' : 'bg-slate-50 border-slate-100'}`}>
+                    <div>
+                      <Typography variant="caption" sx={{ textTransform: 'uppercase', tracking: '0.1em', fontWeight: 600, color: 'text.secondary' }}>
+                        Demographic Renewal Ratio
+                      </Typography>
+                      <Typography variant="h4" fontWeight={700} sx={{ color: DIOCESAN_PALETTE.gold, mt: 1, tabularNums: true }}>
+                        {sacramentalRatioStats.avgRatio}x
+                      </Typography>
+                      <Typography variant="body2" color="textSecondary" sx={{ mt: 1, fontSize: '12px', leading: 1.3 }}>
+                        Ratio of Baptisms to Funerals. A ratio &gt; 1.0x indicates generational renewal and growth.
+                      </Typography>
+                    </div>
+                    {sacramentalRatioStats.highest && (
+                      <div className="mt-4 pt-3 border-t border-slate-200 dark:border-slate-700">
+                        <span className="text-[10px] text-slate-400 block uppercase">Highest Ratio</span>
+                        <span className="text-xs font-semibold block truncate text-slate-700 dark:text-slate-300">{sacramentalRatioStats.highest.name}</span>
+                        <span className="text-xs font-medium text-green-500">{sacramentalRatioStats.highest.ratio}x ratio</span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className={`rounded-xl border p-4 flex flex-col justify-between ${isDark ? 'bg-slate-800/50 border-slate-700' : 'bg-slate-50 border-slate-100'}`}>
+                    <div>
+                      <Typography variant="caption" sx={{ textTransform: 'uppercase', tracking: '0.1em', fontWeight: 600, color: 'text.secondary' }}>
+                        Data Completion Health
+                      </Typography>
+                      <Typography variant="h4" fontWeight={700} sx={{ color: DIOCESAN_PALETTE.above, mt: 1, tabularNums: true }}>
+                        {averages.completeness}%
+                      </Typography>
+                      <Typography variant="body2" color="textSecondary" sx={{ mt: 1, fontSize: '12px', leading: 1.3 }}>
+                        Average completeness of required canonical fields across all reporting parishes.
+                      </Typography>
+                    </div>
+                    <div className="mt-4 pt-3 border-t border-slate-200 dark:border-slate-700 font-sans">
+                      <span className="text-[10px] text-slate-400 block uppercase">Field Completeness Target</span>
+                      <div className="w-full bg-slate-200 dark:bg-slate-800 h-1.5 rounded-full mt-1.5 overflow-hidden">
+                        <div className="h-full bg-green-500 rounded-full" style={{ width: `${averages.completeness}%` }} />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className={`rounded-xl border p-4 flex flex-col justify-between ${isDark ? 'bg-slate-800/50 border-slate-700' : 'bg-slate-50 border-slate-100'}`}>
+                    <div>
+                      <Typography variant="caption" sx={{ textTransform: 'uppercase', tracking: '0.1em', fontWeight: 600, color: 'text.secondary' }}>
+                        Operational Active Status
+                      </Typography>
+                      <Typography variant="h4" fontWeight={700} sx={{ color: DIOCESAN_PALETTE.navyMid, mt: 1, tabularNums: true }}>
+                        {parishes.filter(p => p.records.dataStatus === 'live').length} / {parishes.length}
+                      </Typography>
+                      <Typography variant="body2" color="textSecondary" sx={{ mt: 1, fontSize: '12px', leading: 1.3 }}>
+                        Parishes with live, real-time sync connections compared to stale or offline databases.
+                      </Typography>
+                    </div>
+                    <div className="mt-4 pt-3 border-t border-slate-200 dark:border-slate-700 flex justify-between items-center text-xs">
+                      <span className="text-slate-400">Sync Status rate:</span>
+                      <span className="font-semibold text-slate-700 dark:text-slate-300">
+                        {Math.round((parishes.filter(p => p.records.dataStatus === 'live').length / Math.max(1, parishes.length)) * 100)}% active
+                      </span>
+                    </div>
+                  </div>
+                </div>
               </ChartShell>
             </div>
 
