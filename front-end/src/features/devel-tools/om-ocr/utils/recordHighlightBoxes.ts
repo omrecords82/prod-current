@@ -371,3 +371,69 @@ export function computeReviewFieldHighlightBoxes({
 
   return boxes;
 }
+
+/** Fractional bbox [x0,y0,x1,y1] for header rows + one record's row span. */
+export function computeReviewCropBbox(
+  tableExtractionJson: any,
+  recordCandidates: any,
+  selectedRecordIndex: number,
+): number[] | null {
+  if (!tableExtractionJson?.tables?.length || !recordCandidates?.candidates?.length) return null;
+  const candidate = recordCandidates.candidates[selectedRecordIndex];
+  if (!candidate) return null;
+  const rowStart = candidate.sourceRowIndex;
+  const rowEnd = candidate.sourceRowEnd ?? rowStart;
+  if (typeof rowStart !== 'number' || rowStart < 0) return null;
+
+  const parts: number[][] = [];
+  for (const table of tableExtractionJson.tables) {
+    for (const row of table.rows || []) {
+      const isHeader = row.type === 'header';
+      const inRecord = !isHeader && row.row_index >= rowStart && row.row_index <= rowEnd;
+      if (!isHeader && !inRecord) continue;
+      for (const cell of row.cells || []) {
+        if (cell.bbox?.length === 4) parts.push(cell.bbox);
+      }
+    }
+  }
+  return unionFractionalBboxes(parts);
+}
+
+/** Shift highlight boxes from full-page coords into a review-crop coordinate space. */
+export function adjustHighlightBoxesForCrop(
+  boxes: OverlayBox[],
+  pageDims: { width: number; height: number },
+  cropBbox: number[],
+): OverlayBox[] {
+  const [cx0, cy0, cx1, cy1] = cropBbox;
+  const cropW = Math.max(1, (cx1 - cx0) * pageDims.width);
+  const cropH = Math.max(1, (cy1 - cy0) * pageDims.height);
+  const offsetX = cx0 * pageDims.width;
+  const offsetY = cy0 * pageDims.height;
+
+  return boxes
+    .map((box) => ({
+      ...box,
+      bbox: {
+        x: box.bbox.x - offsetX,
+        y: box.bbox.y - offsetY,
+        w: box.bbox.w,
+        h: box.bbox.h,
+      },
+    }))
+    .filter((box) => {
+      const b = box.bbox;
+      return b.x + b.w > 0 && b.y + b.h > 0 && b.x < cropW && b.y < cropH;
+    });
+}
+
+export function cropVisionPageSize(
+  pageDims: { width: number; height: number },
+  cropBbox: number[],
+): { width: number; height: number } {
+  const [cx0, cy0, cx1, cy1] = cropBbox;
+  return {
+    width: Math.max(1, (cx1 - cx0) * pageDims.width),
+    height: Math.max(1, (cy1 - cy0) * pageDims.height),
+  };
+}

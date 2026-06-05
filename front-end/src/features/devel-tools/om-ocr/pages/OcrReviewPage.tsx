@@ -13,7 +13,10 @@ import {
 import type { ChurchRecordFieldConfig } from '@/features/devel-tools/om-ocr/config/recordFields';
 import FusionOverlay from '@/features/devel-tools/om-ocr/components/FusionOverlay';
 import {
+  adjustHighlightBoxesForCrop,
+  computeReviewCropBbox,
   computeReviewFieldHighlightBoxes,
+  cropVisionPageSize,
   REVIEW_FIELD_COLORS,
 } from '@/features/devel-tools/om-ocr/utils/recordHighlightBoxes';
 import { apiClient } from '@/shared/lib/axiosInstance';
@@ -23,6 +26,7 @@ import {
   Button,
   Chip,
   CircularProgress,
+  Collapse,
   Divider,
   FormControl,
   IconButton,
@@ -43,6 +47,8 @@ import {
 import {
   IconArrowLeft,
   IconCheck,
+  IconChevronDown,
+  IconChevronUp,
   IconDatabase,
   IconMaximize,
   IconRefresh,
@@ -117,6 +123,8 @@ const OcrReviewPage: React.FC = () => {
   const [imageDimensions, setImageDimensions] = useState({ width: 0, height: 0, naturalWidth: 0, naturalHeight: 0 });
   const [imageReady, setImageReady] = useState(false);
   const [churchFieldConfig, setChurchFieldConfig] = useState<ChurchRecordFieldConfig | null>(null);
+  const [showDetailedInfo, setShowDetailedInfo] = useState(false);
+  const [useFullPageImage, setUseFullPageImage] = useState(false);
   const imageRef = useRef<HTMLImageElement>(null);
 
   const backPath = isPortal ? '/portal/upload' : '/devel/ocr-studio/upload';
@@ -134,14 +142,28 @@ const OcrReviewPage: React.FC = () => {
     [jobs, selectedJobId]
   );
 
-  const jobImageUrl = useMemo(() => {
+  const reviewCropBbox = useMemo(
+    () => computeReviewCropBbox(tableExtractionJson, recordCandidates, selectedRecordIndex),
+    [tableExtractionJson, recordCandidates, selectedRecordIndex],
+  );
+
+  const useRecordSnippet = !!reviewCropBbox && !useFullPageImage;
+
+  const fullPageImageUrl = useMemo(() => {
     if (!churchId || !selectedJobId) return null;
-    // Bboxes align to the preprocessed/canonical page used during table extraction
     if (tableExtractionJson?.page_dimensions) {
       return `/api/church/${churchId}/ocr/jobs/${selectedJobId}/image`;
     }
     return `/api/church/${churchId}/ocr/jobs/${selectedJobId}/image?original=true`;
   }, [churchId, selectedJobId, tableExtractionJson]);
+
+  const jobImageUrl = useMemo(() => {
+    if (!churchId || !selectedJobId) return null;
+    if (useRecordSnippet) {
+      return `/api/church/${churchId}/ocr/jobs/${selectedJobId}/record-crop/${selectedRecordIndex}?mode=review`;
+    }
+    return fullPageImageUrl;
+  }, [churchId, selectedJobId, selectedRecordIndex, useRecordSnippet, fullPageImageUrl]);
 
   const loadJobArtifacts = useCallback(async (jobId: number) => {
     if (!churchId) return;
@@ -164,7 +186,8 @@ const OcrReviewPage: React.FC = () => {
 
   const fieldHighlightBoxes = useMemo(() => {
     if (!tableExtractionJson || !recordCandidates) return [];
-    return computeReviewFieldHighlightBoxes({
+    const pageDims = tableExtractionJson.page_dimensions;
+    const raw = computeReviewFieldHighlightBoxes({
       tableExtractionJson,
       recordCandidates,
       scoringV2,
@@ -172,12 +195,22 @@ const OcrReviewPage: React.FC = () => {
       focusedField,
       fieldKeys: fieldDefs.map((d) => d.name),
     });
-  }, [tableExtractionJson, recordCandidates, scoringV2, selectedRecordIndex, focusedField, fieldDefs]);
+    if (useRecordSnippet && reviewCropBbox && pageDims?.width && pageDims?.height) {
+      return adjustHighlightBoxesForCrop(raw, pageDims, reviewCropBbox);
+    }
+    return raw;
+  }, [tableExtractionJson, recordCandidates, scoringV2, selectedRecordIndex, focusedField, fieldDefs, useRecordSnippet, reviewCropBbox]);
 
-  const visionPageSize = useMemo(() => ({
-    width: tableExtractionJson?.page_dimensions?.width || imageDimensions.naturalWidth || 0,
-    height: tableExtractionJson?.page_dimensions?.height || imageDimensions.naturalHeight || 0,
-  }), [tableExtractionJson, imageDimensions]);
+  const visionPageSize = useMemo(() => {
+    const pageDims = tableExtractionJson?.page_dimensions;
+    if (useRecordSnippet && reviewCropBbox && pageDims?.width && pageDims?.height) {
+      return cropVisionPageSize(pageDims, reviewCropBbox);
+    }
+    return {
+      width: pageDims?.width || imageDimensions.naturalWidth || 0,
+      height: pageDims?.height || imageDimensions.naturalHeight || 0,
+    };
+  }, [tableExtractionJson, imageDimensions, useRecordSnippet, reviewCropBbox]);
 
   const loadJobs = useCallback(async () => {
     if (!churchId) return;
@@ -248,7 +281,8 @@ const OcrReviewPage: React.FC = () => {
     setImageZoom(100);
     setFocusedField(null);
     setImageReady(false);
-  }, [selectedJobId, jobImageUrl]);
+    setUseFullPageImage(false);
+  }, [selectedJobId, selectedRecordIndex, jobImageUrl]);
 
   useEffect(() => {
     if (churchId && selectedJobId) loadJobArtifacts(selectedJobId);
@@ -447,27 +481,48 @@ const OcrReviewPage: React.FC = () => {
                 </Alert>
               )}
 
-              {(extractMethod === 'llm' || extractMethod === 'llm_vision') && refinementNotes && (
-                <Alert severity="success">
-                  {refinementNotes}
-                </Alert>
-              )}
-
               {error && <Alert severity="error" onClose={() => setError(null)}>{error}</Alert>}
+
+              {(refinementNotes || ocrPreview || extractMethod) && (
+                <Box>
+                  <Button
+                    size="small"
+                    variant="text"
+                    sx={{ textTransform: 'none', px: 0, mb: showDetailedInfo ? 1 : 0 }}
+                    endIcon={showDetailedInfo ? <IconChevronUp size={16} /> : <IconChevronDown size={16} />}
+                    onClick={() => setShowDetailedInfo((v) => !v)}
+                  >
+                    Detailed Information
+                  </Button>
+                  <Collapse in={showDetailedInfo}>
+                    <Stack spacing={1.5}>
+                      {extractMethod && (
+                        <Typography variant="caption" color="text.secondary">
+                          Extraction method: {extractMethod === 'assembler' ? 'Table assembly' : extractMethod === 'llm_vision' ? 'AI vision' : extractMethod === 'llm' ? 'AI agent' : 'Heuristic'}
+                        </Typography>
+                      )}
+                      {(extractMethod === 'llm' || extractMethod === 'llm_vision') && refinementNotes && (
+                        <Alert severity="info" sx={{ py: 0.5 }}>
+                          {refinementNotes}
+                        </Alert>
+                      )}
+                      {ocrPreview && (
+                        <Paper variant="outlined" sx={{ p: 2, bgcolor: 'action.hover' }}>
+                          <Typography variant="caption" fontWeight={700} color="text.secondary">OCR text preview</Typography>
+                          <Typography variant="body2" sx={{ mt: 0.5, fontFamily: 'monospace', whiteSpace: 'pre-wrap', fontSize: '0.75rem' }}>
+                            {ocrPreview}
+                          </Typography>
+                        </Paper>
+                      )}
+                    </Stack>
+                  </Collapse>
+                </Box>
+              )}
 
               {extractLoading ? (
                 <Box sx={{ py: 4, textAlign: 'center' }}><CircularProgress /></Box>
               ) : (
                 <>
-                  {ocrPreview && (
-                    <Paper variant="outlined" sx={{ p: 2, bgcolor: 'action.hover' }}>
-                      <Typography variant="caption" fontWeight={700} color="text.secondary">OCR TEXT PREVIEW</Typography>
-                      <Typography variant="body2" sx={{ mt: 0.5, fontFamily: 'monospace', whiteSpace: 'pre-wrap', fontSize: '0.75rem' }}>
-                        {ocrPreview}
-                      </Typography>
-                    </Paper>
-                  )}
-
                   <Paper variant="outlined" sx={{ p: 2 }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
                       <IconRobot size={16} />
@@ -582,11 +637,29 @@ const OcrReviewPage: React.FC = () => {
               }}
             >
               <Box sx={{ px: 2, py: 1.25, borderBottom: '1px solid', borderColor: 'divider', bgcolor: 'background.paper' }}>
-                <Typography variant="subtitle2" fontWeight={700}>Source document</Typography>
-                <Typography variant="caption" color="text.secondary" noWrap title={selectedJob?.filename}>
-                  {selectedJob?.filename || `Job #${selectedJobId}`}
-                  {tableExtractionJson ? ' · field highlights on scan' : ''}
-                </Typography>
+                <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={1}>
+                  <Box sx={{ minWidth: 0 }}>
+                    <Typography variant="subtitle2" fontWeight={700}>
+                      {useRecordSnippet ? 'Record snippet' : 'Source document'}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary" noWrap title={selectedJob?.filename}>
+                      {useRecordSnippet && allRecords.length > 1
+                        ? `Record ${selectedRecordIndex + 1} of ${allRecords.length} · headers + row`
+                        : selectedJob?.filename || `Job #${selectedJobId}`}
+                      {useRecordSnippet && fieldHighlightBoxes.length ? ' · field highlights' : ''}
+                    </Typography>
+                  </Box>
+                  {reviewCropBbox && (
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      sx={{ textTransform: 'none', flexShrink: 0 }}
+                      onClick={() => setUseFullPageImage((v) => !v)}
+                    >
+                      {useFullPageImage ? 'Record snippet' : 'Full page'}
+                    </Button>
+                  )}
+                </Stack>
               </Box>
 
               {fieldHighlightBoxes.length > 0 && (
@@ -668,7 +741,13 @@ const OcrReviewPage: React.FC = () => {
                         ref={imageRef}
                         src={jobImageUrl}
                         alt={selectedJob?.filename || `OCR job ${selectedJobId}`}
-                        onError={() => setImageLoadFailed(true)}
+                        onError={() => {
+                          if (!useFullPageImage && reviewCropBbox) {
+                            setUseFullPageImage(true);
+                          } else {
+                            setImageLoadFailed(true);
+                          }
+                        }}
                         onLoad={(e) => {
                           const img = e.currentTarget;
                           setImageDimensions({

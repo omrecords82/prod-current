@@ -553,24 +553,116 @@ function createRouters(upload: any) {
   });
 
   // -----------------------------------------------------------------------
-  // 4b. GET /jobs/:jobId/record-crop/:recordIndex — Serve per-record crop image
+  // 4b. GET /jobs/:jobId/record-crop/:recordIndex — Per-record review image
+  //     ?mode=review (default) — header rows + this record's row band
+  //     ?mode=row — legacy data-row-only crop (record_N.png)
   // -----------------------------------------------------------------------
+  function unionFractionalBboxesLocal(bboxes: number[][]): number[] | null {
+    if (!bboxes.length) return null;
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    for (const b of bboxes) {
+      if (!b || b.length !== 4) continue;
+      x0 = Math.min(x0, b[0]); y0 = Math.min(y0, b[1]);
+      x1 = Math.max(x1, b[2]); y1 = Math.max(y1, b[3]);
+    }
+    if (!Number.isFinite(x0)) return null;
+    const pad = 0.004;
+    return [
+      Math.max(0, x0 - pad),
+      Math.max(0, y0 - pad),
+      Math.min(1, x1 + pad),
+      Math.min(1, y1 + pad),
+    ];
+  }
+
+  function computeReviewCropBbox(tableJson: any, candidates: any[], recordIndex: number): number[] | null {
+    const candidate = candidates?.[recordIndex];
+    if (!candidate || !tableJson?.tables?.length) return null;
+    const rowStart = candidate.sourceRowIndex;
+    const rowEnd = candidate.sourceRowEnd ?? rowStart;
+    if (typeof rowStart !== 'number' || rowStart < 0) return null;
+
+    const parts: number[][] = [];
+    for (const table of tableJson.tables) {
+      for (const row of table.rows || []) {
+        const isHeader = row.type === 'header';
+        const inRecord = !isHeader && row.row_index >= rowStart && row.row_index <= rowEnd;
+        if (!isHeader && !inRecord) continue;
+        for (const cell of row.cells || []) {
+          if (cell.bbox?.length === 4) parts.push(cell.bbox);
+        }
+      }
+    }
+    return unionFractionalBboxesLocal(parts);
+  }
+
   churchJobsRouter.get('/jobs/:jobId/record-crop/:recordIndex', async (req: any, res: any) => {
     try {
       const jobId = parseInt(req.params.jobId);
       const recordIndex = parseInt(req.params.recordIndex);
       const pageIndex = parseInt(req.query.page as string) || 0;
+      const mode = (req.query.mode as string) || 'review';
 
-      const pageDir = path.resolve(__dirname, '../../storage/feeder', `job_${jobId}`, `page_${pageIndex}`);
-      const cropPath = path.join(pageDir, `record_${recordIndex}.png`);
+      const pageDir = path.resolve(__dirname, '../../../storage/feeder', `job_${jobId}`, `page_${pageIndex}`);
+      const legacyCropPath = path.join(pageDir, `record_${recordIndex}.png`);
+      const reviewCropPath = path.join(pageDir, `record_${recordIndex}_review.jpg`);
 
-      if (!fs.existsSync(cropPath)) {
-        return res.status(404).json({ error: 'Record crop not found' });
+      if (mode === 'row' && fs.existsSync(legacyCropPath)) {
+        res.setHeader('Content-Type', 'image/png');
+        res.setHeader('Cache-Control', 'public, max-age=3600');
+        return fs.createReadStream(legacyCropPath).pipe(res);
       }
 
-      res.setHeader('Content-Type', 'image/png');
-      res.setHeader('Cache-Control', 'public, max-age=3600');
-      fs.createReadStream(cropPath).pipe(res);
+      if (mode !== 'row' && fs.existsSync(reviewCropPath)) {
+        res.setHeader('Content-Type', 'image/jpeg');
+        res.setHeader('Cache-Control', 'public, max-age=3600');
+        return fs.createReadStream(reviewCropPath).pipe(res);
+      }
+
+      const preprocPath = path.join(pageDir, 'preprocessed.jpg');
+      const tablePath = path.join(pageDir, 'table_extraction.json');
+      const candPath = path.join(pageDir, 'record_candidates.json');
+
+      if (mode !== 'row' && fs.existsSync(preprocPath) && fs.existsSync(tablePath) && fs.existsSync(candPath)) {
+        const tableJson = JSON.parse(fs.readFileSync(tablePath, 'utf8'));
+        const candData = JSON.parse(fs.readFileSync(candPath, 'utf8'));
+        const candidates = candData.candidates || candData || [];
+        const cropBbox = computeReviewCropBbox(tableJson, candidates, recordIndex);
+
+        if (cropBbox) {
+          const sharp = require('sharp');
+          const meta = await sharp(preprocPath).metadata();
+          const imgW = meta.width || 1;
+          const imgH = meta.height || 1;
+          const [fx0, fy0, fx1, fy1] = cropBbox;
+          const left = Math.max(0, Math.floor(fx0 * imgW));
+          const top = Math.max(0, Math.floor(fy0 * imgH));
+          const width = Math.max(1, Math.min(imgW - left, Math.ceil((fx1 - fx0) * imgW)));
+          const height = Math.max(1, Math.min(imgH - top, Math.ceil((fy1 - fy0) * imgH)));
+
+          const buffer = await sharp(preprocPath)
+            .extract({ left, top, width, height })
+            .jpeg({ quality: 90 })
+            .toBuffer();
+
+          try {
+            fs.writeFileSync(reviewCropPath, buffer);
+          } catch { /* cache optional */ }
+
+          res.setHeader('Content-Type', 'image/jpeg');
+          res.setHeader('Cache-Control', 'public, max-age=3600');
+          res.setHeader('X-Crop-Bbox', cropBbox.map((n: number) => n.toFixed(5)).join(','));
+          return res.send(buffer);
+        }
+      }
+
+      if (fs.existsSync(legacyCropPath)) {
+        res.setHeader('Content-Type', 'image/png');
+        res.setHeader('Cache-Control', 'public, max-age=3600');
+        return fs.createReadStream(legacyCropPath).pipe(res);
+      }
+
+      return res.status(404).json({ error: 'Record crop not found' });
     } catch (error: any) {
       console.error('[OCR RecordCrop] Error:', error);
       res.status(500).json({ error: 'Failed to serve record crop' });
