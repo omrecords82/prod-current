@@ -21,6 +21,50 @@ type Props = {
   onToggleTheme: () => void;
 };
 
+/** Figma: baptism-small-footer 1 (node 65:24) — stacked sacrament illustrations */
+const SACRAMENT_ILLUSTRATIONS = [
+  { key: "baptism", label: "Baptism Records", width: 233 },
+  { key: "marriage", label: "Marriage Records", width: 233 },
+  { key: "funeral", label: "Funeral Records", width: 292 },
+] as const;
+
+function SacramentIllustrationStack() {
+  return (
+    <div
+      className="flex flex-col items-center gap-[10px] w-[345px] max-w-full min-h-[885px] mx-auto"
+      role="group"
+      aria-label="Sacramental record types: baptism, marriage, and funeral"
+    >
+      {SACRAMENT_ILLUSTRATIONS.map(({ key, label, width }) => (
+        <div
+          key={key}
+          className="relative shrink-0 w-full flex justify-center"
+          style={{ maxWidth: width, height: 275 }}
+        >
+          <img
+            src={`/images/enroll/${key}-enroll-light.png`}
+            alt={label}
+            width={width}
+            height={275}
+            className="max-w-full h-full w-auto object-contain object-center dark:hidden"
+            loading="lazy"
+            decoding="async"
+          />
+          <img
+            src={`/images/enroll/${key}-enroll-dark.png`}
+            alt={label}
+            width={width}
+            height={275}
+            className="max-w-full h-full w-auto object-contain object-center hidden dark:block"
+            loading="lazy"
+            decoding="async"
+          />
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function Landing({ onStart, onAdmin, theme, onToggleTheme }: Props) {
   return (
     <div className="flex-1 w-full bg-background text-foreground flex flex-col">
@@ -125,26 +169,26 @@ export function Landing({ onStart, onAdmin, theme, onToggleTheme }: Props) {
         </div>
       </section>
 
-      <section className="border-t border-border bg-card/40">
-        <div className="max-w-6xl mx-auto px-6 py-16 grid md:grid-cols-3 gap-6">
-          {[
-            { key: 'baptism',  label: 'Baptism Records' },
-            { key: 'marriage', label: 'Marriage Records' },
-            { key: 'funeral',  label: 'Funeral Records' },
-          ].map((r) => (
-            <div key={r.key} className="flex flex-col items-center gap-3">
-              <img
-                src={`/images/enroll/${r.key}-enroll-light.png`}
-                alt={r.label}
-                className="w-full h-auto rounded-lg object-cover dark:hidden"
-              />
-              <img
-                src={`/images/enroll/${r.key}-enroll-dark.png`}
-                alt={r.label}
-                className="w-full h-auto rounded-lg object-cover hidden dark:block"
-              />
-            </div>
-          ))}
+      <section className="border-t border-border bg-white dark:bg-[#0d1117]">
+        <div className="max-w-6xl mx-auto px-6 py-16 grid lg:grid-cols-[345px_1fr] gap-12 lg:gap-16 items-start">
+          <SacramentIllustrationStack />
+          <div className="space-y-8 pt-4 lg:pt-8">
+            {SACRAMENT_ILLUSTRATIONS.map(({ key, label }) => (
+              <div key={key}>
+                <h3 className="font-['Georgia'] text-xl text-[#2d1b4e] dark:text-[#d4af37] mb-1">
+                  {label}
+                </h3>
+                <p className="font-['Inter'] text-[15px] text-muted-foreground leading-relaxed">
+                  {key === "baptism" &&
+                    "Digitize baptism registers with sponsors, clergy, dates, and full search across your parish history."}
+                  {key === "marriage" &&
+                    "Preserve marriage records including witnesses, dispensations, and crowning details in one secure workspace."}
+                  {key === "funeral" &&
+                    "Organize funeral and memorial registers with clergy, burial details, and decades of parish history."}
+                </p>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
 
