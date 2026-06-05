@@ -455,6 +455,8 @@ router.post('/enroll', async (req, res) => {
       parishSize,
       referral,
       modules,
+      recordImportMethod,
+      startTimeline,
       adminFirstName,
       adminLastName,
       adminEmail,
@@ -558,12 +560,33 @@ router.post('/enroll', async (req, res) => {
       );
     }
 
+    const moduleLabels = {
+      baptism: 'Baptism',
+      marriage: 'Marriage',
+      funeral: 'Funeral',
+      custom: 'Custom Records',
+    };
     const moduleList = modules && typeof modules === 'object'
-      ? Object.entries(modules).filter(([, v]) => v).map(([k]) => k)
+      ? Object.entries(modules).filter(([, v]) => v).map(([k]) => moduleLabels[k] || k)
       : [];
+    const importLabels = {
+      om_full_service: 'Have Orthodox Metrics handle everything',
+      self_service: 'Self Service',
+    };
+    const timelineLabels = {
+      asap: 'As Soon As Possible',
+      few_weeks: 'A few weeks from now',
+      month_plus: "A month or more before I'm ready",
+    };
     const enrollmentNote = [
       `Enrollment wizard submission`,
       `Modules: ${moduleList.length ? moduleList.join(', ') : 'none'}`,
+      recordImportMethod
+        ? `Record import: ${importLabels[recordImportMethod] || recordImportMethod}`
+        : null,
+      startTimeline
+        ? `Start timeline: ${timelineLabels[startTimeline] || startTimeline}`
+        : null,
       parishSize ? `Parish size: ${parishSize}` : null,
       country ? `Country: ${country}` : null,
       timezone ? `Timezone: ${timezone}` : null,
@@ -629,6 +652,8 @@ router.post('/enroll', async (req, res) => {
             inquiryId: result.insertId,
             reference,
             modules: moduleList,
+            recordImportMethod: recordImportMethod || null,
+            startTimeline: startTimeline || null,
             adminEmail: adminEmail || null,
           }),
         ]

@@ -6,6 +6,7 @@ import {
     CircleAlert,
     Copy,
     Droplets,
+    FileText,
     Flame,
     HeartHandshake,
     Loader2,
@@ -35,20 +36,55 @@ import {
     SelectTrigger,
     SelectValue,
 } from "../ui/select";
-import { Switch } from "../ui/switch";
-
 const steps = [
   { key: "find-parish", label: "Find Your Parish", n: 1 },
   { key: "contact", label: "Your Contact", n: 2 },
   { key: "parish", label: "Parish Info", n: 3 },
   { key: "location", label: "Location", n: 4 },
   { key: "modules", label: "Record Modules", n: 5 },
-  { key: "admin", label: "Administrator", n: 6 },
-  { key: "review", label: "Review & Submit", n: 7 },
-  { key: "confirm", label: "Confirmation", n: 8 },
 ] as const;
 
-type StepKey = (typeof steps)[number]["key"];
+type WizardStepKey = (typeof steps)[number]["key"];
+type StepKey = WizardStepKey | "confirm";
+
+const IMPORT_METHOD_OPTIONS = [
+  {
+    value: "om_full_service",
+    label: "Have Orthodox Metrics handle everything",
+    description:
+      "Our team manages digitization, OCR, and onboarding — you focus on approving records.",
+  },
+  {
+    value: "self_service",
+    label: "Self Service",
+    description:
+      "Your parish handles scanning records and uploading them through the platform.",
+  },
+] as const;
+
+const START_TIMELINE_OPTIONS = [
+  { value: "asap", label: "As Soon As Possible" },
+  { value: "few_weeks", label: "A few weeks from now" },
+  { value: "month_plus", label: "A month or more before I'm ready" },
+] as const;
+
+type ImportMethod = (typeof IMPORT_METHOD_OPTIONS)[number]["value"] | "";
+type StartTimeline = (typeof START_TIMELINE_OPTIONS)[number]["value"] | "";
+
+const MODULE_LABELS: Record<string, string> = {
+  baptism: "Baptism",
+  marriage: "Marriage",
+  funeral: "Funeral",
+  custom: "Custom Records",
+};
+
+function formatImportMethod(value: ImportMethod): string {
+  return IMPORT_METHOD_OPTIONS.find((o) => o.value === value)?.label ?? value;
+}
+
+function formatStartTimeline(value: StartTimeline): string {
+  return START_TIMELINE_OPTIONS.find((o) => o.value === value)?.label ?? value;
+}
 
 type Props = {
   onCancel: () => void;
@@ -103,12 +139,21 @@ function getParishErrors(p: any): Record<string, string> {
   return e;
 }
 
-function getAdminErrors(a: any): Record<string, string> {
+function getModulesStepErrors(
+  modules: Record<string, boolean>,
+  importMethod: ImportMethod,
+  startTimeline: StartTimeline,
+): Record<string, string> {
   const e: Record<string, string> = {};
-  if (!String(a.firstName ?? "").trim()) e.firstName = "First name is required";
-  if (!String(a.lastName ?? "").trim()) e.lastName = "Last name is required";
-  if (!String(a.email ?? "").trim()) e.email = "Email is required";
-  else if (!EMAIL_RE.test(String(a.email).trim())) e.email = "Enter a valid email address";
+  if (!Object.values(modules).some(Boolean)) {
+    e.modules = "Select at least one record module.";
+  }
+  if (!importMethod) {
+    e.importMethod = "Choose how you want to import your records.";
+  }
+  if (!startTimeline) {
+    e.startTimeline = "Let us know when you hope to get started.";
+  }
   return e;
 }
 
@@ -151,15 +196,14 @@ export function Onboarding({ onCancel, onComplete, theme, onToggleTheme }: Props
     size: "",
     referral: "",
   });
-  const [modules, setModules] = useState({ baptism: true, marriage: true, funeral: false });
-  const [admin, setAdmin] = useState({
-    firstName: "",
-    lastName: "",
-    email: "",
-    password: "",
-    confirm: "",
-    secondAdmin: false,
+  const [modules, setModules] = useState({
+    baptism: true,
+    marriage: true,
+    funeral: false,
+    custom: false,
   });
+  const [importMethod, setImportMethod] = useState<ImportMethod>("");
+  const [startTimeline, setStartTimeline] = useState<StartTimeline>("");
 
   // Reveals inline field errors once the user has attempted to advance past a
   // form step. Reset whenever the active step changes.
@@ -218,10 +262,10 @@ export function Onboarding({ onCancel, onComplete, theme, onToggleTheme }: Props
 
   const contactErrors = getContactErrors(profile);
   const parishErrors = getParishErrors(profile);
-  const adminErrors = getAdminErrors(admin);
+  const modulesErrors = getModulesStepErrors(modules, importMethod, startTimeline);
   const contactComplete = Object.keys(contactErrors).length === 0;
   const parishComplete = Object.keys(parishErrors).length === 0;
-  const adminComplete = Object.keys(adminErrors).length === 0;
+  const modulesComplete = Object.keys(modulesErrors).length === 0;
 
   // find-parish drives the disabled state of Next; the form steps stay
   // clickable so pressing Next can surface their validation errors.
@@ -256,10 +300,12 @@ export function Onboarding({ onCancel, onComplete, theme, onToggleTheme }: Props
         parishSize: profile.size.trim() || null,
         referral: profile.referral.trim() || null,
         modules,
-        adminFirstName: admin.firstName.trim(),
-        adminLastName: admin.lastName.trim(),
-        adminEmail: admin.email.trim(),
-        secondAdmin: admin.secondAdmin,
+        recordImportMethod: importMethod || null,
+        startTimeline: startTimeline || null,
+        adminFirstName: profile.firstName.trim(),
+        adminLastName: profile.lastName.trim(),
+        adminEmail: profile.email.trim(),
+        secondAdmin: false,
       });
       if (!data.success) {
         setSubmitError(data.message || "Submission failed. Please try again.");
@@ -289,8 +335,8 @@ export function Onboarding({ onCancel, onComplete, theme, onToggleTheme }: Props
     // and reveal the inline errors.
     if (step === "contact" && !contactComplete) { setTriedNext(true); return; }
     if (step === "parish" && !parishComplete) { setTriedNext(true); return; }
-    if (step === "admin" && !adminComplete) { setTriedNext(true); return; }
-    if (step === "review") {
+    if (step === "modules") {
+      if (!modulesComplete) { setTriedNext(true); return; }
       void submitEnrollment();
       return;
     }
@@ -326,11 +372,18 @@ export function Onboarding({ onCancel, onComplete, theme, onToggleTheme }: Props
   }
   function goBack() {
     setTriedNext(false);
+    if (step === "confirm") {
+      setStep("modules");
+      return;
+    }
     if (stepIndex > 0) setStep(steps[stepIndex - 1].key);
     else onCancel();
   }
 
-  const selectedModules = Object.entries(modules).filter(([, v]) => v).map(([k]) => k);
+  const selectedModules = Object.entries(modules)
+    .filter(([, v]) => v)
+    .map(([k]) => MODULE_LABELS[k] ?? k);
+  const showWizardSteps = step !== "confirm";
 
   const stepButtonClass = (done: boolean, active: boolean) =>
     active
@@ -363,6 +416,7 @@ export function Onboarding({ onCancel, onComplete, theme, onToggleTheme }: Props
       </header>
 
       <div className="flex-1 max-w-7xl mx-auto px-6 py-6 lg:py-10 w-full">
+        {showWizardSteps && (
         <nav
           className="lg:hidden -mx-6 px-4 mb-6 overflow-x-auto overscroll-x-contain"
           aria-label="Enrollment progress"
@@ -394,14 +448,16 @@ export function Onboarding({ onCancel, onComplete, theme, onToggleTheme }: Props
             })}
           </ol>
         </nav>
+        )}
 
         <div className="grid lg:grid-cols-[260px_1fr] gap-10">
+        {showWizardSteps && (
         <aside className="hidden lg:block">
           <div className="text-xs uppercase tracking-[0.18em] text-muted-foreground mb-1">
             Onboarding Wizard
           </div>
           <p className="font-['Inter'] text-[13px] text-muted-foreground mb-3">
-            Step {stepIndex + 1} of {steps.length} · about 8 minutes
+            Step {stepIndex + 1} of {steps.length} · about 5 minutes
           </p>
           <p className="font-['Inter'] text-[12px] text-muted-foreground mb-3">
             <a href="mailto:support@orthodoxmetrics.com" className="text-[#2d1b4e] dark:text-[#d4af37] no-underline hover:underline">
@@ -434,6 +490,7 @@ export function Onboarding({ onCancel, onComplete, theme, onToggleTheme }: Props
             })}
           </ol>
         </aside>
+        )}
 
         <div className="space-y-6 min-w-0">
           {step === "find-parish" && (
@@ -454,35 +511,29 @@ export function Onboarding({ onCancel, onComplete, theme, onToggleTheme }: Props
             />
           )}
           {step === "modules" && (
-            <ModulesStep modules={modules} setModules={setModules} />
-          )}
-          {step === "admin" && (
-            <AdminStep
-              admin={admin}
-              setAdmin={setAdmin}
-              profile={profile}
-              errors={adminErrors}
+            <ModulesStep
+              modules={modules}
+              setModules={setModules}
+              importMethod={importMethod}
+              setImportMethod={setImportMethod}
+              startTimeline={startTimeline}
+              setStartTimeline={setStartTimeline}
+              errors={modulesErrors}
               showErrors={triedNext}
-            />
-          )}
-          {step === "review" && (
-            <ReviewStep
-              profile={profile}
-              modules={selectedModules}
-              admin={admin}
             />
           )}
           {step === "confirm" && (
             <ConfirmStep
               profile={profile}
               modules={selectedModules}
-              admin={admin}
+              importMethod={importMethod}
+              startTimeline={startTimeline}
               reference={confirmation?.reference ?? ""}
               onHome={onCancel}
             />
           )}
 
-          {submitError && step === "review" && (
+          {submitError && step === "modules" && (
             <div className="flex items-start gap-2 p-3 rounded-md border border-destructive/40 bg-destructive/5 text-sm text-destructive">
               <CircleAlert className="h-4 w-4 mt-0.5 shrink-0" />
               <span>{submitError}</span>
@@ -492,14 +543,14 @@ export function Onboarding({ onCancel, onComplete, theme, onToggleTheme }: Props
           {triedNext &&
             ((step === "contact" && !contactComplete) ||
               (step === "parish" && !parishComplete) ||
-              (step === "admin" && !adminComplete)) && (
+              (step === "modules" && !modulesComplete)) && (
               <div className="flex items-start gap-2 p-3 rounded-md border border-destructive/40 bg-destructive/5 text-sm text-destructive">
                 <CircleAlert className="h-4 w-4 mt-0.5 shrink-0" />
                 <div>
                   <div>Please complete the required fields highlighted above before continuing.</div>
-                  {step === "admin" && !adminComplete && (
+                  {step === "modules" && !modulesComplete && (
                     <ul className="mt-2 list-disc pl-4 space-y-0.5">
-                      {Object.values(adminErrors).map((msg) => (
+                      {Object.values(modulesErrors).map((msg) => (
                         <li key={msg}>{msg}</li>
                       ))}
                     </ul>
@@ -530,13 +581,11 @@ export function Onboarding({ onCancel, onComplete, theme, onToggleTheme }: Props
                     </>
                   ) : (
                     <>
-                      {step === "review"
-                        ? "Submit Provision Request"
-                        : step === "admin"
-                          ? "Next — Review & Submit"
-                          : step === "location"
-                            ? "Continue"
-                            : "Next"}{" "}
+                      {step === "modules"
+                        ? "Submit Enrollment"
+                        : step === "location"
+                          ? "Continue"
+                          : "Next"}{" "}
                       <ArrowRight className="h-4 w-4 ml-2" />
                     </>
                   )}
@@ -1077,7 +1126,25 @@ function LocationStep({
   );
 }
 
-function ModulesStep({ modules, setModules }: any) {
+function ModulesStep({
+  modules,
+  setModules,
+  importMethod,
+  setImportMethod,
+  startTimeline,
+  setStartTimeline,
+  errors = {},
+  showErrors = false,
+}: {
+  modules: Record<string, boolean>;
+  setModules: React.Dispatch<React.SetStateAction<Record<string, boolean>>>;
+  importMethod: ImportMethod;
+  setImportMethod: (v: ImportMethod) => void;
+  startTimeline: StartTimeline;
+  setStartTimeline: (v: StartTimeline) => void;
+  errors?: Record<string, string>;
+  showErrors?: boolean;
+}) {
   const cards = [
     {
       key: "baptism",
@@ -1100,21 +1167,33 @@ function ModulesStep({ modules, setModules }: any) {
       desc: "Honor the departed with organized funeral, burial, and memorial records.",
       recommended: false,
     },
+    {
+      key: "custom",
+      icon: FileText,
+      title: "Custom Records",
+      desc: "Other parish registers, historical ledgers, or record types tailored to your needs.",
+      recommended: false,
+    },
   ] as const;
   const count = Object.values(modules).filter(Boolean).length;
+  const moduleErr = showErrors ? errors.modules : undefined;
+  const importErr = showErrors ? errors.importMethod : undefined;
+  const timelineErr = showErrors ? errors.startTimeline : undefined;
+
   return (
     <SectionCard
       number={5}
-      title="Record Module Selection"
-      description="Choose the sacramental record books you want to digitize and manage. You can add more later."
+      title="Record Modules & Next Steps"
+      description="Choose the records you want to manage, how you'd like to import them, and when you hope to begin."
     >
-      <div className="grid md:grid-cols-3 gap-4">
+      <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {cards.map((c) => {
           const selected = modules[c.key];
           const Icon = c.icon;
           return (
             <button
               key={c.key}
+              type="button"
               onClick={() => setModules({ ...modules, [c.key]: !selected })}
               className={`text-left rounded-lg border p-5 transition-all ${
                 selected
@@ -1155,132 +1234,88 @@ function ModulesStep({ modules, setModules }: any) {
         })}
       </div>
 
+      {moduleErr && (
+        <p className="text-sm text-destructive" role="alert">{moduleErr}</p>
+      )}
+
       <div className="flex flex-wrap items-center justify-between gap-3 p-4 rounded-md bg-muted">
         <div className="text-sm">
           <span className="text-muted-foreground">Selected modules: </span>
-          <strong>{count}</strong> of 3
+          <strong>{count}</strong> of {cards.length}
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           {Object.entries(modules)
             .filter(([, v]) => v)
             .map(([k]) => (
-              <Badge key={k} variant="outline" className="capitalize">
-                {k}
+              <Badge key={k} variant="outline">
+                {MODULE_LABELS[k] ?? k}
               </Badge>
             ))}
         </div>
       </div>
-    </SectionCard>
-  );
-}
 
-function AdminStep({ admin, setAdmin, profile, errors = {}, showErrors = false }: any) {
-  const set = (k: string, v: any) => setAdmin({ ...admin, [k]: v });
-  const err = (k: string) => (showErrors ? errors[k] : undefined);
-
-  useEffect(() => {
-    if (!admin.email && profile.email) {
-      setAdmin((a: typeof admin) => ({
-        ...a,
-        email: profile.email,
-        firstName: a.firstName || profile.firstName,
-        lastName: a.lastName || profile.lastName,
-      }));
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  return (
-    <SectionCard
-      number={6}
-      title="Administrator"
-      description="Who should be the first admin when your workspace is ready? You will set your sign-in password after we approve your parish."
-    >
-      <div className="grid md:grid-cols-2 gap-5 max-w-xl">
-        <Field label="Admin first name" required error={err("firstName")}>
-          <Input value={admin.firstName} onChange={(e) => set("firstName", e.target.value)} autoComplete="given-name" />
-        </Field>
-        <Field label="Admin last name" required error={err("lastName")}>
-          <Input value={admin.lastName} onChange={(e) => set("lastName", e.target.value)} autoComplete="family-name" />
-        </Field>
-        <div className="md:col-span-2">
-          <Field label="Admin email" required error={err("email")}>
-            <Input type="email" value={admin.email} onChange={(e) => set("email", e.target.value)} autoComplete="email" />
-          </Field>
+      <div className="space-y-3 pt-2">
+        <Label className="text-base">
+          How do you want to import your records? <span className="text-destructive">*</span>
+        </Label>
+        <div className="grid md:grid-cols-2 gap-4" role="radiogroup" aria-invalid={!!importErr}>
+          {IMPORT_METHOD_OPTIONS.map((opt) => {
+            const selected = importMethod === opt.value;
+            return (
+              <button
+                key={opt.value}
+                type="button"
+                role="radio"
+                aria-checked={selected}
+                onClick={() => setImportMethod(opt.value)}
+                className={`text-left rounded-lg border p-5 transition-all ${
+                  selected
+                    ? "border-[#2d1b4e] dark:border-[#d4af37] ring-2 ring-[#2d1b4e]/15 dark:ring-[#d4af37]/20 bg-[rgba(45,27,78,0.05)] dark:bg-[rgba(212,175,55,0.06)]"
+                    : "border-border hover:border-[#2d1b4e]/30"
+                }`}
+              >
+                <div className="font-medium mb-2">{opt.label}</div>
+                <p className="text-sm text-muted-foreground">{opt.description}</p>
+              </button>
+            );
+          })}
         </div>
+        {importErr && <p className="text-sm text-destructive" role="alert">{importErr}</p>}
       </div>
 
-      <div className="flex items-start justify-between gap-4 p-4 rounded-md border border-border">
-        <div className="space-y-1">
-          <div>Invite a second administrator</div>
-          <div className="text-sm text-muted-foreground">
-            Recommended for parishes with more than one priest or records keeper.
-          </div>
+      <div className="space-y-3 pt-2">
+        <Label className="text-base">
+          How soon are you interested in getting started? <span className="text-destructive">*</span>
+        </Label>
+        <div className="grid sm:grid-cols-3 gap-3" role="radiogroup" aria-invalid={!!timelineErr}>
+          {START_TIMELINE_OPTIONS.map((opt) => {
+            const selected = startTimeline === opt.value;
+            return (
+              <button
+                key={opt.value}
+                type="button"
+                role="radio"
+                aria-checked={selected}
+                onClick={() => setStartTimeline(opt.value)}
+                className={`rounded-lg border px-4 py-3 text-left text-sm transition-all ${
+                  selected
+                    ? "border-[#2d1b4e] dark:border-[#d4af37] bg-[#2d1b4e] text-white dark:bg-[#1e2a3a] dark:text-[#d4af37]"
+                    : "border-border hover:border-[#2d1b4e]/30"
+                }`}
+              >
+                {opt.label}
+              </button>
+            );
+          })}
         </div>
-        <Switch
-          checked={admin.secondAdmin}
-          onCheckedChange={(v) => set("secondAdmin", v)}
-        />
+        {timelineErr && <p className="text-sm text-destructive" role="alert">{timelineErr}</p>}
       </div>
 
       <div className="flex items-start gap-3 p-4 rounded-lg bg-[rgba(212,175,55,0.08)] dark:bg-[rgba(30,42,58,0.8)] border border-[#d4af37]/25 dark:border-white/8 text-sm">
         <ShieldCheck className="h-4 w-4 mt-0.5 text-[#2d1b4e] dark:text-[#d4af37] shrink-0" />
         <div>
-          Click <strong>Next</strong> to review everything on step 7, then submit. Your sign-in
-          password is set only after staff approve your parish workspace.
-        </div>
-      </div>
-    </SectionCard>
-  );
-}
-
-function ReviewStep({ profile, modules, admin }: any) {
-  return (
-    <SectionCard
-      number={7}
-      title="Review & Submit"
-      description="Confirm your details below. Submitting will create a provision request for Orthodox Metrics staff to review."
-    >
-      <div className="grid md:grid-cols-2 gap-4">
-        <SummaryCard title="Church profile" icon={Building2}>
-          <Row k="Church name" v={profile.churchName} />
-          <Row k="Jurisdiction" v={profile.jurisdiction} />
-          <Row k="Size" v={profile.size} />
-          <Row k="Address" v={`${profile.address}, ${profile.city}, ${profile.state} ${profile.zip}`} />
-          <Row k="Country" v={profile.country} />
-          <Row k="Timezone" v={profile.timezone} />
-        </SummaryCard>
-        <SummaryCard title="Contact" icon={Mail}>
-          <Row k="Name" v={`${profile.firstName} ${profile.lastName}`} />
-          <Row k="Email" v={profile.email} />
-          <Row k="Phone" v={profile.phone} />
-          <Row k="Website" v={profile.website} />
-          <Row k="Referral" v={profile.referral} />
-        </SummaryCard>
-        <SummaryCard title="Selected modules" icon={Droplets}>
-          <div className="flex flex-wrap gap-2">
-            {modules.length === 0 && (
-              <span className="text-sm text-muted-foreground">None selected</span>
-            )}
-            {modules.map((m: string) => (
-              <Badge key={m} variant="outline" className="capitalize">
-                {m}
-              </Badge>
-            ))}
-          </div>
-        </SummaryCard>
-        <SummaryCard title="Admin account" icon={ShieldCheck}>
-          <Row k="Name" v={`${admin.firstName} ${admin.lastName}`} />
-          <Row k="Email" v={admin.email} />
-          <Row k="Second admin" v={admin.secondAdmin ? "Yes — invite later" : "No"} />
-        </SummaryCard>
-      </div>
-
-      <div className="p-4 rounded-lg bg-[rgba(45,27,78,0.05)] dark:bg-[rgba(30,42,58,0.8)] border border-[#2d1b4e]/20 dark:border-white/8 text-sm">
-        <div className="mb-1">What happens next</div>
-        <div className="text-muted-foreground">
-          Orthodox Metrics staff will review your request within 1–2 business days. You'll get an
-          email once your workspace is approved and ready for record uploads.
+          Click <strong>Submit Enrollment</strong> when you're ready. Our team will follow up using
+          the contact details you provided.
         </div>
       </div>
     </SectionCard>
@@ -1290,13 +1325,15 @@ function ReviewStep({ profile, modules, admin }: any) {
 function ConfirmStep({
   profile,
   modules,
-  admin,
+  importMethod,
+  startTimeline,
   reference,
   onHome,
 }: {
   profile: any;
   modules: string[];
-  admin: any;
+  importMethod: ImportMethod;
+  startTimeline: StartTimeline;
   reference: string;
   onHome: () => void;
 }) {
@@ -1313,9 +1350,9 @@ function ConfirmStep({
 
   return (
     <SectionCard
-      number={8}
+      number={5}
       title="Submission Confirmation"
-      description="Your provision request has been received."
+      description="Your enrollment request has been received."
     >
       <div className="flex flex-col items-center text-center py-6 space-y-4">
         <div className="h-16 w-16 rounded-full bg-[#2d1b4e] dark:bg-[#1e2a3a] dark:ring-2 dark:ring-[#d4af37]/40 text-[#d4af37] flex items-center justify-center">
@@ -1347,14 +1384,15 @@ function ConfirmStep({
           <Row k="Church" v={profile.churchName} />
           <Row k="Contact email" v={profile.email} />
           <Row k="Modules" v={modules.join(", ") || "None"} />
-          <Row k="Admin" v={admin.email} />
+          <Row k="Import approach" v={formatImportMethod(importMethod)} />
+          <Row k="Getting started" v={formatStartTimeline(startTimeline)} />
         </SummaryCard>
         <SummaryCard title="What happens next" icon={ShieldCheck}>
           <ul className="text-sm space-y-2 text-muted-foreground">
             <li>1. OM staff verifies your church and contact details.</li>
-            <li>2. We provision your workspace and selected record modules.</li>
-            <li>3. You receive an approval email with a sign-in link.</li>
-            <li>4. Begin uploading your first batch of records.</li>
+            <li>2. We review your module selections and import preferences.</li>
+            <li>3. You receive a follow-up email to schedule onboarding.</li>
+            <li>4. Your workspace is provisioned when you're ready to begin.</li>
           </ul>
         </SummaryCard>
       </div>
