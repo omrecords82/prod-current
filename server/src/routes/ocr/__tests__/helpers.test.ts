@@ -195,13 +195,14 @@ assertEq(marriageOut.witness, 'Peter, Paul', 'marriage: witnesses');
 assertEq(marriageOut.mlicense, 'L-1234', 'marriage: license');
 assertEq(marriageOut.clergy, 'Fr. George', 'marriage: clergy from officiant');
 
-// notes used as license fallback
+// notes maps to notes column
 const marriageNotes = mapFieldsToDbColumns('marriage', {
   groom_name: 'A B',
   bride_name: 'C D',
   notes: 'noted',
 });
-assertEq(marriageNotes.mlicense, 'noted', 'marriage: notes is license fallback when license missing');
+assertEq(marriageNotes.notes, 'noted', 'marriage: notes maps to notes column');
+assertEq(marriageNotes.mlicense, null, 'marriage: license is null when missing');
 
 // priest used as clergy fallback
 const marriagePriest = mapFieldsToDbColumns('marriage', {

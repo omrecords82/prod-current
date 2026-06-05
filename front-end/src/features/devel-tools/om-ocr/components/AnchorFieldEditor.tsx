@@ -78,7 +78,6 @@ const DEFAULT_FIELDS: Record<string, Array<{ name: string; key: string }>> = {
     { name: 'Place of Burial', key: 'place_of_burial' },
     { name: 'Age at Death', key: 'age_at_death' },
     { name: 'Cause of Death', key: 'cause_of_death' },
-    { name: 'Next of Kin', key: 'next_of_kin' },
     { name: 'Officiant', key: 'officiant' },
   ],
 };

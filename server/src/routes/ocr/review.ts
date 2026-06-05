@@ -219,87 +219,27 @@ router.post('/jobs/:jobId/review/commit', async (req: any, res: any) => {
           ? `${payload.notes}\n${noteSuffix}`
           : noteSuffix;
 
-        let insertResult: any;
-
-        switch (draft.record_type) {
-          case 'baptism':
-            [insertResult] = await db.query(
-              `INSERT INTO baptism_records
-                (church_id, child_name, date_of_birth, place_of_birth,
-                 father_name, mother_name, address, date_of_baptism,
-                 godparents, performed_by, notes, created_by, created_at)
-              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
-              [
-                churchId,
-                payload.child_name || null,
-                payload.date_of_birth || null,
-                payload.place_of_birth || null,
-                payload.father_name || null,
-                payload.mother_name || null,
-                payload.address || null,
-                payload.date_of_baptism || null,
-                payload.godparents || null,
-                payload.performed_by || null,
-                notes,
-                userEmail,
-              ]
-            );
-            break;
-
-          case 'marriage':
-            [insertResult] = await db.query(
-              `INSERT INTO marriage_records
-                (church_id, groom_name, bride_name, date_of_marriage,
-                 place_of_marriage, witnesses, officiant, notes,
-                 created_by, created_at)
-              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
-              [
-                churchId,
-                payload.groom_name || null,
-                payload.bride_name || null,
-                payload.date_of_marriage || null,
-                payload.place_of_marriage || null,
-                payload.witnesses || null,
-                payload.officiant || null,
-                notes,
-                userEmail,
-              ]
-            );
-            break;
-
-          case 'funeral':
-            [insertResult] = await db.query(
-              `INSERT INTO funeral_records
-                (church_id, deceased_name, date_of_death, date_of_funeral,
-                 date_of_burial, place_of_burial, age_at_death,
-                 cause_of_death, next_of_kin, officiant, notes,
-                 created_by, created_at)
-              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
-              [
-                churchId,
-                payload.deceased_name || null,
-                payload.date_of_death || null,
-                payload.date_of_funeral || null,
-                payload.date_of_burial || null,
-                payload.place_of_burial || null,
-                payload.age_at_death || null,
-                payload.cause_of_death || null,
-                payload.next_of_kin || null,
-                payload.officiant || null,
-                notes,
-                userEmail,
-              ]
-            );
-            break;
-
-          default:
-            errors.push({
-              entry_index: draft.entry_index,
-              record_type: draft.record_type,
-              error: `Unsupported record_type: ${draft.record_type}`,
-            });
-            continue;
+        const tableMap: Record<string, string> = {
+          baptism: 'baptism_records',
+          marriage: 'marriage_records',
+          funeral: 'funeral_records',
+        };
+        const table = tableMap[draft.record_type];
+        if (!table) {
+          errors.push({
+            entry_index: draft.entry_index,
+            record_type: draft.record_type,
+            error: `Unsupported record_type: ${draft.record_type}`,
+          });
+          continue;
         }
+
+        const mapped = mapFieldsToDbColumns(draft.record_type, {
+          ...payload,
+          notes,
+        });
+        const { sql, params } = buildInsertQuery(table, churchId, mapped);
+        const [insertResult]: any = await db.query(sql, params);
 
         const createdRecordId = insertResult?.insertId ?? null;
 

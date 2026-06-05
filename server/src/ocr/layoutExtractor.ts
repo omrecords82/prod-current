@@ -279,12 +279,6 @@ const FUNERAL_ANCHOR_CONFIGS: Record<string, AnchorConfig> = {
     zonePadding: { left: 0, right: 0, top: 0.01, bottom: 0.05 },
     zoneExtent: { width: 0.4, height: 0.1 },
   },
-  next_of_kin: {
-    phrases: ['NEXT OF KIN', 'KIN', 'RELATIVE', 'FAMILY'],
-    direction: 'below',
-    zonePadding: { left: 0, right: 0, top: 0.01, bottom: 0.08 },
-    zoneExtent: { width: 0.4, height: 0.12 },
-  },
   officiant: {
     phrases: ['PRIEST', 'CLERGY', 'OFFICIANT', 'PERFORMED BY'],
     direction: 'right',
@@ -329,7 +323,6 @@ const FUNERAL_FIELDS = [
   'place_of_burial',
   'age_at_death',
   'cause_of_death',
-  'next_of_kin',
   'officiant',
 ] as const;
 

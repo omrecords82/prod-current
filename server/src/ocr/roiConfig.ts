@@ -58,7 +58,6 @@ const FUNERAL_ROIS: Record<string, NormalizedROI> = {
   place_of_burial: { x0: 0.65, y0: 0.18, x1: 0.95, y1: 0.28 },
   age_at_death: { x0: 0.05, y0: 0.28, x1: 0.25, y1: 0.38 },
   cause_of_death: { x0: 0.25, y0: 0.28, x1: 0.60, y1: 0.38 },
-  next_of_kin: { x0: 0.05, y0: 0.38, x1: 0.50, y1: 0.50 },
   officiant: { x0: 0.50, y0: 0.38, x1: 0.95, y1: 0.50 },
 };
 
@@ -103,7 +102,6 @@ export const FIELD_LISTS: Record<RecordType, string[]> = {
     'place_of_burial',
     'age_at_death',
     'cause_of_death',
-    'next_of_kin',
     'officiant',
   ],
 };

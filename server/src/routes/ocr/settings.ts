@@ -363,10 +363,9 @@ const DEFAULT_RECORD_FIELD_CONFIG: Record<string, Array<{
     { key: 'place_of_burial', label: 'Place of Burial', headerLabel: 'PLACE OF BURIAL', required: false, visible: true, sortOrder: 5, type: 'text' },
     { key: 'age_at_death', label: 'Age at Death', headerLabel: 'AGE', required: false, visible: true, sortOrder: 6, type: 'text' },
     { key: 'cause_of_death', label: 'Cause of Death', headerLabel: 'CAUSE OF DEATH', required: false, visible: false, sortOrder: 7, type: 'text' },
-    { key: 'next_of_kin', label: 'Next of Kin', headerLabel: 'NEXT OF KIN', required: false, visible: true, sortOrder: 8, type: 'text' },
-    { key: 'officiant', label: 'Officiant', headerLabel: "PRIEST'S NAME", required: false, visible: true, sortOrder: 9, type: 'text' },
-    { key: 'church', label: 'Church', headerLabel: 'CHURCH', required: false, visible: false, sortOrder: 10, type: 'text' },
-    { key: 'notes', label: 'Notes', headerLabel: 'NOTES', required: false, visible: true, sortOrder: 11, type: 'textarea' },
+    { key: 'officiant', label: 'Officiant', headerLabel: "PRIEST'S NAME", required: false, visible: true, sortOrder: 8, type: 'text' },
+    { key: 'church', label: 'Church', headerLabel: 'CHURCH', required: false, visible: false, sortOrder: 9, type: 'text' },
+    { key: 'notes', label: 'Notes', headerLabel: 'NOTES', required: false, visible: true, sortOrder: 10, type: 'textarea' },
   ],
 };
 

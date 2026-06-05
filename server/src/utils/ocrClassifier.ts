@@ -27,7 +27,7 @@ const RECORD_FIELD_KEYS: Record<string, string[]> = {
   ],
   funeral: [
     'record_number', 'deceased_name', 'date_of_death', 'date_of_funeral', 'date_of_burial',
-    'place_of_burial', 'age_at_death', 'cause_of_death', 'next_of_kin', 'officiant', 'church', 'notes',
+    'place_of_burial', 'age_at_death', 'cause_of_death', 'officiant', 'church', 'notes',
   ],
 };
 
@@ -762,8 +762,12 @@ function visionSystemPrompt(recordType: AgentExtractResult['record_type']): stri
     return [
       ...common,
       'Funeral ledger columns: deceased name, death date, burial date, age, cause, officiant.',
-      'CRITICAL DATE RULES: The FIRST date is date_of_death / deceased_date. The SECOND date is date_of_burial.',
+      'CRITICAL DATE RULES: The FIRST date column (or the first date written) is date_of_death / deceased_date ONLY. The SECOND date column (or the second date written) is date_of_burial / date_of_funeral.',
       'Death date always comes before burial date chronologically.',
+      'Never put the date of death or date of burial in deceased_name. If they are written together or bleed into the name column, split them.',
+      'For example, if the deceased name contains "9/28 Stephanie Kacher", extract "Stephanie Kacher" as deceased_name and "9/28" as the date_of_burial (with the date of death being the preceding date, e.g., "9/23").',
+      'The age at death (age_at_death) must be a clean number (up to 3 digits) and nothing else. Never include text like "years" or comments, and never merge it with cause of death.',
+      'If age and cause are written in the same column (e.g. "88 hypertension"), extract "88" as age_at_death and "hypertension" as cause_of_death.',
       'Deceased name should be mapped to deceased_name.',
     ].join('\n');
   }
@@ -1018,6 +1022,9 @@ async function refineExtractWithLlm(
     '- Map each record to the correct schema fields only; do not invent people, dates, or places.',
     '- Remove header text, column labels, and Cyrillic boilerplate from field values.',
     '- Fix date bleed into names (example: "-69 DAVID JAMES" → child_name "DAVID JAMES", date_of_birth "5-24-69").',
+    '- Fix date of death or burial date bleeding into deceased_name for funeral records (example: "9/28 Stephanie Kacher" → deceased_name "Stephanie Kacher", date_of_burial "9/28").',
+    '- For funeral records, make sure date_of_death is set (e.g. if the image or context shows "9/23" as death date and "9/28" as funeral/burial date, map "9/23" to date_of_death and "9/28" to date_of_burial).',
+    '- Extract age_at_death as a clean number (up to 3 digits) and nothing else. If it is merged into the cause of death (example: cause_of_death "88 hypertension" or age_at_death "88 years"), split them: age_at_death "88", cause_of_death "hypertension".',
     '- Separate priest/officiant from godparents/sponsors when combined.',
     '- Split father and mother names when they appear in one parents column.',
     '- Keep dates in the source style (M-D-YY or M/D/YYYY). Leave blank when uncertain.',

@@ -74,7 +74,6 @@ const FUNERAL_HEADER_HINTS: Record<string, string[]> = {
   place_of_burial: ['place of burial', 'cemetery', 'interment place'],
   age_at_death: ['age'],
   cause_of_death: ['cause', 'cause of death'],
-  next_of_kin: ['kin', 'relative', 'family'],
   officiant: ['priest', 'clergy', 'officiant', 'performed'],
 };
 

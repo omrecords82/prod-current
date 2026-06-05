@@ -7,7 +7,7 @@ const express = require('express');
 const fs = require('fs');
 const path = require('path');
 const router = express.Router({ mergeParams: true });
-import { resolveChurchDb, promisePool } from './helpers';
+import { resolveChurchDb, promisePool, mapFieldsToDbColumns, buildInsertQuery } from './helpers';
 
 const CREATE_FUSED_DRAFTS_TABLE = `
   CREATE TABLE IF NOT EXISTS ocr_fused_drafts (
@@ -930,83 +930,32 @@ router.post('/jobs/:jobId/fusion/commit', async (req: any, res: any) => {
         let recordId: number | null = null;
         const recordType = draft.record_type;
 
-        if (recordType === 'baptism') {
-          if (!payload.child_name) {
-            errors.push({ draft_id: draft.id, error: 'child_name is required for baptism records' });
-            continue;
-          }
-          const [result]: any = await db.query(`
-            INSERT INTO baptism_records
-              (church_id, child_name, date_of_birth, place_of_birth,
-               father_name, mother_name, address, date_of_baptism,
-               godparents, performed_by, notes, created_by, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
-          `, [
-            churchId,
-            payload.child_name || null,
-            payload.date_of_birth || null,
-            payload.place_of_birth || null,
-            payload.father_name || null,
-            payload.mother_name || payload.parents_name || null,
-            payload.address || null,
-            payload.date_of_baptism || null,
-            payload.godparents || null,
-            payload.performed_by || null,
-            payload.notes || null,
-            userEmail,
-          ]);
-          recordId = result.insertId;
-
-        } else if (recordType === 'marriage') {
-          if (!payload.groom_name || !payload.bride_name) {
-            errors.push({ draft_id: draft.id, error: 'groom_name and bride_name are required for marriage records' });
-            continue;
-          }
-          const [result]: any = await db.query(`
-            INSERT INTO marriage_records
-              (church_id, groom_name, bride_name, date_of_marriage,
-               place_of_marriage, witnesses, officiant, notes, created_by, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
-          `, [
-            churchId,
-            payload.groom_name || null,
-            payload.bride_name || null,
-            payload.date_of_marriage || null,
-            payload.place_of_marriage || null,
-            payload.witnesses || null,
-            payload.officiant || null,
-            payload.notes || null,
-            userEmail,
-          ]);
-          recordId = result.insertId;
-
-        } else if (recordType === 'funeral') {
-          if (!payload.deceased_name) {
-            errors.push({ draft_id: draft.id, error: 'deceased_name is required for funeral records' });
-            continue;
-          }
-          const [result]: any = await db.query(`
-            INSERT INTO funeral_records
-              (church_id, deceased_name, date_of_death, date_of_funeral,
-               date_of_burial, place_of_burial, age_at_death, cause_of_death,
-               next_of_kin, officiant, notes, created_by, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
-          `, [
-            churchId,
-            payload.deceased_name || null,
-            payload.date_of_death || null,
-            payload.date_of_funeral || null,
-            payload.date_of_burial || null,
-            payload.place_of_burial || null,
-            payload.age_at_death || null,
-            payload.cause_of_death || null,
-            payload.next_of_kin || null,
-            payload.officiant || null,
-            payload.notes || null,
-            userEmail,
-          ]);
-          recordId = result.insertId;
+        const tableMap: Record<string, string> = {
+          baptism: 'baptism_records',
+          marriage: 'marriage_records',
+          funeral: 'funeral_records',
+        };
+        const table = tableMap[recordType];
+        if (!table) {
+          errors.push({ draft_id: draft.id, error: `Unsupported record_type: ${recordType}` });
+          continue;
         }
+
+        if (recordType === 'baptism' && !payload.child_name) {
+          errors.push({ draft_id: draft.id, error: 'child_name is required for baptism records' });
+          continue;
+        } else if (recordType === 'marriage' && (!payload.groom_name || !payload.bride_name)) {
+          errors.push({ draft_id: draft.id, error: 'groom_name and bride_name are required for marriage records' });
+          continue;
+        } else if (recordType === 'funeral' && !payload.deceased_name) {
+          errors.push({ draft_id: draft.id, error: 'deceased_name is required for funeral records' });
+          continue;
+        }
+
+        const mapped = mapFieldsToDbColumns(recordType, payload);
+        const { sql, params } = buildInsertQuery(table, churchId, mapped);
+        const [result]: any = await db.query(sql, params);
+        recordId = result.insertId;
 
         if (recordId) {
           await db.query(

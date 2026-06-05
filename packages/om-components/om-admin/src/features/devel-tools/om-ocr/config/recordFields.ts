@@ -48,7 +48,6 @@ export const RECORD_FIELDS: Record<string, FieldDefinition[]> = {
     { name: 'place_of_burial', label: 'Place of Burial', required: false, type: 'text' },
     { name: 'age_at_death', label: 'Age at Death', required: false, type: 'text' },
     { name: 'cause_of_death', label: 'Cause of Death', required: false, type: 'text' },
-    { name: 'next_of_kin', label: 'Next of Kin', required: false, type: 'text' },
     { name: 'officiant', label: 'Officiant', required: false, type: 'text' },
     { name: 'church', label: 'Church', required: false, type: 'text' },
     { name: 'notes', label: 'Notes', required: false, type: 'textarea' },

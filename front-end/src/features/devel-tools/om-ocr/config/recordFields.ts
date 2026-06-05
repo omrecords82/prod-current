@@ -70,10 +70,9 @@ export const RECORD_FIELDS: Record<string, FieldDefinition[]> = {
     { name: 'place_of_burial', label: 'Place of Burial', required: false, type: 'text', headerLabel: 'PLACE OF BURIAL', visible: true, sortOrder: 5 },
     { name: 'age_at_death', label: 'Age at Death', required: false, type: 'text', headerLabel: 'AGE', visible: true, sortOrder: 6 },
     { name: 'cause_of_death', label: 'Cause of Death', required: false, type: 'text', headerLabel: 'CAUSE OF DEATH', visible: false, sortOrder: 7 },
-    { name: 'next_of_kin', label: 'Next of Kin', required: false, type: 'text', headerLabel: 'NEXT OF KIN', visible: true, sortOrder: 8 },
-    { name: 'officiant', label: 'Officiant', required: false, type: 'text', headerLabel: "PRIEST'S NAME", visible: true, sortOrder: 9 },
-    { name: 'church', label: 'Church', required: false, type: 'text', headerLabel: 'CHURCH', visible: false, sortOrder: 10 },
-    { name: 'notes', label: 'Notes', required: false, type: 'textarea', headerLabel: 'NOTES', visible: true, sortOrder: 11 },
+    { name: 'officiant', label: 'Officiant', required: false, type: 'text', headerLabel: "PRIEST'S NAME", visible: true, sortOrder: 8 },
+    { name: 'church', label: 'Church', required: false, type: 'text', headerLabel: 'CHURCH', visible: false, sortOrder: 9 },
+    { name: 'notes', label: 'Notes', required: false, type: 'textarea', headerLabel: 'NOTES', visible: true, sortOrder: 10 },
   ],
 };
 
