@@ -34,6 +34,7 @@ function createRouters(upload: any) {
         SELECT id, church_id, uploaded_by, filename, status, review_status, review_notes,
                record_type, language,
                confidence_score, ocr_text, ocr_result, error_regions,
+               agent_status, ready_to_seed, seeded_at,
                created_at, source_pipeline
         FROM ocr_jobs
         WHERE church_id = ?
@@ -113,6 +114,9 @@ function createRouters(upload: any) {
           ocr_text_preview: ocrTextPreview,
           has_ocr_text: hasOcrText,
           has_bundle: bundleCheckMap.get(job.id) || false,
+          agent_status: job.agent_status || null,
+          ready_to_seed: !!job.ready_to_seed,
+          seeded_at: job.seeded_at || null,
         };
       });
 
@@ -253,8 +257,9 @@ function createRouters(upload: any) {
 
       // Query PLATFORM DB — ocr_jobs lives in orthodoxmetrics_db
       const [rows] = await promisePool.query(
-        `SELECT id, church_id, filename, status, record_type, language,
+        `SELECT id, church_id, filename, status, review_status, record_type, language,
                 confidence_score, ocr_text, ocr_result, error_regions,
+                agent_status, agent_extract_json, ready_to_seed, seeded_at, variation_id,
                 created_at
          FROM ocr_jobs WHERE id = ? AND church_id = ?`,
         [jobId, churchId]
@@ -4393,7 +4398,10 @@ function createRouters(upload: any) {
         return res.status(403).json({ error: 'Only admins can update review status' });
       }
       const { review_status, review_notes } = req.body;
-      const validStatuses = ['uploaded', 'pending_review', 'in_review', 'processed', 'returned'];
+      const validStatuses = [
+        'uploaded', 'pending_review', 'in_review', 'processed', 'returned',
+        'ocr_complete', 'agent_extracted', 'human_confirmed', 'ready_to_seed', 'seeded',
+      ];
       if (!review_status || !validStatuses.includes(review_status)) {
         return res.status(400).json({ error: `review_status must be one of: ${validStatuses.join(', ')}` });
       }

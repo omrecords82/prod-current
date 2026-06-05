@@ -7,7 +7,8 @@
  */
 const express = require('express');
 const router = express.Router({ mergeParams: true });
-import { resolveChurchDb, promisePool } from './helpers';
+import { resolveChurchDb, promisePool, mapFieldsToDbColumns, buildInsertQuery } from './helpers';
+import { extractAgentFields } from '../../utils/ocrClassifier';
 
 // ---------------------------------------------------------------------------
 // POST /jobs/:jobId/review/finalize
@@ -429,6 +430,230 @@ router.get('/finalize-history', async (req: any, res: any) => {
   } catch (err: any) {
     console.error('[OCR Review] finalize-history error:', err);
     return res.status(500).json({ error: err.message || 'Failed to fetch history' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// Agent pipeline — extract → confirm → seed (replaces Workbench/Fusion flow)
+// ---------------------------------------------------------------------------
+
+async function loadPlatformJob(churchId: number, jobId: number) {
+  const [rows]: any = await promisePool.query(
+    `SELECT id, church_id, filename, status, review_status, record_type, language,
+            ocr_text, agent_status, agent_extract_json, ready_to_seed, seeded_at, variation_id
+     FROM ocr_jobs WHERE id = ? AND church_id = ?`,
+    [jobId, churchId]
+  );
+  return rows[0] || null;
+}
+
+router.post('/jobs/:jobId/agent-extract', async (req: any, res: any) => {
+  try {
+    const churchId = parseInt(req.params.churchId);
+    const jobId = parseInt(req.params.jobId);
+    const job = await loadPlatformJob(churchId, jobId);
+    if (!job) return res.status(404).json({ error: 'Job not found' });
+    if (!job.ocr_text?.trim()) {
+      return res.status(400).json({ error: 'OCR text not available — wait for OCR to complete' });
+    }
+
+    await promisePool.query(
+      `UPDATE ocr_jobs SET agent_status = 'running' WHERE id = ?`,
+      [jobId]
+    );
+
+    const extract = extractAgentFields(job.ocr_text, job.record_type);
+    const payload = {
+      ...extract,
+      extracted_at: new Date().toISOString(),
+      confirmed: false,
+    };
+
+    await promisePool.query(
+      `UPDATE ocr_jobs SET
+         agent_status = 'complete',
+         agent_extract_json = ?,
+         review_status = 'agent_extracted',
+         record_type = CASE WHEN record_type = 'custom' OR record_type IS NULL THEN ? ELSE record_type END
+       WHERE id = ?`,
+      [JSON.stringify(payload), extract.record_type !== 'custom' ? extract.record_type : job.record_type, jobId]
+    );
+
+    res.json({ ok: true, jobId, extract: payload });
+  } catch (err: any) {
+    console.error('[OCR Agent] extract error:', err);
+    res.status(500).json({ error: err.message || 'Agent extraction failed' });
+  }
+});
+
+router.get('/jobs/:jobId/agent-extract', async (req: any, res: any) => {
+  try {
+    const churchId = parseInt(req.params.churchId);
+    const jobId = parseInt(req.params.jobId);
+    const job = await loadPlatformJob(churchId, jobId);
+    if (!job) return res.status(404).json({ error: 'Job not found' });
+
+    let extract = null;
+    if (job.agent_extract_json) {
+      try {
+        extract = typeof job.agent_extract_json === 'string'
+          ? JSON.parse(job.agent_extract_json)
+          : job.agent_extract_json;
+      } catch {
+        extract = job.agent_extract_json;
+      }
+    }
+
+    res.json({
+      jobId,
+      agent_status: job.agent_status,
+      review_status: job.review_status,
+      ready_to_seed: !!job.ready_to_seed,
+      seeded_at: job.seeded_at,
+      extract,
+      ocr_text_preview: job.ocr_text ? job.ocr_text.slice(0, 500) : null,
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || 'Failed to load agent extract' });
+  }
+});
+
+router.post('/jobs/:jobId/confirm-extract', async (req: any, res: any) => {
+  try {
+    const churchId = parseInt(req.params.churchId);
+    const jobId = parseInt(req.params.jobId);
+    const { fields, records, record_type } = req.body || {};
+
+    const job = await loadPlatformJob(churchId, jobId);
+    if (!job) return res.status(404).json({ error: 'Job not found' });
+
+    const recordType = record_type || job.record_type;
+    if (!recordType || recordType === 'custom') {
+      return res.status(400).json({ error: 'record_type is required (baptism, marriage, or funeral)' });
+    }
+
+    const confirmedRecords = Array.isArray(records) && records.length
+      ? records
+      : fields
+        ? [fields]
+        : null;
+
+    if (!confirmedRecords?.length) {
+      return res.status(400).json({ error: 'fields or records array is required' });
+    }
+
+    const payload = {
+      record_type: recordType,
+      fields: confirmedRecords[0],
+      records: confirmedRecords,
+      confirmed: true,
+      confirmed_at: new Date().toISOString(),
+      confirmed_by: req.session?.user?.email || req.user?.email || 'system',
+      method: 'human_confirmed',
+    };
+
+    await promisePool.query(
+      `UPDATE ocr_jobs SET
+         agent_extract_json = ?,
+         review_status = 'ready_to_seed',
+         ready_to_seed = 1
+       WHERE id = ?`,
+      [JSON.stringify(payload), jobId]
+    );
+
+    res.json({ ok: true, jobId, review_status: 'ready_to_seed', extract: payload });
+  } catch (err: any) {
+    console.error('[OCR Agent] confirm error:', err);
+    res.status(500).json({ error: err.message || 'Failed to confirm extraction' });
+  }
+});
+
+router.post('/jobs/:jobId/seed', async (req: any, res: any) => {
+  try {
+    const churchId = parseInt(req.params.churchId);
+    const jobId = parseInt(req.params.jobId);
+    const job = await loadPlatformJob(churchId, jobId);
+    if (!job) return res.status(404).json({ error: 'Job not found' });
+    if (!job.ready_to_seed) {
+      return res.status(400).json({ error: 'Job is not ready to seed — confirm extraction first' });
+    }
+
+    let extract: any = null;
+    try {
+      extract = typeof job.agent_extract_json === 'string'
+        ? JSON.parse(job.agent_extract_json)
+        : job.agent_extract_json;
+    } catch {
+      return res.status(400).json({ error: 'Invalid agent_extract_json on job' });
+    }
+
+    const recordType = extract.record_type;
+    const records = extract.records || (extract.fields ? [extract.fields] : []);
+    if (!records.length) return res.status(400).json({ error: 'No confirmed records to seed' });
+
+    const resolved = await resolveChurchDb(churchId);
+    if (!resolved) return res.status(404).json({ error: 'Church not found' });
+    const { db } = resolved;
+
+    const tableMap: Record<string, string> = {
+      baptism: 'baptism_records',
+      marriage: 'marriage_records',
+      funeral: 'funeral_records',
+    };
+    const table = tableMap[recordType];
+    if (!table) return res.status(400).json({ error: `Unsupported record_type: ${recordType}` });
+
+    const seedRunId = `ocr_job_${jobId}_${Date.now()}`;
+    const userEmail = req.session?.user?.email || req.user?.email || 'system';
+    const conn = await db.getConnection();
+    const created: any[] = [];
+
+    try {
+      await conn.beginTransaction();
+      for (const rec of records) {
+        const mapped = mapFieldsToDbColumns(recordType, rec);
+        const extra: Record<string, any> = {
+          source_scan_id: jobId,
+          status: 'active',
+        };
+        try {
+          const [cols] = await conn.query(
+            `SELECT COLUMN_NAME FROM information_schema.COLUMNS
+             WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = 'seed_run_id'`,
+            [table]
+          );
+          if ((cols as any[]).length) extra.seed_run_id = seedRunId;
+        } catch (_) { /* optional column */ }
+
+        const merged = { ...mapped, ...extra };
+        const { sql, params } = buildInsertQuery(table, churchId, merged);
+        const [result] = await conn.query(sql, params);
+        created.push({ recordId: result.insertId, fields: rec });
+      }
+      await conn.commit();
+    } catch (txErr) {
+      await conn.rollback();
+      throw txErr;
+    } finally {
+      conn.release();
+    }
+
+    await promisePool.query(
+      `UPDATE ocr_jobs SET review_status = 'seeded', seeded_at = NOW(), ready_to_seed = 0 WHERE id = ?`,
+      [jobId]
+    );
+
+    console.log(`OCR_SEED_OK ${JSON.stringify({ jobId, churchId, recordType, count: created.length, seedRunId, by: userEmail })}`);
+    res.json({
+      ok: true,
+      jobId,
+      seed_run_id: seedRunId,
+      created_records: created,
+      review_status: 'seeded',
+    });
+  } catch (err: any) {
+    console.error('[OCR Agent] seed error:', err);
+    res.status(500).json({ error: err.message || 'Failed to seed records' });
   }
 });
 

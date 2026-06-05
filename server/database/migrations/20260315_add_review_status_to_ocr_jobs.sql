@@ -21,6 +21,16 @@ DEALLOCATE PREPARE stmt;
 UPDATE orthodoxmetrics_db.ocr_jobs SET review_status = 'processed' WHERE status IN ('completed', 'complete') AND review_status = 'uploaded';
 UPDATE orthodoxmetrics_db.ocr_jobs SET review_status = 'pending_review' WHERE status IN ('pending', 'queued') AND review_status = 'uploaded';
 
+-- Agent pipeline columns (2026-06-04)
+ALTER TABLE orthodoxmetrics_db.ocr_jobs ADD COLUMN IF NOT EXISTS agent_status ENUM('pending','running','complete','failed') NULL DEFAULT NULL;
+ALTER TABLE orthodoxmetrics_db.ocr_jobs ADD COLUMN IF NOT EXISTS agent_extract_json LONGTEXT NULL;
+ALTER TABLE orthodoxmetrics_db.ocr_jobs ADD COLUMN IF NOT EXISTS ready_to_seed TINYINT(1) NOT NULL DEFAULT 0;
+ALTER TABLE orthodoxmetrics_db.ocr_jobs ADD COLUMN IF NOT EXISTS seeded_at TIMESTAMP NULL;
+ALTER TABLE orthodoxmetrics_db.ocr_jobs ADD COLUMN IF NOT EXISTS variation_id INT NULL;
+ALTER TABLE orthodoxmetrics_db.ocr_extractors ADD COLUMN IF NOT EXISTS era_label VARCHAR(100) NULL;
+ALTER TABLE orthodoxmetrics_db.ocr_extractors ADD COLUMN IF NOT EXISTS year_from SMALLINT NULL;
+ALTER TABLE orthodoxmetrics_db.ocr_extractors ADD COLUMN IF NOT EXISTS year_to SMALLINT NULL;
+
 -- Add uploaded_by column to track which user uploaded
 SET @has_uploaded_by = (
   SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS

@@ -42,7 +42,7 @@ export function getOcrDbPool(): mysql.Pool {
   if (!ocrPool) {
     ocrPool = mysql.createPool({
       ...DB_CONFIG,
-      database: process.env.OCR_DATABASE || 'orthodoxmetrics_ocr_db'
+      database: process.env.OCR_DATABASE || 'orthodoxmetrics_db'
     });
   }
   return ocrPool;

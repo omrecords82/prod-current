@@ -6,17 +6,13 @@
  *   1. Upload — drag-and-drop image upload with live queue
  *   2. My Uploads — history of all uploaded jobs with review status
  *
- * Review status stages (visible to users):
- *   uploaded → pending_review → in_review → processed → returned
- * Only admins can advance review_status; users see read-only status.
- * OCR Workbench only shown to admin/super_admin.
+ * Pipeline stages:
+ *   uploaded → ocr_complete → agent_extracted → ready_to_seed → seeded
  */
 
 import { useAuth } from '@/context/AuthContext';
 import OcrSetupGate from '@/features/devel-tools/om-ocr/components/OcrSetupGate';
 import churchService, { type Church as ChurchRecord } from '@/shared/lib/churchService';
-import OcrWorkbench from '@/features/devel-tools/om-ocr/components/workbench/OcrWorkbench';
-import { WorkbenchProvider } from '@/features/devel-tools/om-ocr/context/WorkbenchContext';
 import { apiClient } from '@/shared/lib/axiosInstance';
 import {
   Alert,
@@ -50,6 +46,7 @@ import {
   IconX,
 } from '@tabler/icons-react';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -81,7 +78,9 @@ interface OcrJob {
   has_ocr_text: boolean;
 }
 
-type ReviewStatus = 'uploaded' | 'pending_review' | 'in_review' | 'processed' | 'returned';
+type ReviewStatus =
+  | 'uploaded' | 'ocr_complete' | 'agent_extracted' | 'ready_to_seed' | 'seeded' | 'returned'
+  | 'pending_review' | 'in_review' | 'processed';
 
 let _uid = 0;
 const uid = () => `urf_${++_uid}_${Date.now()}`;
@@ -104,14 +103,18 @@ const normalizeOcrLanguage = (raw?: string | null): string => {
 // ─────────────────────────────────────────────────────────────────────────────
 
 const REVIEW_STATUS_CONFIG: Record<ReviewStatus, { label: string; color: string; description: string; step: number }> = {
-  uploaded:       { label: 'Uploaded',         color: '#9e9e9e', description: 'Image received, awaiting review queue', step: 1 },
-  pending_review: { label: 'Pending Review',   color: '#ff9800', description: 'In queue for OM staff review',        step: 2 },
-  in_review:      { label: 'Under Review',     color: '#2196f3', description: 'Currently being reviewed by OM staff', step: 3 },
-  processed:      { label: 'Processed',        color: '#4caf50', description: 'OCR complete, records extracted',      step: 4 },
-  returned:       { label: 'Returned',         color: '#f44336', description: 'Needs attention — see notes',          step: 0 },
+  uploaded:         { label: 'Uploaded',         color: '#9e9e9e', description: 'Image received, queued for OCR',           step: 1 },
+  ocr_complete:     { label: 'OCR Complete',     color: '#03a9f4', description: 'Text recognized from image',               step: 2 },
+  agent_extracted:  { label: 'Review Fields',    color: '#ff9800', description: 'Agent extracted fields — confirm in Review', step: 3 },
+  ready_to_seed:    { label: 'Ready to Seed',    color: '#673ab7', description: 'Confirmed — ready for database insert',    step: 4 },
+  seeded:           { label: 'Seeded',           color: '#4caf50', description: 'Records inserted into parish database',    step: 5 },
+  returned:         { label: 'Returned',         color: '#f44336', description: 'Needs attention — see notes',              step: 0 },
+  pending_review:   { label: 'Pending Review',   color: '#ff9800', description: 'Legacy status', step: 2 },
+  in_review:        { label: 'Under Review',     color: '#2196f3', description: 'Legacy status', step: 3 },
+  processed:        { label: 'Processed',        color: '#4caf50', description: 'Legacy status', step: 4 },
 };
 
-const REVIEW_STEPS: ReviewStatus[] = ['uploaded', 'pending_review', 'in_review', 'processed'];
+const REVIEW_STEPS: ReviewStatus[] = ['uploaded', 'ocr_complete', 'agent_extracted', 'ready_to_seed', 'seeded'];
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Helpers
@@ -190,6 +193,9 @@ const ReviewStatusChip: React.FC<{ status: ReviewStatus; size?: 'small' | 'mediu
 // ─────────────────────────────────────────────────────────────────────────────
 
 const UploadRecordsPage: React.FC = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const isPortalUpload = location.pathname.startsWith('/portal');
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
   const { user, isSuperAdmin } = useAuth();
@@ -463,7 +469,6 @@ const UploadRecordsPage: React.FC = () => {
             >
               <Tab label="Upload Images" />
               <Tab label={`My Uploads${history.length > 0 ? ` (${history.length})` : ''}`} />
-              {isAdmin && <Tab label="OCR Workbench" />}
             </Tabs>
           </Paper>
 
@@ -616,7 +621,7 @@ const UploadRecordsPage: React.FC = () => {
                     sx={{ mb: 2 }}
                   >
                     {failedCount === 0
-                      ? 'Your images have been submitted. The OM team will review and process them — you can track progress in the "My Uploads" tab.'
+                      ? 'Images submitted. OCR and agent extraction run automatically — track progress in My Uploads, then confirm fields in Review.'
                       : failedCount === queue.length
                         ? 'All uploads failed. Please check your files and try again.'
                         : `${completedCount} of ${queue.length} files uploaded. ${failedCount} failed.`}
@@ -628,6 +633,19 @@ const UploadRecordsPage: React.FC = () => {
                     <Button variant="text" onClick={() => { setActiveTab(1); fetchHistory(); }} sx={{ textTransform: 'none' }}>
                       View My Uploads
                     </Button>
+                    {effectiveChurchId && (
+                      <Button
+                        variant="contained"
+                        onClick={() => navigate(
+                          isPortalUpload
+                            ? `/portal/ocr/review/${effectiveChurchId}`
+                            : `/devel/ocr-studio/review/${effectiveChurchId}`
+                        )}
+                        sx={{ textTransform: 'none' }}
+                      >
+                        Open Review
+                      </Button>
+                    )}
                   </Stack>
                 </Box>
               )}
@@ -713,6 +731,20 @@ const UploadRecordsPage: React.FC = () => {
                               )}
                             </Stack>
                             <ReviewStepper status={job.review_status as ReviewStatus} />
+                            {['agent_extracted', 'ready_to_seed'].includes(job.review_status) && effectiveChurchId && (
+                              <Button
+                                size="small"
+                                variant="outlined"
+                                sx={{ mt: 1, textTransform: 'none' }}
+                                onClick={() => navigate(
+                                  isPortalUpload
+                                    ? `/portal/ocr/review/${effectiveChurchId}/${job.id}`
+                                    : `/devel/ocr-studio/review/${effectiveChurchId}/${job.id}`
+                                )}
+                              >
+                                Review & Seed
+                              </Button>
+                            )}
                             {/* Review notes (shown to user when returned) */}
                             {job.review_notes && (
                               <Alert severity={job.review_status === 'returned' ? 'warning' : 'info'} sx={{ mt: 1, py: 0, '& .MuiAlert-message': { fontSize: '0.8rem' } }}>
@@ -746,22 +778,6 @@ const UploadRecordsPage: React.FC = () => {
             </Box>
           )}
 
-          {/* ════════════ TAB 2: OCR WORKBENCH (admin only) ════════════ */}
-          {activeTab === 2 && isAdmin && (
-            <Paper
-              variant="outlined"
-              sx={{
-                height: 'calc(100vh - 260px)',
-                minHeight: 500,
-                overflow: 'hidden',
-                borderRadius: 2,
-              }}
-            >
-              <WorkbenchProvider>
-                <OcrWorkbench churchId={effectiveChurchId} />
-              </WorkbenchProvider>
-            </Paper>
-          )}
         </>
       )}
     </Box>

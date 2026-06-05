@@ -42,7 +42,7 @@ import { detectAndSplitSpread } from '../ocr/preprocessing/splitSpread';
 import { buildRetryPlan, computeStructureScore, extractSignals } from '../ocr/preprocessing/structureRetry';
 import type { TemplateMatchResult } from '../ocr/preprocessing/templateSpec';
 import { extractWithTemplate, resolveTemplate, selectTemplate } from '../ocr/preprocessing/templateSpec';
-import { classifyRecordType } from '../utils/ocrClassifier';
+import { classifyRecordType, extractAgentFields } from '../utils/ocrClassifier';
 
 const { dbLogger } = require('../utils/dbLogger');
 
@@ -2762,18 +2762,50 @@ async function processJob(job: JobRow): Promise<void> {
       confidenceScore: avgConfidence, ocrTextLen: combinedText.length
     }, null, 'ocr-worker');
 
-    // Run classifier on combined OCR text
+    // Run classifier + agent field extraction on combined OCR text
     if (combinedText) {
       try {
         const classResult = classifyRecordType(combinedText);
         await platformPool.query(
-          `UPDATE ocr_jobs SET classifier_suggested_type = ?, classifier_confidence = ? WHERE id = ?`,
+          `UPDATE ocr_jobs SET classifier_suggested_type = ?, classifier_confidence = ?, review_status = 'ocr_complete' WHERE id = ?`,
           [classResult.suggested_type, classResult.confidence, jobId]
         );
         console.log(`OCR_CLASSIFIER ${JSON.stringify({ jobId, suggested: classResult.suggested_type, confidence: classResult.confidence })}`);
+
+        const hintType = record_type && record_type !== 'custom' ? record_type : classResult.suggested_type;
+        const extract = extractAgentFields(combinedText, hintType !== 'unknown' ? hintType : record_type);
+        const payload = {
+          ...extract,
+          extracted_at: new Date().toISOString(),
+          confirmed: false,
+        };
+        const resolvedType = extract.record_type !== 'custom' ? extract.record_type : (record_type || 'custom');
+        await platformPool.query(
+          `UPDATE ocr_jobs SET
+             agent_status = 'complete',
+             agent_extract_json = ?,
+             review_status = 'agent_extracted',
+             record_type = CASE WHEN record_type = 'custom' OR record_type IS NULL THEN ? ELSE record_type END
+           WHERE id = ?`,
+          [JSON.stringify(payload), resolvedType, jobId]
+        );
+        console.log(`OCR_AGENT_EXTRACT ${JSON.stringify({ jobId, recordType: resolvedType, fieldCount: Object.keys(extract.fields).length, confidence: extract.confidence })}`);
       } catch (classErr: any) {
-        console.warn(`[OCR Worker] Classifier failed for job ${jobId}: ${classErr.message}`);
+        console.warn(`[OCR Worker] Classifier/agent extract failed for job ${jobId}: ${classErr.message}`);
+        try {
+          await platformPool.query(
+            `UPDATE ocr_jobs SET review_status = 'ocr_complete', agent_status = 'pending' WHERE id = ?`,
+            [jobId]
+          );
+        } catch (_) { /* best effort */ }
       }
+    } else {
+      try {
+        await platformPool.query(
+          `UPDATE ocr_jobs SET review_status = 'ocr_complete' WHERE id = ?`,
+          [jobId]
+        );
+      } catch (_) { /* best effort */ }
     }
   } else {
     console.log(`OCR_JOB_ERROR ${JSON.stringify({ jobId, code: 'ALL_PAGES_FAILED', message: `${pagesFailed}/${pages.length} pages failed` })}`);

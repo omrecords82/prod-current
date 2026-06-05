@@ -61,8 +61,10 @@ export const portalRoute = {
     protectedRoute('guide', <UserGuide />),
     // OCR Studio (portal version)
     protectedRoute('ocr', <OCRStudioPage />, ROLE_STAFF),
-    // OCR Jobs History (portal version)
-    protectedRoute('ocr/jobs', <OcrReviewPage />, ROLE_STAFF),
+    // Agent review & seed (portal)
+    protectedRoute('ocr/review/:churchId', <OcrReviewPage />, ROLE_STAFF),
+    protectedRoute('ocr/review/:churchId/:jobId', <OcrReviewPage />, ROLE_STAFF),
+    redirectRoute('ocr/jobs', '/portal/ocr'),
     // Sacramental Restrictions (portal version)
     protectedRoute('sacramental-restrictions', <OrthodoxScheduleGuidelinesPage />, ROLE_ALL_CHURCH),
     // Site Map (portal version)
