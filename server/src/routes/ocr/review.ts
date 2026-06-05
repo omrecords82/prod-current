@@ -567,9 +567,10 @@ router.post('/jobs/:jobId/confirm-extract', async (req: any, res: any) => {
       `UPDATE ocr_jobs SET
          agent_extract_json = ?,
          review_status = ?,
-         ready_to_seed = ?
+         ready_to_seed = ?,
+         record_type = ?
        WHERE id = ?`,
-      [JSON.stringify(payload), isFinal ? 'ready_to_seed' : 'agent_extracted', isFinal ? 1 : 0, jobId]
+      [JSON.stringify(payload), isFinal ? 'ready_to_seed' : 'agent_extracted', isFinal ? 1 : 0, recordType, jobId]
     );
 
     res.json({

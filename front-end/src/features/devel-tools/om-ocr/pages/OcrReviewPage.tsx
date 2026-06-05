@@ -997,7 +997,53 @@ const OcrReviewPage: React.FC = () => {
               <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
                 <Typography variant="h6" fontWeight={700}>Job #{selectedJobId}</Typography>
                 <Chip label={statusCfg.label} color={statusCfg.color} size="small" />
-                <Chip label={recordType} size="small" variant="outlined" />
+                <Select
+                  value={recordType}
+                  onChange={async (e) => {
+                    const nextType = e.target.value;
+                    setRecordType(nextType);
+                    try {
+                      await apiClient.post(`/api/church/${churchId}/ocr/jobs/${selectedJobId}/confirm-extract`, {
+                        record_type: nextType,
+                        records: allRecords.length ? allRecords : [fields],
+                        confirmed_indexes: Array.from(confirmedIndexes),
+                        finalize: false,
+                      });
+                      setJobs((prev) =>
+                        prev.map((j) =>
+                          Number(j.id) === selectedJobId ? { ...j, record_type: nextType } : j
+                        )
+                      );
+                      setMapHint(`Record type changed to ${nextType}.`);
+                    } catch (err: any) {
+                      console.error("Failed to update record type on backend:", err);
+                      setError(err?.response?.data?.error || "Failed to update record type");
+                    }
+                  }}
+                  size="small"
+                  variant="outlined"
+                  sx={{
+                    height: 24,
+                    fontSize: '0.75rem',
+                    textTransform: 'capitalize',
+                    '.MuiOutlinedInput-notchedOutline': {
+                      borderColor: 'divider',
+                    },
+                    '&:hover .MuiOutlinedInput-notchedOutline': {
+                      borderColor: 'primary.main',
+                    },
+                    '.MuiSelect-select': {
+                      py: 0,
+                      px: 1,
+                      display: 'flex',
+                      alignItems: 'center',
+                    }
+                  }}
+                >
+                  <MenuItem value="baptism" sx={{ fontSize: '0.75rem', textTransform: 'capitalize' }}>Baptism</MenuItem>
+                  <MenuItem value="marriage" sx={{ fontSize: '0.75rem', textTransform: 'capitalize' }}>Marriage</MenuItem>
+                  <MenuItem value="funeral" sx={{ fontSize: '0.75rem', textTransform: 'capitalize' }}>Funeral</MenuItem>
+                </Select>
                 {extractMethod && (
                   <Chip
                     label={extractMethod === 'assembler' ? 'Table assembly' : extractMethod === 'llm_vision' ? 'AI vision' : extractMethod === 'llm' ? 'AI agent' : 'Heuristic'}
