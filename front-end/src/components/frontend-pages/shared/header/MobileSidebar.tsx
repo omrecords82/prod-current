@@ -96,17 +96,6 @@ const MobileSidebar = ({ isPortal = false }: MobileSidebarProps) => {
             </>
           ) : (
             <>
-              <Button
-                variant="contained"
-                href={PUBLIC_ROUTES.ENROLL}
-                sx={{
-                  backgroundColor: '#d4af37',
-                  color: '#2d1b4e',
-                  '&:hover': { backgroundColor: '#c29d2f' },
-                }}
-              >
-                {t('common.enroll_parish')}
-              </Button>
               <Button color="inherit" href={PUBLIC_ROUTES.HOME} sx={{ justifyContent: 'start' }}>
                 {t('nav.home')}
               </Button>

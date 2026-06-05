@@ -161,12 +161,6 @@ const HpHeader = () => {
                   >
                     {t('common.sign_in')}
                   </a>
-                  <a
-                    href={PUBLIC_ROUTES.ENROLL}
-                    className="px-5 py-2.5 bg-[#d4af37] text-[#2d1b4e] rounded-lg font-['Inter'] text-[15px] font-medium hover:bg-[#c29d2f] transition-colors no-underline"
-                  >
-                    {t('common.enroll_parish')}
-                  </a>
                 </>
               )
             )}
