@@ -2955,7 +2955,8 @@ async function processJob(job: JobRow): Promise<void> {
         console.log(`OCR_CLASSIFIER ${JSON.stringify({ jobId, suggested: classResult.suggested_type, confidence: classResult.confidence, layout: layoutClassification?.detectedLayoutType })}`);
 
         const hintType = record_type && record_type !== 'custom' ? record_type : classResult.suggested_type;
-        const extract = await extractAgentFieldsForJob(jobId, combinedText, hintType !== 'unknown' ? hintType : record_type);
+        const detectedLayout = layoutClassification?.detectedLayoutType;
+        const extract = await extractAgentFieldsForJob(jobId, combinedText, hintType !== 'unknown' ? hintType : record_type, detectedLayout);
         const payload = {
           ...extract,
           agent: 'agent1',

@@ -734,11 +734,39 @@ async function prepareVisionImageBuffer(jobId: number, rowStart: number, rowEnd:
   }
 }
 
-function visionSystemPrompt(recordType: AgentExtractResult['record_type']): string {
+function visionSystemPrompt(
+  recordType: AgentExtractResult['record_type'],
+  layoutType?: 'tabular' | 'form' | 'narrative'
+): string {
+  // ── Layout-specific preamble ──────────────────────────────────────────
+  let layoutGuidance: string;
+  if (layoutType === 'form') {
+    layoutGuidance = [
+      'This image shows a PRINTED FORM or CERTIFICATE — a structured document with',
+      'pre-printed label fields and hand-filled or typed values.',
+      'Extract each label-value pair. The labels are the pre-printed text (e.g., "Name of Child:"),',
+      'and the values are the handwritten or typed entries next to or below each label.',
+      'Do NOT treat this as a tabular ledger with aligned columns.',
+    ].join(' ');
+  } else if (layoutType === 'narrative') {
+    layoutGuidance = [
+      'This image shows a NARRATIVE JOURNAL entry — a handwritten paragraph describing',
+      'a sacramental event (baptism, marriage, funeral) in flowing prose.',
+      'Read the paragraph carefully and extract the relevant fields from the text.',
+      'Names, dates, and places are embedded within sentences, not in columns or labeled fields.',
+      'Sequential entries may be numbered (No. 1, No. 2, etc.).',
+    ].join(' ');
+  } else {
+    layoutGuidance = [
+      'This image shows a TABULAR LEDGER page with data arranged in aligned columns.',
+      'Extract exactly ONE ledger entry from the image crop — never merge adjacent entries.',
+    ].join(' ');
+  }
+
   const common = [
-    'You read handwritten Orthodox parish ledger scans like an experienced church registrar.',
+    'You read handwritten Orthodox parish scans like an experienced church registrar.',
+    layoutGuidance,
     'Trust the IMAGE over noisy OCR hints when they conflict.',
-    'Extract exactly ONE ledger entry from the image crop — never merge adjacent entries.',
     'Use uppercase names as written. Dates in M-D-YY or M/D/YY as shown.',
     'Leave fields blank when not visible — do not guess.',
     'You are receiving ocr_row_hints. If a cell contains a "lines" array, it represents vertically stacked text lines within that column.',
@@ -748,8 +776,16 @@ function visionSystemPrompt(recordType: AgentExtractResult['record_type']): stri
     'Respond only via submit_record_fields with exactly one record in the records array.',
   ];
   if (recordType === 'baptism') {
-    return [
-      ...common,
+    const typeSpecific = layoutType === 'form' ? [
+      'Baptism form fields: child_name (full name of baptized person), date_of_birth, date_of_baptism,',
+      'place_of_birth, father_name, mother_name, godparents, performed_by.',
+      'Look for labeled fields like "Name of Child", "Date of Birth", "Date of Baptism", "Godparents", etc.',
+    ] : layoutType === 'narrative' ? [
+      'Baptism journal entry: Look for phrases like "was baptized", "born on", "child of",',
+      '"godparents were", "sacraments administered by".',
+      'Extract child_name, date_of_birth, date_of_baptism, place_of_birth, father_name, mother_name,',
+      'godparents, performed_by from the flowing text.',
+    ] : [
       'Baptism ledger columns (left to right): entry number | BIRTH date | BAPTISM date | child name & birthplace | parents | godparents/sponsors | priest.',
       'CRITICAL DATE RULES: The FIRST date column is date_of_birth ONLY. The SECOND date column is date_of_baptism ONLY.',
       'Birth date always comes before baptism date chronologically. Never put baptism date in date_of_birth.',
@@ -758,14 +794,34 @@ function visionSystemPrompt(recordType: AgentExtractResult['record_type']): stri
       'father_name and mother_name come from the parents column (father first, comma, mother/maiden).',
       'place_of_birth = city/state in parentheses in the name column, e.g. (FALL RIVER, MASS.).',
       'godparents = sponsors column. performed_by = full priest name (REV. ...).',
-    ].join('\n');
+    ];
+    return [...common, ...typeSpecific].join('\n');
   }
   if (recordType === 'marriage') {
-    return [...common, 'Marriage ledger: groom, bride, date, witnesses, officiant.'].join('\n');
+    const typeSpecific = layoutType === 'form' ? [
+      'Marriage form fields: date_of_marriage, groom_first_name, groom_last_name, groom_parents,',
+      'bride_first_name, bride_last_name, bride_parents, witnesses, marriage_license, officiant.',
+      'Look for labeled fields like "Groom", "Bride", "Date of Marriage", "Witnesses", etc.',
+    ] : layoutType === 'narrative' ? [
+      'Marriage journal entry: Look for phrases like "united in holy matrimony",',
+      '"sacrament of holy matrimony", "were married", "civil ceremony".',
+      'Extract groom name, bride name, date_of_marriage, witnesses, officiant from the prose.',
+    ] : [
+      'Marriage ledger: groom, bride, date, witnesses, officiant.',
+    ];
+    return [...common, ...typeSpecific].join('\n');
   }
   if (recordType === 'funeral') {
-    return [
-      ...common,
+    const typeSpecific = layoutType === 'form' ? [
+      'Funeral/death form fields: deceased_name, date_of_death, date_of_burial, age_at_death,',
+      'cause_of_death, place_of_burial, officiant.',
+      'Look for labeled fields like "Name of Deceased", "Date of Death", "Cause of Death", etc.',
+    ] : layoutType === 'narrative' ? [
+      'Funeral journal entry: Look for phrases like "died on", "buried at",',
+      '"cause of death was", "confessed", "at the age of".',
+      'Extract deceased_name, date_of_death, date_of_burial, age_at_death, cause_of_death,',
+      'place_of_burial, officiant from the flowing text.',
+    ] : [
       'Funeral ledger columns: deceased name, death date, burial date, age, cause, officiant.',
       'CRITICAL DATE RULES: The FIRST date column (or the first date written) is date_of_death / deceased_date ONLY. The SECOND date column (or the second date written) is date_of_burial / date_of_funeral.',
       'Death date always comes before burial date chronologically.',
@@ -774,7 +830,8 @@ function visionSystemPrompt(recordType: AgentExtractResult['record_type']): stri
       'The age at death (age_at_death) must be a clean number (up to 3 digits) and nothing else. Never include text like "years" or comments, and never merge it with cause of death.',
       'If age and cause are written in the same column (e.g. "88 hypertension"), extract "88" as age_at_death and "hypertension" as cause_of_death.',
       'Deceased name should be mapped to deceased_name.',
-    ].join('\n');
+    ];
+    return [...common, ...typeSpecific].join('\n');
   }
   return common.join('\n');
 }
@@ -787,6 +844,7 @@ async function extractSingleRecordVision(
   rowContext: ReturnType<typeof buildRecordRowContext>,
   draftFields: Record<string, string>,
   recordIndex: number,
+  layoutType?: 'tabular' | 'form' | 'narrative',
 ): Promise<{ fields: Record<string, string>; confidence: number; needs_review: boolean; note?: string } | null> {
   if (imageBuffer.length > OCR_AGENT_VISION_MAX_BYTES) return null;
 
@@ -801,7 +859,7 @@ async function extractSingleRecordVision(
   const message = await client.messages.create({
     model,
     max_tokens: 2048,
-    system: visionSystemPrompt(recordType),
+    system: visionSystemPrompt(recordType, layoutType),
     tools: [SUBMIT_RECORD_FIELDS_TOOL],
     tool_choice: { type: 'tool', name: 'submit_record_fields' },
     messages: [{
@@ -1147,6 +1205,7 @@ async function extractSingleRecordGeminiVision(
   rowContext: ReturnType<typeof buildRecordRowContext>,
   draftFields: Record<string, string>,
   recordIndex: number,
+  layoutType?: 'tabular' | 'form' | 'narrative',
 ): Promise<{ fields: Record<string, string>; confidence: number; needs_review: boolean; note?: string } | null> {
   if (imageBuffer.length > OCR_AGENT_VISION_MAX_BYTES) return null;
 
@@ -1159,7 +1218,7 @@ async function extractSingleRecordGeminiVision(
   }, null, 2);
 
   const systemPrompt = [
-    visionSystemPrompt(recordType),
+    visionSystemPrompt(recordType, layoutType),
     'Respond ONLY in JSON format matching this schema:',
     JSON.stringify({
       record_type: recordType,
@@ -1226,6 +1285,7 @@ async function extractSingleRecordGeminiVision(
 async function extractRecordsWithGeminiVision(
   jobId: number,
   draft: AgentExtractResult,
+  layoutType?: 'tabular' | 'form' | 'narrative',
 ): Promise<AgentExtractResult | null> {
   const candidates = loadFeederRecordCandidates(jobId);
   const tableJson = loadTableExtractionJson(jobId);
@@ -1254,7 +1314,7 @@ async function extractRecordsWithGeminiVision(
       const rowContext = buildRecordRowContext(tableJson, rowStart, rowEnd);
       const draftFields = draft.records[i] || cand.fields || {};
       const result = await extractSingleRecordGeminiVision(
-        model, draft.record_type, imageBuffer, rowContext, draftFields, i,
+        model, draft.record_type, imageBuffer, rowContext, draftFields, i, layoutType,
       );
       if (result) {
         records.push(result.fields);
@@ -1405,7 +1465,8 @@ async function refineExtractWithGeminiLlm(
 export async function extractAgentFieldsForJob(
   jobId: number,
   ocrText: string,
-  recordTypeHint?: string
+  recordTypeHint?: string,
+  layoutType?: 'tabular' | 'form' | 'narrative',
 ): Promise<AgentExtractResult> {
   const draft = buildAssemblerDraft(jobId, ocrText, recordTypeHint)
     || extractAgentFields(ocrText, recordTypeHint);
@@ -1413,7 +1474,7 @@ export async function extractAgentFieldsForJob(
   let result: AgentExtractResult;
 
   if (isGeminiEnabled()) {
-    const vision = await extractRecordsWithGeminiVision(jobId, draft);
+    const vision = await extractRecordsWithGeminiVision(jobId, draft, layoutType);
     if (vision) result = vision;
     else {
       const refined = await refineExtractWithGeminiLlm(draft, ocrText);
