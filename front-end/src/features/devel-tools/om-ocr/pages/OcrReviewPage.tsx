@@ -89,7 +89,7 @@ import {
   IconInfoCircle,
   IconX,
   IconRotateClockwise,
-  IconRotateCounterClockwise,
+  IconRotate,
 } from '@tabler/icons-react';
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
@@ -2214,7 +2214,7 @@ const OcrReviewPage: React.FC = () => {
                             onClick={() => setRotation((r) => (r - 90 + 360) % 360)}
                             color="primary"
                           >
-                            <IconRotateCounterClockwise size={18} />
+                            <IconRotate size={18} />
                           </IconButton>
                         </Tooltip>
                         <Tooltip title="Rotate clockwise">
