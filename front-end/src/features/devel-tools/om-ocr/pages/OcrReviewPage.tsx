@@ -84,6 +84,10 @@ import {
   IconZoomIn,
   IconZoomOut,
   IconTrash,
+  IconAlertCircle,
+  IconAlertTriangle,
+  IconInfoCircle,
+  IconX,
 } from '@tabler/icons-react';
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
@@ -233,6 +237,17 @@ function normalizeBaptismDates(fields: Record<string, string>): void {
     }
   }
 }
+function debounce<T extends (...args: any[]) => void>(func: T, delay: number): (...args: Parameters<T>) => void {
+  let timeoutId: ReturnType<typeof setTimeout> | null = null;
+  return (...args: Parameters<T>) => {
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+    }
+    timeoutId = setTimeout(() => {
+      func(...args);
+    }, delay);
+  };
+}
 
 const OcrReviewPage: React.FC = () => {
   const navigate = useNavigate();
@@ -253,6 +268,11 @@ const OcrReviewPage: React.FC = () => {
   const [extractLoading, setExtractLoading] = useState(false);
   const [confirmLoading, setConfirmLoading] = useState(false);
   const [seedLoading, setSeedLoading] = useState(false);
+  const [rulesData, setRulesData] = useState<{
+    has_blockers: boolean;
+    has_warnings: boolean;
+    outcomes: Array<{ record_index: number; outcomes: any[] }>;
+  } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [recordType, setRecordType] = useState<string>('baptism');
   const [fields, setFields] = useState<Record<string, string>>({});
@@ -318,6 +338,75 @@ const OcrReviewPage: React.FC = () => {
     () => jobs.find((j) => Number(j.id) === selectedJobId) ?? null,
     [jobs, selectedJobId]
   );
+
+  const currentRecordOutcomes = useMemo(() => {
+    if (!rulesData?.outcomes) return [];
+    const recordObj = rulesData.outcomes.find(o => o.record_index === selectedRecordIndex);
+    return recordObj?.outcomes || [];
+  }, [rulesData, selectedRecordIndex]);
+
+  const ruleCounts = useMemo(() => {
+    let suggestions = 0;
+    let warnings = 0;
+    let blockers = 0;
+    
+    currentRecordOutcomes.forEach((o: any) => {
+      if (o.reviewer_decision !== 'pending') return;
+      if (o.severity === 'blocker') blockers++;
+      else if (o.severity === 'warning' || o.severity === 'error') warnings++;
+      else suggestions++;
+    });
+
+    return { suggestions, warnings, blockers };
+  }, [currentRecordOutcomes]);
+
+  const triggerRevalidation = useCallback(
+    debounce(async (updatedFields: Record<string, string>) => {
+      if (!churchId || !selectedJobId) return;
+      try {
+        const res = await apiClient.post(`/api/church/${churchId}/ocr/rules/revalidate-record`, {
+          job_id: selectedJobId,
+          record_index: selectedRecordIndex,
+          fields: updatedFields
+        });
+        const evalResult = res.data ?? res;
+        
+        setRulesData((prev: any) => {
+          if (!prev) return { has_blockers: evalResult.has_blockers, has_warnings: evalResult.has_warnings, outcomes: [{ record_index: selectedRecordIndex, outcomes: evalResult.outcomes }] };
+          
+          const nextOutcomes = prev.outcomes.filter((o: any) => o.record_index !== selectedRecordIndex);
+          nextOutcomes.push({ record_index: selectedRecordIndex, outcomes: evalResult.outcomes });
+          
+          const allOutcomes = nextOutcomes.flatMap((o: any) => o.outcomes);
+          const hasBlockers = allOutcomes.some((o: any) => o.severity === 'blocker' && o.reviewer_decision === 'pending');
+          const hasWarnings = allOutcomes.some((o: any) => (o.severity === 'warning' || o.severity === 'error') && o.reviewer_decision === 'pending');
+
+          return {
+            has_blockers: hasBlockers,
+            has_warnings: hasWarnings,
+            outcomes: nextOutcomes
+          };
+        });
+      } catch (err) {
+        console.error("Revalidation failed:", err);
+      }
+    }, 600),
+    [churchId, selectedJobId, selectedRecordIndex]
+  );
+
+  const handleFieldChange = (fieldName: string, value: string) => {
+    if (editorReadOnly) return;
+    const nextFields = { ...fields, [fieldName]: value };
+    setFields(nextFields);
+    
+    const nextRecords = [...allRecords];
+    if (nextRecords[selectedRecordIndex]) {
+      nextRecords[selectedRecordIndex] = nextFields;
+    }
+    setAllRecords(nextRecords);
+
+    triggerRevalidation(nextFields);
+  };
 
   // The agent's record array order does not always line up with the table
   // candidates (truncation, single confirmed record, LLM reordering). Resolve
@@ -520,6 +609,13 @@ const OcrReviewPage: React.FC = () => {
       setFields({ ...(normalizedRecords[idx] || extract?.fields || {}) });
     setAgent2Available(!!agent2 || !!data.llamaparse_available);
     setConfirmedIndexes(new Set<number>(Array.isArray(extract?.confirmed_indexes) ? extract.confirmed_indexes : []));
+    if (extract?.rules) {
+      setRulesData(extract.rules);
+    } else if (data?.rules) {
+      setRulesData(data.rules);
+    } else {
+      setRulesData(null);
+    }
   };
 
   const loadJobs = useCallback(async () => {
@@ -1455,6 +1551,49 @@ const OcrReviewPage: React.FC = () => {
                 </Stack>
               )}
 
+              {currentRecordOutcomes.length > 0 && (
+                <Paper
+                  variant="outlined"
+                  sx={{
+                    p: 1.5,
+                    bgcolor: 'background.default',
+                    borderLeft: '4px solid',
+                    borderColor: ruleCounts.blockers > 0 ? 'error.main' : ruleCounts.warnings > 0 ? 'warning.main' : 'info.main'
+                  }}
+                >
+                  <Stack direction="row" spacing={2} alignItems="center" justifyContent="space-between" flexWrap="wrap">
+                    <Typography variant="subtitle2" fontWeight={700}>
+                      Rules Validation
+                    </Typography>
+                    <Stack direction="row" spacing={1}>
+                      <Chip
+                        label={`${ruleCounts.blockers} Blockers`}
+                        color={ruleCounts.blockers > 0 ? 'error' : 'default'}
+                        size="small"
+                        variant={ruleCounts.blockers > 0 ? 'filled' : 'outlined'}
+                      />
+                      <Chip
+                        label={`${ruleCounts.warnings} Warnings`}
+                        color={ruleCounts.warnings > 0 ? 'warning' : 'default'}
+                        size="small"
+                        variant={ruleCounts.warnings > 0 ? 'filled' : 'outlined'}
+                      />
+                      <Chip
+                        label={`${ruleCounts.suggestions} Suggestions`}
+                        color={ruleCounts.suggestions > 0 ? 'info' : 'default'}
+                        size="small"
+                        variant={ruleCounts.suggestions > 0 ? 'filled' : 'outlined'}
+                      />
+                    </Stack>
+                  </Stack>
+                  {ruleCounts.blockers > 0 && (
+                    <Typography variant="caption" color="error.main" sx={{ display: 'block', mt: 1, fontWeight: 600 }}>
+                      ⚠️ Seeding to tenant database is blocked. Please resolve the active blocker(s) by correcting the dates or fields.
+                    </Typography>
+                  )}
+                </Paper>
+              )}
+
               {needsReviewFlag && (
                 <Alert severity="warning">
                   This record may need manual review — some key fields could not be confidently mapped from the ledger layout.
@@ -1555,48 +1694,209 @@ const OcrReviewPage: React.FC = () => {
                         const fieldValue = editorReadOnly
                           ? (agent2DisplayFields[def.name] || '')
                           : (fields[def.name] || '');
+
+                        const fieldRules = currentRecordOutcomes.filter((o: any) => o.target_field === def.name);
+                        const hasBlocker = fieldRules.some((o: any) => o.severity === 'blocker' && o.reviewer_decision === 'pending');
+                        const hasWarningOrError = fieldRules.some((o: any) => (o.severity === 'warning' || o.severity === 'error') && o.reviewer_decision === 'pending');
+
                         return (
-                          <TextField
+                          <Box
                             key={def.name}
-                            fullWidth
-                            size="small"
-                            label={def.label}
-                            required={def.required}
-                            value={fieldValue}
-                            onChange={editorReadOnly ? undefined : (e) => setFields((prev) => ({ ...prev, [def.name]: e.target.value }))}
-                            onFocus={editorReadOnly ? undefined : () => setFocusedField(def.name)}
-                            disabled={editorReadOnly}
-                            multiline={def.type === 'textarea'}
-                            minRows={def.type === 'textarea' ? 2 : 1}
                             sx={{
+                              display: 'flex',
+                              flexDirection: 'column',
+                              gap: 0.5,
                               ...(def.type === 'textarea' ? { gridColumn: { sm: '1 / -1' } } : {}),
-                              ...(fieldColor ? {
-                                '& .MuiOutlinedInput-root': {
-                                  '& fieldset': {
-                                    borderColor: isFocused ? fieldColor : `${fieldColor}66`,
-                                    borderWidth: isFocused ? 2 : 1,
-                                  },
-                                },
-                                '& .MuiInputLabel-root': {
-                                  color: isFocused ? fieldColor : undefined,
-                                },
-                              } : {}),
                             }}
-                            InputProps={fieldColor ? {
-                              startAdornment: (
-                                <InputAdornment position="start">
-                                  <Box sx={{
-                                    width: 10,
-                                    height: 10,
-                                    borderRadius: '50%',
-                                    bgcolor: hasSnippetLink ? fieldColor : `${fieldColor}44`,
-                                    border: hasSnippetLink ? 'none' : `1px solid ${fieldColor}`,
-                                    flexShrink: 0,
-                                  }} />
-                                </InputAdornment>
-                              ),
-                            } : undefined}
-                          />
+                          >
+                            <TextField
+                              fullWidth
+                              size="small"
+                              label={def.label}
+                              required={def.required}
+                              value={fieldValue}
+                              onChange={editorReadOnly ? undefined : (e) => handleFieldChange(def.name, e.target.value)}
+                              onFocus={editorReadOnly ? undefined : () => setFocusedField(def.name)}
+                              disabled={editorReadOnly}
+                              multiline={def.type === 'textarea'}
+                              minRows={def.type === 'textarea' ? 2 : 1}
+                              error={hasBlocker || hasWarningOrError}
+                              sx={{
+                                ...(fieldColor ? {
+                                  '& .MuiOutlinedInput-root': {
+                                    '& fieldset': {
+                                      borderColor: isFocused ? fieldColor : `${fieldColor}66`,
+                                      borderWidth: isFocused ? 2 : 1,
+                                    },
+                                  },
+                                  '& .MuiInputLabel-root': {
+                                    color: isFocused ? fieldColor : undefined,
+                                  },
+                                } : {}),
+                              }}
+                              InputProps={fieldColor ? {
+                                startAdornment: (
+                                  <InputAdornment position="start">
+                                    <Box sx={{
+                                      width: 10,
+                                      height: 10,
+                                      borderRadius: '50%',
+                                      bgcolor: hasSnippetLink ? fieldColor : `${fieldColor}44`,
+                                      border: hasSnippetLink ? 'none' : `1px solid ${fieldColor}`,
+                                      flexShrink: 0,
+                                    }} />
+                                  </InputAdornment>
+                                ),
+                              } : undefined}
+                            />
+                            
+                            {!editorReadOnly && fieldRules.map((outcome: any) => {
+                              if (outcome.reviewer_decision !== 'pending') return null;
+
+                              const handleAccept = async () => {
+                                try {
+                                  await apiClient.post(`/api/church/${churchId}/ocr/rules/outcomes/${outcome.id}/accept`);
+                                  let valToApply = outcome.suggested_value;
+                                  if (typeof valToApply === 'string' && valToApply.startsWith('[')) {
+                                    try {
+                                      const parsed = JSON.parse(valToApply);
+                                      if (Array.isArray(parsed) && parsed.length > 0) {
+                                        valToApply = parsed[0].canonical_value || valToApply;
+                                      }
+                                    } catch (_) {}
+                                  }
+                                  if (valToApply) {
+                                    setFields(prev => ({ ...prev, [outcome.target_field]: valToApply }));
+                                    const nextRecords = [...allRecords];
+                                    if (nextRecords[selectedRecordIndex]) {
+                                      nextRecords[selectedRecordIndex][outcome.target_field] = valToApply;
+                                    }
+                                    setAllRecords(nextRecords);
+                                    triggerRevalidation({ ...fields, [outcome.target_field]: valToApply });
+                                  } else {
+                                    triggerRevalidation(fields);
+                                  }
+                                } catch (err: any) {
+                                  alert("Failed to accept suggestion: " + (err.response?.data?.error || err.message));
+                                }
+                              };
+
+                              const handleReject = async () => {
+                                try {
+                                  await apiClient.post(`/api/church/${churchId}/ocr/rules/outcomes/${outcome.id}/reject`);
+                                  triggerRevalidation(fields);
+                                } catch (err: any) {
+                                  alert("Failed to reject suggestion: " + (err.response?.data?.error || err.message));
+                                }
+                              };
+
+                              const handleOverride = async () => {
+                                const reason = window.prompt(`Enter reason to override this warning/error:`);
+                                if (!reason || !reason.trim()) return;
+                                try {
+                                  await apiClient.post(`/api/church/${churchId}/ocr/rules/outcomes/${outcome.id}/override`, { reason });
+                                  triggerRevalidation(fields);
+                                } catch (err: any) {
+                                  alert("Failed to override: " + (err.response?.data?.error || err.message));
+                                }
+                              };
+
+                              if (outcome.action_type === 'suggest_value' || outcome.action_type === 'normalize_value') {
+                                return (
+                                  <Paper
+                                    variant="outlined"
+                                    key={outcome.id}
+                                    sx={{
+                                      p: 1,
+                                      mt: 0.5,
+                                      bgcolor: 'action.hover',
+                                      borderColor: 'info.main',
+                                      display: 'flex',
+                                      flexDirection: 'column',
+                                      gap: 1
+                                    }}
+                                  >
+                                    <Typography variant="caption" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                      <IconInfoCircle size={14} color="#0288d1" />
+                                      {outcome.explanation}
+                                    </Typography>
+                                    <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" sx={{ gap: 0.5 }}>
+                                      {Array.isArray(outcome.suggested_value) ? (
+                                        outcome.suggested_value.map((sug: any, idx: number) => (
+                                          <Chip
+                                            key={idx}
+                                            label={`${sug.canonical_value} (${Math.round((sug.score || 0) * 100)}%)`}
+                                            size="small"
+                                            onClick={async () => {
+                                              try {
+                                                setFields(prev => ({ ...prev, [outcome.target_field]: sug.canonical_value }));
+                                                const nextRecords = [...allRecords];
+                                                if (nextRecords[selectedRecordIndex]) {
+                                                  nextRecords[selectedRecordIndex][outcome.target_field] = sug.canonical_value;
+                                                }
+                                                setAllRecords(nextRecords);
+                                                await apiClient.post(`/api/church/${churchId}/ocr/rules/outcomes/${outcome.id}/accept`);
+                                                triggerRevalidation({ ...fields, [outcome.target_field]: sug.canonical_value });
+                                              } catch (err: any) {
+                                                alert("Failed to apply clergy suggestion: " + (err.response?.data?.error || err.message));
+                                              }
+                                            }}
+                                            color="info"
+                                            variant="outlined"
+                                            sx={{ cursor: 'pointer' }}
+                                          />
+                                        ))
+                                      ) : (
+                                        <Chip
+                                          label={outcome.suggested_value}
+                                          size="small"
+                                          onClick={handleAccept}
+                                          color="info"
+                                          variant="filled"
+                                          sx={{ cursor: 'pointer' }}
+                                        />
+                                      )}
+                                      <Button
+                                        size="small"
+                                        color="error"
+                                        startIcon={<IconX size={12} />}
+                                        onClick={handleReject}
+                                        sx={{ minWidth: 0, textTransform: 'none', px: 1, height: 24 }}
+                                      >
+                                        Reject
+                                      </Button>
+                                    </Stack>
+                                  </Paper>
+                                );
+                              } else {
+                                const isBlocker = outcome.severity === 'blocker';
+                                return (
+                                  <Alert
+                                    key={outcome.id}
+                                    severity={isBlocker ? 'error' : outcome.severity === 'warning' ? 'warning' : 'info'}
+                                    variant="outlined"
+                                    icon={isBlocker ? <IconAlertCircle size={16} /> : <IconAlertTriangle size={16} />}
+                                    sx={{
+                                      py: 0.25,
+                                      px: 1,
+                                      mt: 0.5,
+                                      '& .MuiAlert-message': { fontSize: '0.75rem', py: 0.5 },
+                                      '& .MuiAlert-icon': { py: 0.5, mr: 1 }
+                                    }}
+                                    action={
+                                      !isBlocker ? (
+                                        <Button size="small" color="inherit" onClick={handleOverride} sx={{ textTransform: 'none', py: 0, height: 20 }}>
+                                          Override
+                                        </Button>
+                                      ) : undefined
+                                    }
+                                  >
+                                    {outcome.explanation}
+                                  </Alert>
+                                );
+                              }
+                            })}
+                          </Box>
                         );
                       })}
                     </Box>
@@ -1636,12 +1936,12 @@ const OcrReviewPage: React.FC = () => {
                             : 'Confirm Record & Next')
                           : 'Confirm Fields'}
                     </Button>
-                    <Button
+                     <Button
                       variant="contained"
                       color="success"
                       startIcon={<IconDatabase size={18} />}
                       onClick={seedRecords}
-                      disabled={seedLoading || reviewStatus !== 'ready_to_seed'}
+                      disabled={seedLoading || reviewStatus !== 'ready_to_seed' || !!rulesData?.has_blockers}
                     >
                       {seedLoading ? 'Seeding…' : 'Seed to Records'}
                     </Button>

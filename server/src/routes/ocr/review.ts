@@ -679,7 +679,7 @@ router.post('/jobs/:jobId/confirm-extract', async (req: any, res: any) => {
     // stays in review (per-record progress save) and is NOT yet seedable.
     const isFinal = finalize !== false;
 
-    const payload = {
+    const payload: any = {
       record_type: recordType,
       fields: confirmedRecords[0],
       records: confirmedRecords,
@@ -689,6 +689,9 @@ router.post('/jobs/:jobId/confirm-extract', async (req: any, res: any) => {
       confirmed_by: req.session?.user?.email || req.user?.email || 'system',
       method: 'human_confirmed',
     };
+
+    // Evaluate rules and persist outcomes
+    await evaluateAndPersistRulesForJob(churchId, jobId, payload, recordType);
 
     await promisePool.query(
       `UPDATE ocr_jobs SET
