@@ -1992,7 +1992,7 @@ async function processPage(tenantPool: Pool, page: PageRow, churchId: number): P
           const [defaultRows] = await platformPool.query(
             `SELECT id, extraction_mode, column_bands, header_y_threshold, record_regions, learned_params
              FROM ocr_extractors
-             WHERE record_type = ? AND is_default = 1${churchClause}
+             WHERE record_type = ? AND is_default = 1 AND (status = 'approved' OR status IS NULL)${churchClause}
              ORDER BY (church_id IS NOT NULL) DESC
              LIMIT 1`,
             tplParams
@@ -2153,16 +2153,17 @@ async function processPage(tenantPool: Pool, page: PageRow, churchId: number): P
                 );
               }
               
-              // 2. Insert new auto-detected template
+              // 2. Insert new auto-detected template as CANDIDATE (requires approval before reuse)
               const [insResult] = await platformPool.query(
-                `INSERT INTO ocr_extractors (name, description, record_type, page_mode, extraction_mode, column_bands, header_y_threshold, is_default, church_id, created_at, updated_at)
-                 VALUES (?, ?, ?, 'single', 'tabular', ?, ?, 1, ?, NOW(), NOW())`,
+                `INSERT INTO ocr_extractors (name, description, record_type, page_mode, extraction_mode, column_bands, header_y_threshold, is_default, status, sample_job_id, church_id, created_at, updated_at)
+                 VALUES (?, ?, ?, 'single', 'tabular', ?, ?, 0, 'candidate', ?, ?, NOW(), NOW())`,
                 [
                   templateName,
                   `Automatically imported layout template from Job #${page.job_id}`,
                   recordType,
                   JSON.stringify(bandsArray),
                   headerYThreshold,
+                  page.job_id,
                   targetChurchId
                 ]
               );
@@ -2181,7 +2182,7 @@ async function processPage(tenantPool: Pool, page: PageRow, churchId: number): P
                   candidates: [{ templateId, score: 1.0 }]
                 };
               }
-              console.log(`  [AutoTemplate] Successfully created template #${templateId} and set as default.`);
+              console.log(`  [AutoTemplate] Created candidate template #${templateId} (requires approval before it becomes default).`);
             } catch (autoTplErr: any) {
               console.warn(`  [AutoTemplate] Failed to automatically import layout as template:`, autoTplErr.message);
             }

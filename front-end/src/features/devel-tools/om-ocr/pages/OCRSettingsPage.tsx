@@ -47,7 +47,7 @@ import {
     IconTrash,
     IconEdit,
 } from '@tabler/icons-react';
-import React, { useCallback, useContext, useEffect, useState } from 'react';
+import React, { useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import OcrStudioNav from '../components/OcrStudioNav';
 
@@ -91,10 +91,40 @@ interface OCRSettingsData {
 
 const OCRSettingsPage: React.FC = () => {
   const { isLayout } = useContext(CustomizerContext);
-  const { user } = useAuth();
-  const [searchParams] = useSearchParams();
+  const { user, isSuperAdmin } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
   const churchParam = searchParams.get('church');
-  const effectiveChurchId = churchParam ? Number(churchParam) : user?.church_id ? Number(user.church_id) : null;
+
+  // Church selector state (super_admin only)
+  const [churches, setChurches] = useState<Array<{ id: number; name: string }>>([]);
+  const [selectedChurchId, setSelectedChurchId] = useState<number | null>(
+    churchParam ? Number(churchParam) : user?.church_id ? Number(user.church_id) : null
+  );
+
+  const effectiveChurchId = selectedChurchId || (user?.church_id ? Number(user.church_id) : null);
+
+  // Load churches list for super_admin
+  useEffect(() => {
+    if (!isSuperAdmin()) return;
+    (async () => {
+      try {
+        const res: any = await apiClient.get('/api/churches');
+        const list = res.data?.churches || res.churches || res.data || [];
+        const sorted = (Array.isArray(list) ? list : []).sort((a: any, b: any) =>
+          (a.name || '').localeCompare(b.name || '')
+        );
+        setChurches(sorted);
+      } catch (err) {
+        console.error('Failed to load churches:', err);
+      }
+    })();
+  }, [isSuperAdmin]);
+
+  const selectedChurchName = useMemo(() => {
+    if (!selectedChurchId) return null;
+    const found = churches.find(c => c.id === selectedChurchId);
+    return found?.name || `Church #${selectedChurchId}`;
+  }, [selectedChurchId, churches]);
   
   const [activeTab, setActiveTab] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -438,7 +468,30 @@ const OCRSettingsPage: React.FC = () => {
           <Typography variant="h5" fontWeight={600}>
             Settings
           </Typography>
+          {selectedChurchName && (
+            <Chip label={selectedChurchName} size="small" color="primary" variant="outlined" />
+          )}
         </Stack>
+        {isSuperAdmin() && churches.length > 0 && (
+          <FormControl size="small" sx={{ minWidth: 260 }}>
+            <InputLabel>Church</InputLabel>
+            <Select
+              value={selectedChurchId || ''}
+              label="Church"
+              onChange={(e) => {
+                const newId = Number(e.target.value);
+                setSelectedChurchId(newId);
+                setSearchParams({ church: String(newId) });
+              }}
+            >
+              {churches.map((c: any) => (
+                <MenuItem key={c.id} value={c.id}>
+                  {c.name} (#{c.id})
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        )}
       </Stack>
 
       {/* Tabs */}
