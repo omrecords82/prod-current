@@ -975,6 +975,10 @@ function createRouters(upload: any) {
   // -----------------------------------------------------------------------
   churchJobsRouter.post('/jobs/:jobId/retry', async (req: any, res: any) => {
     try {
+      const userRole = req.session?.user?.role;
+      if (!['super_admin', 'admin', 'church_admin', 'priest', 'deacon', 'editor'].includes(userRole)) {
+        return res.status(403).json({ error: 'Only authorized staff can retry jobs' });
+      }
       const churchId = parseInt(req.params.churchId);
       const jobId = parseInt(req.params.jobId);
 

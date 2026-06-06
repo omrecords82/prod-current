@@ -47,6 +47,7 @@ import {
 } from '@tabler/icons-react';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { toast } from 'react-toastify';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -200,6 +201,7 @@ const UploadRecordsPage: React.FC = () => {
   const isDark = theme.palette.mode === 'dark';
   const { user, isSuperAdmin } = useAuth();
   const isAdmin = isSuperAdmin() || user?.role === 'admin' || user?.role === 'manager';
+  const isStaff = isSuperAdmin() || ['admin', 'manager', 'church_admin', 'priest', 'deacon', 'editor'].includes(user?.role || '');
 
   // Tab
   const [activeTab, setActiveTab] = useState(0);
@@ -403,6 +405,19 @@ const UploadRecordsPage: React.FC = () => {
       setHistory((prev) => prev.map((j) => j.id === jobId ? { ...j, review_status, review_notes: review_notes ?? j.review_notes } : j));
     } catch { /* non-critical */ }
   }, [effectiveChurchId]);
+
+  // ─── Staff: reprocess/retry job ──
+  const handleReprocessJob = useCallback(async (jobId: string) => {
+    if (!effectiveChurchId) return;
+    try {
+      await apiClient.post(`/api/church/${effectiveChurchId}/ocr/jobs/${jobId}/retry`);
+      toast.success('Reprocessing triggered. The worker will pick up the job shortly.');
+      fetchHistory();
+    } catch (err: any) {
+      const serverMsg = err?.response?.data?.message || err?.response?.data?.error || err?.message || 'Failed to trigger reprocessing';
+      toast.error(serverMsg);
+    }
+  }, [effectiveChurchId, fetchHistory]);
 
   // ─── Filtered history ──
   const filteredHistory = useMemo(() => {
@@ -753,18 +768,29 @@ const UploadRecordsPage: React.FC = () => {
                             )}
                           </Box>
 
-                          {/* Admin: status controls */}
-                          {isAdmin && (
+                          {/* Staff: status controls */}
+                          {isStaff && (
                             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, flexShrink: 0 }}>
                               <FormControl size="small" sx={{ minWidth: 140 }}>
                                 <Select
                                   value={job.review_status}
-                                  onChange={(e) => updateReviewStatus(job.id, e.target.value as ReviewStatus)}
+                                  onChange={(e) => {
+                                    const val = e.target.value;
+                                    if (val === 'reprocess') {
+                                      handleReprocessJob(job.id);
+                                    } else {
+                                      updateReviewStatus(job.id, val as ReviewStatus);
+                                    }
+                                  }}
                                   sx={{ fontSize: '0.75rem', height: 30 }}
                                 >
                                   {Object.entries(REVIEW_STATUS_CONFIG).map(([k, v]) => (
                                     <MenuItem key={k} value={k} sx={{ fontSize: '0.8rem' }}>{v.label}</MenuItem>
                                   ))}
+                                  <Divider />
+                                  <MenuItem value="reprocess" sx={{ fontSize: '0.8rem', color: 'primary.main', fontWeight: 600 }}>
+                                    Reprocess Image
+                                  </MenuItem>
                                 </Select>
                               </FormControl>
                             </Box>
