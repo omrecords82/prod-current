@@ -656,23 +656,40 @@ router.post('/jobs/:jobId/seed', async (req: any, res: any) => {
 
     try {
       await conn.beginTransaction();
+
+      // Fetch valid columns for the target table
+      const [columnRows] = await conn.query(
+        `SELECT COLUMN_NAME FROM information_schema.COLUMNS
+         WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ?`,
+        [table]
+      );
+      const validColumns = new Set(
+        (columnRows as any[]).map((row) => row.COLUMN_NAME.toLowerCase())
+      );
+
       for (const rec of records) {
         const mapped = mapFieldsToDbColumns(recordType, rec);
-        const extra: Record<string, any> = {
-          source_scan_id: jobId,
-          status: 'active',
-        };
-        try {
-          const [cols] = await conn.query(
-            `SELECT COLUMN_NAME FROM information_schema.COLUMNS
-             WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = 'seed_run_id'`,
-            [table]
-          );
-          if ((cols as any[]).length) extra.seed_run_id = seedRunId;
-        } catch (_) { /* optional column */ }
+        const extra: Record<string, any> = {};
+
+        if (validColumns.has('source_scan_id')) {
+          extra.source_scan_id = jobId;
+        }
+        if (validColumns.has('status')) {
+          extra.status = 'active';
+        }
+        if (validColumns.has('seed_run_id')) {
+          extra.seed_run_id = seedRunId;
+        }
 
         const merged = { ...mapped, ...extra };
-        const { sql, params } = buildInsertQuery(table, churchId, merged);
+        const filteredMerged: Record<string, any> = {};
+        for (const [key, val] of Object.entries(merged)) {
+          if (validColumns.has(key.toLowerCase())) {
+            filteredMerged[key] = val;
+          }
+        }
+
+        const { sql, params } = buildInsertQuery(table, churchId, filteredMerged);
         const [result] = await conn.query(sql, params);
         created.push({ recordId: result.insertId, fields: rec });
       }
