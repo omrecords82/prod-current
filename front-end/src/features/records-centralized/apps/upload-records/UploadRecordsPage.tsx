@@ -11,6 +11,7 @@
  */
 
 import { useAuth } from '@/context/AuthContext';
+import OcrChurchSelector from '@/features/devel-tools/om-ocr/components/OcrChurchSelector';
 import OcrSetupGate from '@/features/devel-tools/om-ocr/components/OcrSetupGate';
 import OcrStudioNav from '@/features/devel-tools/om-ocr/components/OcrStudioNav';
 
@@ -442,6 +443,7 @@ const UploadRecordsPage: React.FC = () => {
     <OcrSetupGate churchId={effectiveChurchId}>
     <Box sx={{ py: 3, px: { xs: 1.5, md: 3 }, maxWidth: 1100, mx: 'auto' }}>
       {location.pathname.includes('/devel/ocr-studio') && <OcrStudioNav />}
+      {location.pathname.includes('/devel/ocr-studio') && <OcrChurchSelector />}
       {/* Page header */}
       <Box sx={{ mb: 3 }}>
         <Typography variant="h5" fontWeight={700}>

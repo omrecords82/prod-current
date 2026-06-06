@@ -2,9 +2,8 @@
  * OcrStudioNav — Compact mini-navigation bar for OCR Studio pages.
  * Drop into any OCR Studio sub-page to enable quick jumps between siblings.
  *
- * Includes a church selector dropdown (super_admin only) that persists the
- * selected church as `?church=XX` in the URL and carries the param across
- * sibling page navigations.
+ * Preserves `?church=XX` URL param when navigating between sibling pages
+ * so each page's own church selector stays in sync.
  */
 
 import {
@@ -16,10 +15,9 @@ import {
   ViewColumn as ViewColumnIcon,
   TableRows as TableRowsIcon,
 } from '@mui/icons-material';
-import { alpha, Box, Button, FormControl, InputLabel, MenuItem, Select, Stack, useTheme } from '@mui/material';
-import { apiClient } from '@/shared/lib/axiosInstance';
+import { alpha, Box, Button, Stack, useTheme } from '@mui/material';
 import { useAuth } from '@/context/AuthContext';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 
 interface NavItem {
@@ -28,11 +26,6 @@ interface NavItem {
   icon: React.ReactElement;
   /** When true, only super_admin sees this link (matches backend requireRole guards). */
   superAdminOnly?: boolean;
-}
-
-interface ChurchOption {
-  id: number;
-  name: string;
 }
 
 const NAV_ITEMS: NavItem[] = [
@@ -49,49 +42,8 @@ const OcrStudioNav: React.FC = () => {
   const theme = useTheme();
   const navigate = useNavigate();
   const { pathname } = useLocation();
-  const { user, isSuperAdmin } = useAuth();
-  const [searchParams, setSearchParams] = useSearchParams();
-
-  // ── Church selector state (super_admin only) ────────────────────────────
-  const [churches, setChurches] = useState<ChurchOption[]>([]);
-  const selectedChurchId = searchParams.get('church') ? Number(searchParams.get('church')) : null;
-
-  // Fetch church list once on mount (super_admin only)
-  useEffect(() => {
-    if (!isSuperAdmin()) return;
-    (async () => {
-      try {
-        const res: any = await apiClient.get('/api/churches');
-        const list = res.data?.churches || res.churches || res.data || [];
-        const sorted = (Array.isArray(list) ? list : []).sort((a: ChurchOption, b: ChurchOption) =>
-          (a.name || '').localeCompare(b.name || ''),
-        );
-        setChurches(sorted);
-        // Auto-select first church if none is in URL and user has no church_id
-        if (!searchParams.get('church') && !user?.church_id && sorted.length > 0) {
-          setSearchParams((prev) => {
-            const next = new URLSearchParams(prev);
-            next.set('church', String(sorted[0].id));
-            return next;
-          }, { replace: true });
-        }
-      } catch (err) {
-        console.error('[OcrStudioNav] Failed to load churches:', err);
-      }
-    })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const handleChurchChange = useCallback(
-    (newId: number) => {
-      setSearchParams((prev) => {
-        const next = new URLSearchParams(prev);
-        next.set('church', String(newId));
-        return next;
-      }, { replace: true });
-    },
-    [setSearchParams],
-  );
+  const { isSuperAdmin } = useAuth();
+  const [searchParams] = useSearchParams();
 
   const visibleItems = useMemo(
     () => NAV_ITEMS.filter((item) => !item.superAdminOnly || isSuperAdmin()),
@@ -151,33 +103,6 @@ const OcrStudioNav: React.FC = () => {
             </Button>
           );
         })}
-
-        {/* Spacer pushes church dropdown to the right */}
-        {isSuperAdmin() && churches.length > 0 && <Box sx={{ flexGrow: 1 }} />}
-
-        {/* Church selector (super_admin only) */}
-        {isSuperAdmin() && churches.length > 0 && (
-          <FormControl size="small" sx={{ minWidth: 180, maxWidth: 260 }}>
-            <InputLabel id="ocr-nav-church-label" sx={{ fontSize: '0.78rem' }}>Church</InputLabel>
-            <Select
-              labelId="ocr-nav-church-label"
-              value={selectedChurchId ?? ''}
-              label="Church"
-              onChange={(e) => handleChurchChange(Number(e.target.value))}
-              sx={{
-                fontSize: '0.78rem',
-                height: 32,
-                '& .MuiSelect-select': { py: 0.5 },
-              }}
-            >
-              {churches.map((c) => (
-                <MenuItem key={c.id} value={c.id} sx={{ fontSize: '0.78rem' }}>
-                  {c.name} (#{c.id})
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-        )}
       </Stack>
     </Box>
   );

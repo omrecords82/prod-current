@@ -4,6 +4,8 @@
  */
 
 import { useAuth } from '@/context/AuthContext';
+import OcrChurchSelector from '@/features/devel-tools/om-ocr/components/OcrChurchSelector';
+import { useOcrChurchSelector } from '@/features/devel-tools/om-ocr/hooks/useOcrChurchSelector';
 import {
   CloudUpload as UploadIcon,
   CheckCircle as ConfirmIcon,
@@ -25,7 +27,8 @@ const OCRStudioPage: React.FC = () => {
   const theme = useTheme();
   const { user } = useAuth();
   const isPortal = location.pathname.startsWith('/portal');
-  const effectiveChurchId = user?.church_id ? Number(user.church_id) : null;
+  const { selectedChurchId } = useOcrChurchSelector();
+  const effectiveChurchId = selectedChurchId ?? (user?.church_id ? Number(user.church_id) : null);
 
   const routes = useMemo(() => {
     if (isPortal) {
@@ -46,6 +49,7 @@ const OCRStudioPage: React.FC = () => {
   return (
     <Box sx={{ py: 3, px: { xs: 2, md: 3 } }}>
       <OcrStudioNav />
+      <OcrChurchSelector />
       <Typography variant="h4" fontWeight={700} sx={{ mb: 0.5 }}>
         OCR Studio
       </Typography>

@@ -51,6 +51,7 @@ import ColumnBoundaryEditor, {
     type ColumnBand,
     type FractionalBBox
 } from '../components/ColumnBoundaryEditor';
+import OcrChurchSelector from '../components/OcrChurchSelector';
 import OcrStudioNav from '../components/OcrStudioNav';
 import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
@@ -469,6 +470,7 @@ const LayoutTemplateEditorPage: React.FC = () => {
   return (
     <PageContainer title="Layout Template Editor" description="Visual editor for OCR layout templates">
       <OcrStudioNav />
+      <OcrChurchSelector />
       <Box sx={{ p: { xs: 1, sm: 2 } }}>
         {/* Header */}
         <Stack direction="row" alignItems="center" justifyContent="space-between" flexWrap="wrap" gap={1} sx={{ mb: 2 }}>
