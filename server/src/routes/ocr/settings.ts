@@ -99,6 +99,39 @@ router.get(['/', '/settings'], async (req: any, res: any) => {
         console.log(`[OCR Settings] No saved settings found for church ${churchId}, using defaults`);
       }
     } catch (dbError: any) {
+      // If settings_json column doesn't exist, try to add it and retry
+      if (dbError.code === 'ER_BAD_FIELD_ERROR' && dbError.message?.includes('settings_json')) {
+        try {
+          await db.query(`ALTER TABLE ocr_settings ADD COLUMN settings_json JSON NULL`);
+          console.log(`[OCR Settings] Added settings_json column for church ${churchId}`);
+          // Retry the query without settings_json (just return defaults for now)
+          const [retryRows] = await db.query(`
+            SELECT engine, language, dpi, deskew, remove_noise, preprocess_images, output_format,
+              confidence_threshold, default_language, preprocessing_enabled, auto_rotate, noise_reduction
+            FROM ocr_settings WHERE church_id = ? ORDER BY updated_at DESC LIMIT 1
+          `, [churchId]);
+          if (retryRows.length > 0) {
+            const s = retryRows[0];
+            const loadedSettings: any = {
+              engine: s.engine || defaultSettings.engine,
+              language: s.language || defaultSettings.language,
+              defaultLanguage: s.default_language || 'en',
+              dpi: s.dpi || defaultSettings.dpi,
+              deskew: s.deskew !== undefined ? Boolean(s.deskew) : defaultSettings.deskew,
+              removeNoise: s.remove_noise !== undefined ? Boolean(s.remove_noise) : defaultSettings.removeNoise,
+              preprocessImages: s.preprocess_images !== undefined ? Boolean(s.preprocess_images) : defaultSettings.preprocessImages,
+              outputFormat: s.output_format || defaultSettings.outputFormat,
+              confidenceThreshold: s.confidence_threshold !== null && s.confidence_threshold !== undefined ? Math.round(Number(s.confidence_threshold) * 100) : defaultSettings.confidenceThreshold,
+              useRecordSnippets: defaultSettings.useRecordSnippets,
+              documentProcessing: { spellingCorrection: 'fix', extractAllText: 'yes', improveFormatting: 'yes' },
+              documentDeletion: { deleteAfter: 7, deleteUnit: 'days' },
+            };
+            return res.json(loadedSettings);
+          }
+        } catch (alterErr) {
+          console.warn('[OCR Settings] Failed to add settings_json column:', alterErr);
+        }
+      }
       console.warn('OCR settings table may not exist, using defaults:', dbError.message);
     }
 
@@ -134,8 +167,8 @@ router.put(['/', '/settings'], async (req: any, res: any) => {
       return res.status(400).json({ error: 'Invalid church ID' });
     }
 
-    if (settings.documentProcessing || settings.documentDeletion) {
-      // Allow partial updates for document processing/deletion
+    if (settings.documentProcessing || settings.documentDeletion || settings.useRecordSnippets !== undefined) {
+      // Allow partial updates for document processing/deletion/snippets toggle
     } else if (!settings.engine || !settings.language) {
       return res.status(400).json({ error: 'Invalid settings', message: 'Engine and language are required' });
     }
