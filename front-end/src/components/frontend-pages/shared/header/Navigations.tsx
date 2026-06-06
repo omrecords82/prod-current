@@ -12,7 +12,7 @@ export const NavLinks = PUBLIC_NAV_LINKS.map((link) => ({
 }));
 
 const StyledButton = styled(Button)(({ theme }) => ({
-  fontSize: '15px',
+  fontSize: '14px',
   fontWeight: 500,
   color: theme.palette.text.secondary,
   '&.active': {

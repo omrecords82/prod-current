@@ -144,7 +144,16 @@ const NavCollapse = ({
         >
           {menuIcon}
         </ListItemIcon>
-        <ListItemText color="inherit">{hideMenu ? '' : <>{t(`${menu.title}`)}</>}</ListItemText>
+        <ListItemText
+          color="inherit"
+          primaryTypographyProps={{
+            fontSize: '0.8125rem',
+            fontFamily: "'Inter', sans-serif",
+            fontWeight: 'inherit',
+          }}
+        >
+          {hideMenu ? '' : <>{t(`${menu.title}`)}</>}
+        </ListItemText>
         {!open ? <IconChevronDown size="1rem" /> : <IconChevronUp size="1rem" />}
       </ListItemStyled>
       <Collapse in={open} timeout="auto" unmountOnExit>

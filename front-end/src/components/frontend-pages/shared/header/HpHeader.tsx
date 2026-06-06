@@ -80,7 +80,7 @@ const HpHeader = () => {
                     <NavLink
                       key={link.to}
                       to={link.to}
-                      className={`font-['Inter'] text-[15px] transition-colors no-underline ${
+                      className={`font-['Inter'] text-[14px] transition-colors no-underline ${
                         isActive
                           ? 'text-[#2d1b4e] dark:text-white font-medium'
                           : 'text-[#4a5565] dark:text-gray-400 hover:text-[#2d1b4e] dark:hover:text-white'
@@ -158,7 +158,7 @@ const HpHeader = () => {
                 <>
                   <a
                     href="/auth/login"
-                    className="font-['Inter'] text-[15px] text-[#2d1b4e] dark:text-white hover:text-[#1f1236] dark:hover:text-[#d4af37] transition-colors no-underline"
+                    className="font-['Inter'] text-[14px] text-[#2d1b4e] dark:text-white hover:text-[#1f1236] dark:hover:text-[#d4af37] transition-colors no-underline"
                   >
                     {t('common.sign_in')}
                   </a>

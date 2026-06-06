@@ -60,7 +60,7 @@ const baselightTheme = {
     },
     divider: '#E5E7EB',
     background: {
-      default: '#F9FAFB',
+      default: '#f8f8fb',
       paper: '#ffffff',
     },
   },
@@ -127,9 +127,9 @@ const baseDarkTheme = {
     },
     divider: '#333F55',
     background: {
-      default: '#171c23',
-      dark: '#171c23',
-      paper: '#171c23',
+      default: '#0f1117',
+      dark: '#0f1117',
+      paper: '#0f1117',
     },
   },
 };

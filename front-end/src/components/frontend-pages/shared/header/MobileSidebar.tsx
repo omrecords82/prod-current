@@ -56,6 +56,13 @@ interface MobileSidebarProps {
   isPortal?: boolean;
 }
 
+const mobileNavButtonSx = {
+  justifyContent: 'start',
+  fontSize: '14px',
+  fontFamily: "'Inter', sans-serif",
+  textTransform: 'none' as const,
+};
+
 const MobileSidebar = ({ isPortal = false }: MobileSidebarProps) => {
   const { activeMode, setActiveMode } = useContext(CustomizerContext);
   const { logout } = useAuth();
@@ -85,7 +92,7 @@ const MobileSidebar = ({ isPortal = false }: MobileSidebarProps) => {
                   key={i}
                   component={Link}
                   to={link.to}
-                  sx={{ justifyContent: 'start' }}
+                  sx={mobileNavButtonSx}
                 >
                   {link.tKey === 'portal' ? 'Portal' :
                    link.tKey === 'church_records' ? 'Church Records' :
@@ -99,10 +106,10 @@ const MobileSidebar = ({ isPortal = false }: MobileSidebarProps) => {
             </>
           ) : (
             <>
-              <Button color="inherit" component={Link} to={PUBLIC_ROUTES.HOME} sx={{ justifyContent: 'start' }}>
+              <Button color="inherit" component={Link} to={PUBLIC_ROUTES.HOME} sx={mobileNavButtonSx}>
                 {t('nav.home')}
               </Button>
-              <Button color="inherit" component={Link} to={PUBLIC_ROUTES.PRICING} sx={{ justifyContent: 'start' }}>
+              <Button color="inherit" component={Link} to={PUBLIC_ROUTES.PRICING} sx={mobileNavButtonSx}>
                 {t('nav.pricing')}
               </Button>
               {PUBLIC_MOBILE_NAV_GROUPS.map((group) => (
@@ -117,7 +124,7 @@ const MobileSidebar = ({ isPortal = false }: MobileSidebarProps) => {
                         key={link.to}
                         component={Link}
                         to={link.to}
-                        sx={{ justifyContent: 'start' }}
+                        sx={mobileNavButtonSx}
                       >
                         {t(link.tKey)}
                       </Button>

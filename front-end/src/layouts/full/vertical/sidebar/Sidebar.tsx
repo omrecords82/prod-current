@@ -66,7 +66,7 @@ const Sidebar = () => {
               }),
               width: toggleWidth,
               boxSizing: 'border-box',
-              backgroundColor: theme.palette.background.paper,
+              backgroundColor: theme.palette.mode === 'dark' ? '#0f1117' : '#fff',
               borderRight: theme.palette.mode === 'dark'
                 ? '1px solid rgba(255, 255, 255, 0.06)'
                 : '1px solid rgba(45, 27, 78, 0.06)',

@@ -31,7 +31,7 @@ const AppDD = () => {
           bgcolor: 'transparent',
           color: 'inherit',
           fontFamily: "'Inter', sans-serif",
-          fontSize: '15px',
+          fontSize: '14px',
           fontWeight: 400,
           textTransform: 'none',
           '&:hover': { bgcolor: 'transparent', opacity: 0.8 },

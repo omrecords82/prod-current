@@ -67,7 +67,7 @@ const NavItem = ({ item, level, pathDirect, hideMenu, onClick, badgeMap }: ItemT
         ? (isDark ? '#d4af37' : '#2d1b4e')
         : isDark ? '#9ca3af' : '#6b7280',
     fontFamily: "'Inter', sans-serif",
-    fontSize: '0.875rem',
+    fontSize: '0.8125rem',
     fontWeight: 400,
     paddingLeft: hideMenu ? '10px' : level > 2 ? `${level * 15}px` : '10px',
     transition: 'color 0.15s ease, background-color 0.15s ease',
@@ -120,7 +120,13 @@ const NavItem = ({ item, level, pathDirect, hideMenu, onClick, badgeMap }: ItemT
         >
           {itemIcon}
         </ListItemIcon>
-        <ListItemText>
+        <ListItemText
+          primaryTypographyProps={{
+            fontSize: '0.8125rem',
+            fontFamily: "'Inter', sans-serif",
+            fontWeight: 'inherit',
+          }}
+        >
           {hideMenu ? '' : <>{t(`${item?.title}`)}</>}
           <br />
           {item?.subtitle ? (

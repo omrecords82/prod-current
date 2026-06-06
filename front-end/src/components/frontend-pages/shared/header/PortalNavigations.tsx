@@ -48,7 +48,7 @@ const PortalNavigations: React.FC = () => {
           <NavLink
             key={link.to}
             to={link.to}
-            className={`font-['Inter'] text-[15px] transition-colors no-underline relative pb-1 ${
+            className={`font-['Inter'] text-[14px] transition-colors no-underline relative pb-1 ${
               isActive
                 ? 'text-[#2d1b4e] dark:text-white font-medium after:content-[""] after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[2px] after:bg-[#2d1b4e] dark:after:bg-[#d4af37] after:rounded-sm'
                 : 'text-[#4a5565] dark:text-gray-400 hover:text-[#2d1b4e] dark:hover:text-white'
@@ -62,7 +62,7 @@ const PortalNavigations: React.FC = () => {
       {/* User menu */}
       <button
         onClick={(e) => setAnchorEl(e.currentTarget)}
-        className="flex items-center gap-2 font-['Inter'] text-[15px] text-[#4a5565] dark:text-gray-400 hover:text-[#2d1b4e] dark:hover:text-white transition-colors cursor-pointer border-0 bg-transparent p-0"
+        className="flex items-center gap-2 font-['Inter'] text-[14px] text-[#4a5565] dark:text-gray-400 hover:text-[#2d1b4e] dark:hover:text-white transition-colors cursor-pointer border-0 bg-transparent p-0"
       >
         <span className="w-7 h-7 rounded-full flex items-center justify-center text-[0.75rem] font-medium bg-[rgba(45,27,78,0.08)] dark:bg-[rgba(212,175,55,0.15)] text-[#2d1b4e] dark:text-[#d4af37] border border-[rgba(45,27,78,0.12)] dark:border-[rgba(212,175,55,0.25)]">
           {initials}
