@@ -6,6 +6,7 @@
 import { useAuth } from '@/context/AuthContext';
 import { CustomizerContext } from '@/context/CustomizerContext';
 import { apiClient } from '@/shared/lib/axiosInstance';
+import churchService from '@/shared/lib/churchService';
 import {
     Alert,
     Box,
@@ -108,11 +109,15 @@ const OCRSettingsPage: React.FC = () => {
     if (!isSuperAdmin()) return;
     (async () => {
       try {
-        const res: any = await apiClient.get('/api/churches');
-        console.log('[OCRSettings] Churches API response:', res);
-        const list = res.data?.churches || res.churches || res.data || [];
+        let list: any[] = await churchService.fetchChurches();
+        if (list.length === 0) {
+          const fallback: any = await apiClient.get('/api/churches');
+          const body = fallback?.data ?? fallback;
+          const inner = body?.data ?? body;
+          list = inner?.churches || (Array.isArray(inner) ? inner : []);
+        }
         const sorted = (Array.isArray(list) ? list : []).sort((a: any, b: any) =>
-          (a.name || '').localeCompare(b.name || '')
+          (a.church_name || a.name || '').localeCompare(b.church_name || b.name || '')
         );
         setChurches(sorted);
         // Auto-select first church if none is selected yet
@@ -130,7 +135,7 @@ const OCRSettingsPage: React.FC = () => {
   const selectedChurchName = useMemo(() => {
     if (!selectedChurchId) return null;
     const found = churches.find(c => c.id === selectedChurchId);
-    return found?.name || `Church #${selectedChurchId}`;
+    return found?.church_name || found?.name || `Church #${selectedChurchId}`;
   }, [selectedChurchId, churches]);
   
   const [activeTab, setActiveTab] = useState(0);
@@ -583,7 +588,7 @@ const OCRSettingsPage: React.FC = () => {
             >
               {churches.map((c: any) => (
                 <MenuItem key={c.id} value={c.id}>
-                  {c.name} (#{c.id})
+                  {c.church_name || c.name || `Church ${c.id}`}
                 </MenuItem>
               ))}
             </Select>
