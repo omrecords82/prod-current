@@ -285,6 +285,36 @@ function median(arr: number[]): number {
   return sorted.length % 2 !== 0 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
 }
 
+function fuzzyMatchExpectedNum(cleaned: string, expected: number): boolean {
+  if (cleaned === String(expected)) return true;
+  const val = cleaned.replace(/X$/i, '').trim();
+  if (val === String(expected)) return true;
+
+  const fuzzyMap: Record<number, string[]> = {
+    1: ['1', 'I', 'L', '|', '!', '[', ']', '1X', 'IX', 'LX'],
+    2: ['2', 'A', 'Z', 'R', '2X', 'AX', 'ZX', 'RX'],
+    3: ['3', '3X'],
+    4: ['4', 'A', 'H', 'K', 'I', 'L', '4X', 'AX', 'HX', 'KX', 'IX', 'LX'],
+    5: ['5', 'S', '5X', 'SX'],
+    6: ['6', 'B', 'G', '6X', 'BX', 'GX'],
+    7: ['7', 'T', '7X', 'TX'],
+    8: ['8', 'B', '8X', 'BX'],
+    9: ['9', 'Q', 'G', 'O', '0', '9X', 'QX', 'GX', 'OX', '0X'],
+    10: ['10', 'IO', '1O', '10X', 'IOX'],
+    11: ['11', 'II', 'H', 'A', '11X', 'IIX', 'HX', 'AX'],
+    12: ['12', '12X'],
+    13: ['13', '13X'],
+    14: ['14', '14X'],
+    15: ['15', '15X']
+  };
+
+  const allowed = fuzzyMap[expected];
+  if (allowed && allowed.includes(val)) {
+    return true;
+  }
+  return false;
+}
+
 function isRecordStart(row: any, config: RecordTypeConfig = BAPTISM_CONFIG): boolean {
   const cells = getNormalizedCells(row);
   const numCol = cells.number || '';
@@ -805,24 +835,24 @@ export function assembleRecords(structuredTableOutput: any): AssemblyResult {
       hasXmarkOnly = true;
     }
 
-    // 2. Check for merged date + number (e.g. "45-27-88" when expectedNum is 4)
+    // 2. Check for merged date + number (try expectedNum, expectedNum+1, expectedNum+2)
     if (parsedNum === null && dateCol) {
-      const regex = new RegExp(`^\\s*(${expectedNum})\\s*(1[0-2]|0?[1-9])[-/\\.]\\s*([0-3]?\\d)[-/\\.]\\s*(\\d{2,4})`);
-      const m = dateCol.match(regex);
-      if (m) {
-        parsedNum = parseInt(m[1], 10);
+      for (let offset = 0; offset <= 2; offset++) {
+        const targetNum = expectedNum + offset;
+        const regex = new RegExp('^\\s*(' + targetNum + ')\\s*(1[0-2]|0?[1-9])[-\\/\\.]\\s*([0-3]?\\d)[-\\/\\.]\\s*(\\d{2,4})');
+        const m = dateCol.match(regex);
+        if (m) {
+          parsedNum = targetNum;
+          break;
+        }
       }
     }
 
     // 3. OCR misread sequence corrector in number column
     if (parsedNum === null && numCol) {
       const cleaned = numCol.trim().toUpperCase().replace(/[\s\.]/g, '');
-      if (expectedNum === 5 && (cleaned === 'S' || cleaned === '5')) {
-        parsedNum = 5;
-      } else if (expectedNum === 9 && (cleaned === 'Σ' || cleaned === 'σ' || cleaned === 'O' || cleaned === '0' || cleaned === 'Q' || cleaned === '9')) {
-        parsedNum = 9;
-      } else if (expectedNum === 11 && (cleaned === 'A' || cleaned === '11' || cleaned === 'II' || cleaned === 'H')) {
-        parsedNum = 11;
+      if (fuzzyMatchExpectedNum(cleaned, expectedNum)) {
+        parsedNum = expectedNum;
       }
     }
 
@@ -847,7 +877,11 @@ export function assembleRecords(structuredTableOutput: any): AssemblyResult {
     let startsNew = false;
     let reason = 'continuation';
 
-    if (parsedNum !== null && parsedNum > maxNumberSeen) {
+    if (ri === 0) {
+      startsNew = true;
+      reason = 'NEW (First Row)';
+      maxNumberSeen = parsedNum || 1;
+    } else if (parsedNum !== null && parsedNum > maxNumberSeen) {
       if (corroborated) {
         startsNew = true;
         reason = `NEW #${parsedNum} (prev max=${maxNumberSeen})${lookaheadCorroboration && !hasContent ? ' [lookahead]' : ''}`;
