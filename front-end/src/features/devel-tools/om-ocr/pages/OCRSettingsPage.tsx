@@ -109,11 +109,18 @@ const OCRSettingsPage: React.FC = () => {
     (async () => {
       try {
         const res: any = await apiClient.get('/api/churches');
+        console.log('[OCRSettings] Churches API response:', res);
         const list = res.data?.churches || res.churches || res.data || [];
         const sorted = (Array.isArray(list) ? list : []).sort((a: any, b: any) =>
           (a.name || '').localeCompare(b.name || '')
         );
         setChurches(sorted);
+        // Auto-select first church if none is selected yet
+        if (!selectedChurchId && sorted.length > 0) {
+          const firstId = sorted[0].id;
+          setSelectedChurchId(firstId);
+          setSearchParams({ church: String(firstId) });
+        }
       } catch (err) {
         console.error('Failed to load churches:', err);
       }
