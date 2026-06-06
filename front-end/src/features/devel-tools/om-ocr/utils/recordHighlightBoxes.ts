@@ -196,26 +196,39 @@ export function computeRecordHighlightBoxes({
 
 export const REVIEW_FIELD_COLORS: Record<string, string> = {
   record_number: '#546e7a',
+  child_first_name: '#1565c0',
+  child_last_name: '#0d47a1',
   child_name: '#1565c0',
   date_of_birth: '#2e7d32',
   date_of_baptism: '#00838f',
   place_of_birth: '#6a1b9a',
+  entry_type: '#4527a0',
   father_name: '#e65100',
   mother_name: '#ad1457',
+  parents: '#bf360c',
   parents_name: '#bf360c',
   address: '#5d4037',
   godparents: '#7b1fa2',
   performed_by: '#455a64',
   church: '#3949ab',
   notes: '#795548',
-  groom_name: '#1565c0',
-  bride_name: '#ad1457',
   date_of_marriage: '#00838f',
+  groom_first_name: '#1565c0',
+  groom_last_name: '#0d47a1',
+  groom_name: '#1565c0',
+  groom_parents: '#e65100',
+  bride_first_name: '#ad1457',
+  bride_last_name: '#880e4f',
+  bride_name: '#ad1457',
+  bride_parents: '#c2185b',
   place_of_marriage: '#6a1b9a',
   witnesses: '#7b1fa2',
+  marriage_license: '#5e35b1',
   best_man: '#5e35b1',
   maid_of_honor: '#8e24aa',
   officiant: '#455a64',
+  deceased_first_name: '#1565c0',
+  deceased_last_name: '#0d47a1',
   deceased_name: '#1565c0',
   date_of_death: '#c62828',
   date_of_funeral: '#6d4c41',
@@ -227,14 +240,24 @@ export const REVIEW_FIELD_COLORS: Record<string, string> = {
 };
 
 const FIELD_EXTRA_COLUMNS: Record<string, string[]> = {
+  child_first_name: ['child_name', 'first_name', 'name'],
+  child_last_name: ['child_name', 'last_name', 'surname'],
+  groom_first_name: ['groom_name', 'groom', 'fname_groom'],
+  groom_last_name: ['groom_name', 'groom', 'lname_groom'],
+  bride_first_name: ['bride_name', 'bride', 'fname_bride'],
+  bride_last_name: ['bride_name', 'bride', 'lname_bride'],
+  deceased_first_name: ['deceased_name', 'deceased', 'name'],
+  deceased_last_name: ['deceased_name', 'deceased', 'lastname'],
+  parents: ['parents', 'father', 'mother'],
   mother_name: ['parents', 'mother'],
   father_name: ['parents', 'father'],
   parents_name: ['parents'],
-  date_of_baptism: ['date', 'baptism_date'],
+  date_of_baptism: ['date', 'baptism_date', 'baptism'],
   date_of_birth: ['date', 'birth_date'],
   date_of_death: ['date', 'death_date'],
   date_of_funeral: ['date', 'funeral_date'],
   date_of_burial: ['date', 'burial_date'],
+  date_of_marriage: ['date', 'marriage_date', 'mdate'],
   groom_name: ['groom', 'bridegroom'],
   bride_name: ['bride'],
   groom_parents: ['groom_parents', 'parentsg', 'parents'],
@@ -242,9 +265,37 @@ const FIELD_EXTRA_COLUMNS: Record<string, string[]> = {
   marriage_license: ['marriage_license', 'mlicense', 'license'],
   deceased_name: ['deceased_name', 'deceased'],
   godparents: ['sponsors', 'godparents'],
-  performed_by: ['priest', 'officiant', 'clergy'],
-  officiant: ['priest', 'officiant'],
+  performed_by: ['priest', 'officiant', 'clergy', 'officiating priest'],
+  officiant: ['priest', 'officiant', 'officiating priest'],
+  place_of_burial: ['burial_location', 'place_of_burial', 'cemetery'],
+  entry_type: ['entry_type', 'type', 'entry'],
 };
+
+/** Pipeline columnMapping often stores legacy merged field names (groom_name, license). */
+const LEGACY_MAPPED_FIELD_ALIASES: Record<string, string[]> = {
+  child_first_name: ['child_name'],
+  child_last_name: ['child_name'],
+  groom_first_name: ['groom_name'],
+  groom_last_name: ['groom_name'],
+  bride_first_name: ['bride_name'],
+  bride_last_name: ['bride_name'],
+  marriage_license: ['license', 'marriage_license'],
+  performed_by: ['officiant', 'priest'],
+  officiant: ['officiant', 'priest', 'performed_by'],
+};
+
+/** First/last pairs that share one ledger column — each gets the full column band. */
+const SPLIT_NAME_FIELD_GROUPS: string[][] = [
+  ['child_first_name', 'child_last_name'],
+  ['groom_first_name', 'groom_last_name'],
+  ['bride_first_name', 'bride_last_name'],
+  ['deceased_first_name', 'deceased_last_name'],
+];
+
+function isSplitNameFieldGroup(fieldNames: string[]): boolean {
+  const sorted = [...fieldNames].sort().join(',');
+  return SPLIT_NAME_FIELD_GROUPS.some((g) => [...g].sort().join(',') === sorted);
+}
 
 function unionFractionalBboxes(bboxes: number[][]): number[] | null {
   if (!bboxes.length) return null;
@@ -262,8 +313,12 @@ function unionFractionalBboxes(bboxes: number[][]): number[] | null {
 
 function fieldColumnKeys(fieldName: string, columnMapping: Record<string, string>): string[] {
   const keys = new Set<string>();
+  const mappedTargets = new Set<string>([
+    fieldName,
+    ...(LEGACY_MAPPED_FIELD_ALIASES[fieldName] || []),
+  ]);
   for (const [colKey, mappedField] of Object.entries(columnMapping)) {
-    if (mappedField === fieldName) keys.add(colKey);
+    if (mappedTargets.has(String(mappedField))) keys.add(colKey);
   }
   for (const alias of FIELD_EXTRA_COLUMNS[fieldName] || []) keys.add(alias);
   return Array.from(keys);
@@ -369,6 +424,7 @@ export function computeReviewFieldHighlightBoxes({
     boxes.push({
       bbox: visionBbox,
       color,
+      fieldKey: fieldName,
       label: fieldName.replace(/_/g, ' '),
       selected: isFocused,
       emphasized: isFocused,
@@ -648,14 +704,17 @@ export function computeFieldRegions({
   const regions: FieldRegion[] = [];
   for (const [bandKey, members] of groups) {
     const band = bands[bandKey];
-    // Shared y-span = union of all members' y-spans for this band.
     let gy0 = Infinity, gy1 = -Infinity;
     for (const m of members) { gy0 = Math.min(gy0, m.y0); gy1 = Math.max(gy1, m.y1); }
     if (!Number.isFinite(gy0)) { gy0 = recY0; gy1 = recY1; }
     const n = members.length;
+    const shareFullBand = n > 1 && isSplitNameFieldGroup(members.map((m) => m.fieldName));
     members.forEach((m, i) => {
       let y0 = m.y0, y1 = m.y1;
-      if (n > 1) {
+      if (shareFullBand) {
+        y0 = gy0;
+        y1 = gy1;
+      } else if (n > 1) {
         const h = (gy1 - gy0) / n;
         y0 = gy0 + i * h;
         y1 = gy0 + (i + 1) * h;
@@ -679,6 +738,7 @@ export function fieldRegionsToBoxes(
   const boxes: OverlayBox[] = ordered.map((r) => ({
     bbox: cellBboxToVision(r.frac, pageDims),
     color: REVIEW_FIELD_COLORS[r.fieldName] || '#1976d2',
+    fieldKey: r.fieldName,
     label: r.fieldName.replace(/_/g, ' '),
     selected: focusedField === r.fieldName,
     emphasized: focusedField === r.fieldName,

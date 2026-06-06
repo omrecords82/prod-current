@@ -464,20 +464,20 @@ router.post('/jobs/:jobId/agent-extract', async (req: any, res: any) => {
       [JSON.stringify(payload), extract.record_type !== 'custom' ? extract.record_type : job.record_type, jobId]
     );
 
-    let agent2Extract = null;
-    try {
-      agent2Extract = await runAndPersistAgent2(job, jobId);
-    } catch (agent2Err: any) {
-      console.warn('[OCR Agent2] extract error:', agent2Err.message);
-    }
-
     const recordIndex = typeof payload.candidate_index === 'number' ? payload.candidate_index : 0;
+
+    // Agent 2 (LlamaParse + LLM) can take 30–90s — run in background so the UI is not blocked.
+    runAndPersistAgent2(job, jobId).catch((agent2Err: any) => {
+      console.warn('[OCR Agent2] background extract error:', agent2Err.message);
+    });
+
     res.json({
       ok: true,
       jobId,
       extract: payload,
-      agent2_extract: agent2Extract,
-      comparison: compareAgentFieldDiffs(payload, agent2Extract, recordIndex),
+      agent2_status: 'running',
+      agent2_extract: parseJsonColumn(job.agent2_extract_json),
+      comparison: compareAgentFieldDiffs(payload, parseJsonColumn(job.agent2_extract_json), recordIndex),
     });
   } catch (err: any) {
     console.error('[OCR Agent] extract error:', err);

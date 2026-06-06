@@ -922,13 +922,17 @@ function createRouters(upload: any) {
     try {
       const churchId = parseInt(req.params.churchId);
       const jobId = parseInt(req.params.jobId);
-      const { record_type, priority } = req.body;
+      const { record_type, priority, layout_classification_json } = req.body;
 
       // Build update query dynamically
       const updates: string[] = [];
       const values: any[] = [];
 
       if (record_type) {
+        const valid = ['baptism', 'marriage', 'funeral', 'custom', 'unknown'];
+        if (!valid.includes(record_type)) {
+          return res.status(400).json({ error: `Invalid record_type. Must be one of: ${valid.join(', ')}` });
+        }
         updates.push('record_type = ?');
         values.push(record_type);
       }
@@ -941,6 +945,15 @@ function createRouters(upload: any) {
         }
       }
 
+      if (layout_classification_json !== undefined && layout_classification_json !== null) {
+        updates.push('layout_classification_json = ?');
+        values.push(
+          typeof layout_classification_json === 'string'
+            ? layout_classification_json
+            : JSON.stringify(layout_classification_json),
+        );
+      }
+
       if (updates.length === 0) {
         return res.status(400).json({ error: 'No valid fields to update' });
       }
@@ -949,7 +962,7 @@ function createRouters(upload: any) {
       // Update PLATFORM DB — ocr_jobs lives in orthodoxmetrics_db
       await promisePool.query(`UPDATE ocr_jobs SET ${updates.join(', ')} WHERE id = ? AND church_id = ?`, values);
 
-      res.json({ success: true, message: 'Job updated' });
+      res.json({ success: true, message: 'Job updated', record_type, layout_classification_json });
     } catch (error: any) {
       console.error('[OCR Job PATCH] Error:', error);
       res.status(500).json({ error: 'Failed to update job', message: error.message });

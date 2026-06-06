@@ -17,18 +17,21 @@ const OCR_AGENT_VISION_MAX_BYTES = 4 * 1024 * 1024;
 
 const RECORD_FIELD_KEYS: Record<string, string[]> = {
   baptism: [
-    'record_number', 'child_name', 'date_of_birth', 'place_of_birth', 'father_name',
-    'mother_name', 'address', 'date_of_baptism', 'godparents',
+    'record_number', 'child_first_name', 'child_last_name', 'child_name',
+    'date_of_birth', 'place_of_birth', 'entry_type', 'date_of_baptism',
+    'godparents', 'parents', 'father_name', 'mother_name', 'address',
     'performed_by', 'church', 'notes',
   ],
   marriage: [
-    'record_number', 'groom_name', 'groom_parents', 'bride_name', 'bride_parents',
-    'date_of_marriage', 'marriage_license', 'witnesses', 'best_man', 'maid_of_honor',
-    'officiant', 'church', 'notes',
+    'record_number', 'date_of_marriage', 'groom_first_name', 'groom_last_name', 'groom_name',
+    'groom_parents', 'bride_first_name', 'bride_last_name', 'bride_name', 'bride_parents',
+    'witnesses', 'marriage_license', 'best_man', 'maid_of_honor', 'officiant',
+    'place_of_marriage', 'church', 'notes',
   ],
   funeral: [
-    'record_number', 'deceased_name', 'date_of_death', 'date_of_funeral', 'date_of_burial',
-    'place_of_burial', 'age_at_death', 'cause_of_death', 'officiant', 'church', 'notes',
+    'record_number', 'deceased_first_name', 'deceased_last_name', 'deceased_name',
+    'date_of_death', 'date_of_funeral', 'date_of_burial', 'place_of_burial',
+    'age_at_death', 'cause_of_death', 'officiant', 'church', 'notes',
   ],
 };
 
@@ -922,9 +925,11 @@ async function extractRecordsWithVision(
 }
 
 function requiredFieldsForType(record_type: AgentExtractResult['record_type']): string[] {
-  if (record_type === 'baptism') return ['child_name', 'date_of_baptism'];
-  if (record_type === 'marriage') return ['groom_name', 'bride_name', 'date_of_marriage'];
-  if (record_type === 'funeral') return ['deceased_name'];
+  if (record_type === 'baptism') return ['child_first_name', 'child_last_name', 'date_of_baptism'];
+  if (record_type === 'marriage') {
+    return ['date_of_marriage', 'groom_first_name', 'groom_last_name', 'bride_first_name', 'bride_last_name'];
+  }
+  if (record_type === 'funeral') return ['deceased_first_name', 'deceased_last_name'];
   return [];
 }
 
@@ -1476,11 +1481,14 @@ export async function extractAgent2FieldsForJob(
     const systemPrompt = [
       'You extract Orthodox parish sacramental records from LlamaParse markdown output.',
       'The markdown may be a table (| col |) or labeled form (* **FIELD**: value).',
+      'Use the parish Records DB field schema:',
+      '- Baptism: child_first_name, child_last_name, date_of_birth, date_of_baptism, place_of_birth, entry_type (Baptism|Chrismation), godparents, parents, performed_by, notes',
+      '- Marriage: date_of_marriage, groom_first_name, groom_last_name, groom_parents, bride_first_name, bride_last_name, bride_parents, witnesses, marriage_license, officiant, notes',
+      '- Funeral: date_of_death, date_of_burial, deceased_first_name, deceased_last_name, age_at_death, officiant, place_of_burial, notes',
       'Rules:',
       '- Return one record per logical ledger row or form entry.',
-      '- Map to schema fields only; use record_number when a row number is visible.',
-      '- For baptism: split father_name and mother_name when combined in one column.',
-      '- For baptism dates column with birth+baptism, map to date_of_birth and date_of_baptism.',
+      '- Split full names into first_name and last_name fields (last token = surname).',
+      '- Map combined parents column to parents (not father_name/mother_name unless split is obvious).',
       '- Keep dates in source style. Do not invent values.',
       '- Set needs_review=true when required fields are missing.',
       'Respond ONLY with JSON:',
@@ -1574,13 +1582,13 @@ export function extractAgentFields(ocrText: string, recordTypeHint?: string): Ag
 
   if (record_type === 'baptism') {
     fields = extractBaptismFields(text);
-    required = ['child_name', 'date_of_baptism'];
+    required = ['child_first_name', 'child_last_name', 'date_of_baptism'];
   } else if (record_type === 'marriage') {
     fields = extractMarriageFields(text);
-    required = ['groom_name', 'bride_name', 'date_of_marriage'];
+    required = ['date_of_marriage', 'groom_first_name', 'groom_last_name', 'bride_first_name', 'bride_last_name'];
   } else if (record_type === 'funeral') {
     fields = extractFuneralFields(text);
-    required = ['deceased_name'];
+    required = ['deceased_first_name', 'deceased_last_name'];
   }
 
   const confidence = scoreFields(fields, required);

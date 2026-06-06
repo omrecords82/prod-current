@@ -53,29 +53,48 @@ function splitName(name: string | null | undefined): { first: string | null; las
   return { first: parts.join(' '), last };
 }
 
+function resolvePersonName(
+  combined?: string | null,
+  first?: string | null,
+  last?: string | null,
+): { first: string | null; last: string | null } {
+  if (first?.trim() || last?.trim()) {
+    return { first: first?.trim() || null, last: last?.trim() || null };
+  }
+  return splitName(combined);
+}
+
+function composeNotes(entryType?: string, notes?: string): string | null {
+  const parts = [
+    entryType?.trim() ? `Entry: ${entryType.trim()}` : '',
+    notes?.trim() || '',
+  ].filter(Boolean);
+  return parts.length ? parts.join('. ') : null;
+}
+
 /**
  * Map OCR field names (from recordFields.ts) to actual DB column names.
  * Handles name splitting for compound name fields.
  */
 export function mapFieldsToDbColumns(recordType: string, f: Record<string, any>): Record<string, any> {
   if (recordType === 'baptism') {
-    const child = splitName(f.child_name);
+    const child = resolvePersonName(f.child_name, f.child_first_name, f.child_last_name);
     return {
       first_name: child.first,
       last_name: child.last,
       birth_date: f.date_of_birth || null,
       reception_date: f.date_of_baptism || null,
       birthplace: f.place_of_birth || null,
-      parents: [f.father_name, f.mother_name].filter(Boolean).join(', ') || null,
+      parents: f.parents || [f.father_name, f.mother_name].filter(Boolean).join(', ') || null,
       sponsors: f.godparents || null,
-      clergy: f.performed_by || null,
-      notes: f.notes || null,
+      clergy: f.performed_by || f.officiant || null,
+      notes: composeNotes(f.entry_type, f.notes),
     };
   }
 
   if (recordType === 'marriage') {
-    const groom = splitName(f.groom_name);
-    const bride = splitName(f.bride_name);
+    const groom = resolvePersonName(f.groom_name, f.groom_first_name, f.groom_last_name);
+    const bride = resolvePersonName(f.bride_name, f.bride_first_name, f.bride_last_name);
     return {
       mdate: f.date_of_marriage || null,
       fname_groom: groom.first,
@@ -86,20 +105,20 @@ export function mapFieldsToDbColumns(recordType: string, f: Record<string, any>)
       parentsb: f.bride_parents || null,
       witness: f.witnesses || null,
       mlicense: f.marriage_license || f.mlicense || f.license || null,
-      clergy: f.officiant || f.priest || null,
+      clergy: f.officiant || f.priest || f.performed_by || null,
       notes: f.notes || null,
     };
   }
 
   if (recordType === 'funeral') {
-    const deceased = splitName(f.deceased_name);
+    const deceased = resolvePersonName(f.deceased_name, f.deceased_first_name, f.deceased_last_name);
     return {
       name: deceased.first,
       lastname: deceased.last,
       deceased_date: f.date_of_death || null,
       burial_date: f.date_of_burial || f.date_of_funeral || null,
-      age: f.age_at_death ? parseInt(f.age_at_death) || null : null,
-      clergy: f.officiant || null,
+      age: f.age_at_death ? parseInt(f.age_at_death, 10) || null : null,
+      clergy: f.officiant || f.performed_by || null,
       burial_location: f.place_of_burial || null,
       notes: f.notes || null,
     };

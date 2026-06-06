@@ -16,6 +16,8 @@ import { getImageViewportMetrics, visionBboxToScreen } from '../utils/imageViewp
 export interface OverlayBox {
   bbox: BBox;
   color: string;
+  /** Canonical review field key (e.g. groom_first_name) for legend/form linking */
+  fieldKey?: string;
   label?: string;
   emphasized?: boolean;
   completed?: boolean;

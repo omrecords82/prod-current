@@ -10,6 +10,10 @@ import {
   fetchChurchRecordFields,
   getReviewFieldsForType,
 } from '@/features/devel-tools/om-ocr/utils/fieldConfig';
+import {
+  normalizeExtractRecords,
+  recordDisplayName,
+} from '@/features/devel-tools/om-ocr/config/recordFields';
 import type { ChurchRecordFieldConfig } from '@/features/devel-tools/om-ocr/config/recordFields';
 import FusionOverlay from '@/features/devel-tools/om-ocr/components/FusionOverlay';
 import {
@@ -100,6 +104,17 @@ function recordsFromExtract(extract: any): Array<Record<string, string>> {
   if (Array.isArray(extract?.records) && extract.records.length) return extract.records;
   if (extract?.fields) return [extract.fields];
   return [];
+}
+
+const AGENT_EXTRACT_TIMEOUT_MS = 180_000;
+const AGENT2_POLL_MS = 3_000;
+const AGENT2_POLL_MAX = 40;
+
+function isTimeoutError(err: any): boolean {
+  return err?.code === 'ECONNABORTED'
+    || err?.originalError?.code === 'ECONNABORTED'
+    || err?.status === 408
+    || /timeout/i.test(err?.message || '');
 }
 
 type PipelineStatus =
@@ -321,8 +336,8 @@ const OcrReviewPage: React.FC = () => {
       if (byNum >= 0) return byNum;
     }
 
-    const nameKeys = ['child_name', 'groom_name', 'deceased_name', 'bride_name'];
-    const recName = nameKeys.map((k) => rec[k]).find(Boolean);
+    const nameKeys = ['child_first_name', 'child_last_name', 'child_name', 'groom_first_name', 'groom_last_name', 'groom_name', 'deceased_first_name', 'deceased_last_name', 'deceased_name', 'bride_first_name', 'bride_last_name', 'bride_name'];
+    const recName = recordDisplayName(recordType, rec) || nameKeys.map((k) => rec[k]).find(Boolean);
     if (recName) {
       const tokens = recName.toUpperCase().split(/\s+/).filter((t: string) => t.length > 2);
       let best = -1;
@@ -338,7 +353,7 @@ const OcrReviewPage: React.FC = () => {
     }
 
     return Math.min(selectedRecordIndex, cands.length - 1);
-  }, [recordCandidates, allRecords, selectedRecordIndex, fields]);
+  }, [recordCandidates, allRecords, selectedRecordIndex, fields, recordType]);
 
   const reviewCropBbox = useMemo(
     () => computeReviewCropBbox(tableExtractionJson, recordCandidates, candidateIndex),
@@ -485,20 +500,24 @@ const OcrReviewPage: React.FC = () => {
     const rt = extract?.record_type || agent2?.record_type || 'baptism';
     if (rt && rt !== 'custom') setRecordType(rt);
 
-    const records = recordsFromExtract(extract);
-    const a2records = recordsFromExtract(agent2);
-    const idx = typeof extract?.candidate_index === 'number' ? extract.candidate_index : 0;
+      const records = recordsFromExtract(extract);
+      const a2records = recordsFromExtract(agent2);
+      const idx = typeof extract?.candidate_index === 'number' ? extract.candidate_index : 0;
+      const rtNorm = rt && rt !== 'custom' ? rt : 'baptism';
 
-    setAgent1Snapshot(records.map((r) => ({ ...r })));
-    setAllRecords(records.map((r) => ({ ...r })));
-    setAgent2Records(a2records.map((r) => ({ ...r })));
+      const normalizedRecords = normalizeExtractRecords(rtNorm, records.map((r) => ({ ...r })));
+      const normalizedA2 = normalizeExtractRecords(rtNorm, a2records.map((r) => ({ ...r })));
+
+      setAgent1Snapshot(normalizedRecords.map((r) => ({ ...r })));
+      setAllRecords(normalizedRecords.map((r) => ({ ...r })));
+      setAgent2Records(normalizedA2.map((r) => ({ ...r })));
     setSelectedRecordIndex(Math.min(idx, Math.max(records.length - 1, 0)));
     setExtractMethod(extract?.method || null);
     setAgent2Method(agent2?.method || null);
     setNeedsReviewFlag(!!extract?.needs_review);
     setRefinementNotes(extract?.refinement_notes || null);
     setAgent2Notes(agent2?.refinement_notes || null);
-    setFields({ ...(records[idx] || extract?.fields || {}) });
+      setFields({ ...(normalizedRecords[idx] || extract?.fields || {}) });
     setAgent2Available(!!agent2 || !!data.llamaparse_available);
     setConfirmedIndexes(new Set<number>(Array.isArray(extract?.confirmed_indexes) ? extract.confirmed_indexes : []));
   };
@@ -533,6 +552,25 @@ const OcrReviewPage: React.FC = () => {
     }
   }, [churchId]);
 
+  const refreshExtractSnapshot = useCallback(async (jobId: number) => {
+    if (!churchId) return null;
+    const res: any = await apiClient.get(`/api/church/${churchId}/ocr/jobs/${jobId}/agent-extract`);
+    const data = res?.data ?? res;
+    hydrateExtractResponse(data);
+    return data;
+  }, [churchId]);
+
+  const pollUntilAgent2Ready = useCallback(async (jobId: number) => {
+    for (let attempt = 0; attempt < AGENT2_POLL_MAX; attempt += 1) {
+      await new Promise((resolve) => setTimeout(resolve, AGENT2_POLL_MS));
+      const data = await refreshExtractSnapshot(jobId);
+      const status = data?.agent2_status;
+      if (status === 'complete' || status === 'unavailable' || status === 'failed') return data;
+    }
+    setMapHint('Agent 2 is still running — refresh the page in a moment.');
+    return null;
+  }, [refreshExtractSnapshot]);
+
   useEffect(() => { loadJobs(); }, [loadJobs]);
 
   useEffect(() => {
@@ -548,6 +586,19 @@ const OcrReviewPage: React.FC = () => {
   useEffect(() => {
     if (churchId && selectedJobId) loadExtract(selectedJobId);
   }, [churchId, selectedJobId, loadExtract]);
+
+  // Poll when Agent 2 is still running in the background (after Re-run Agent 1).
+  useEffect(() => {
+    if (!churchId || !selectedJobId || agent2Status !== 'running' || extractLoading) return;
+    let cancelled = false;
+    (async () => {
+      const data = await pollUntilAgent2Ready(selectedJobId);
+      if (!cancelled && data?.agent2_status === 'complete') {
+        setMapHint('Agent 2 (LlamaParse) finished — open Compare to review differences.');
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [churchId, selectedJobId, agent2Status, extractLoading, pollUntilAgent2Ready]);
 
   useEffect(() => {
     setImageLoadFailed(false);
@@ -715,16 +766,36 @@ const OcrReviewPage: React.FC = () => {
     if (!churchId || !selectedJobId) return;
     setExtractLoading(true);
     setError(null);
+    setAgent2Status('running');
     try {
-      const res: any = await apiClient.post(`/api/church/${churchId}/ocr/jobs/${selectedJobId}/agent-extract`);
+      const res: any = await apiClient.post(
+        `/api/church/${churchId}/ocr/jobs/${selectedJobId}/agent-extract`,
+        {},
+        { timeout: AGENT_EXTRACT_TIMEOUT_MS },
+      );
       const data = res?.data ?? res;
       hydrateExtractResponse(data);
       setConfirmedIndexes(new Set<number>());
       setColumnBandsOverride(null);
       setReviewStatus('agent_extracted');
       await loadJobs();
+      if (data?.agent2_status === 'running') {
+        setMapHint('Agent 1 complete — Agent 2 (LlamaParse) is running in the background…');
+        await pollUntilAgent2Ready(selectedJobId);
+      }
     } catch (err: any) {
-      setError(err?.response?.data?.error || 'Agent extraction failed');
+      if (isTimeoutError(err)) {
+        setMapHint('Request timed out — checking whether extraction finished on the server…');
+        try {
+          await refreshExtractSnapshot(selectedJobId);
+          await pollUntilAgent2Ready(selectedJobId);
+          setError(null);
+        } catch {
+          setError('Agent extraction timed out. Try refreshing the page — results may already be saved.');
+        }
+      } else {
+        setError(err?.response?.data?.error || err?.message || 'Agent extraction failed');
+      }
     } finally {
       setExtractLoading(false);
     }
@@ -734,8 +805,13 @@ const OcrReviewPage: React.FC = () => {
     if (!churchId || !selectedJobId) return;
     setExtractLoading(true);
     setError(null);
+    setAgent2Status('running');
     try {
-      const res: any = await apiClient.post(`/api/church/${churchId}/ocr/jobs/${selectedJobId}/agent2-extract`);
+      const res: any = await apiClient.post(
+        `/api/church/${churchId}/ocr/jobs/${selectedJobId}/agent2-extract`,
+        {},
+        { timeout: AGENT_EXTRACT_TIMEOUT_MS },
+      );
       const data = res?.data ?? res;
       const agent2 = data.agent2_extract;
       const a2records = recordsFromExtract(agent2);
@@ -747,7 +823,22 @@ const OcrReviewPage: React.FC = () => {
       if (agent2?.record_type && agent2.record_type !== 'custom') setRecordType(agent2.record_type);
       setMapHint('Agent 2 (LlamaParse) extraction complete — open Compare to see differences.');
     } catch (err: any) {
-      setError(err?.response?.data?.error || 'Agent 2 extraction failed');
+      if (isTimeoutError(err)) {
+        setMapHint('Agent 2 timed out — checking server…');
+        try {
+          const data = await refreshExtractSnapshot(selectedJobId);
+          if (data?.agent2_status === 'complete') {
+            setError(null);
+            setMapHint('Agent 2 finished on the server — data loaded.');
+          } else {
+            setError('Agent 2 extraction timed out. Refresh the page to check again.');
+          }
+        } catch {
+          setError('Agent 2 extraction timed out. Refresh the page to check again.');
+        }
+      } else {
+        setError(err?.response?.data?.error || err?.message || 'Agent 2 extraction failed');
+      }
     } finally {
       setExtractLoading(false);
     }
@@ -865,19 +956,21 @@ const OcrReviewPage: React.FC = () => {
   };
 
   const handleLayoutOverride = async (newLayout: 'tabular' | 'form' | 'narrative') => {
-    if (!churchId || !selectedJobId) return;
+    if (!churchId || !selectedJobId || !layoutClassification) return;
+    if (newLayout === layoutClassification.detectedLayoutType && layoutClassification.userOverridden) return;
     try {
       const updatedLayout = {
         ...layoutClassification,
         detectedLayoutType: newLayout,
-        userOverridden: true
+        userOverridden: true,
       };
       await apiClient.patch(`/api/church/${churchId}/ocr/jobs/${selectedJobId}`, {
-        layout_classification_json: updatedLayout
+        layout_classification_json: updatedLayout,
       });
       setLayoutClassification(updatedLayout);
+      setMapHint(`Layout set to ${newLayout}.`);
     } catch (err: any) {
-      console.error('Failed to override layout classification:', err);
+      setError(err?.response?.data?.error || err?.message || 'Failed to save layout override');
     }
   };
 
@@ -1349,7 +1442,7 @@ const OcrReviewPage: React.FC = () => {
                       {allRecords.map((rec, i) => (
                         <MenuItem key={i} value={i}>
                           {confirmedIndexes.has(i) ? '✓ ' : ''}
-                          #{rec.record_number || i + 1} — {rec.child_name || rec.groom_name || rec.deceased_name || `Record ${i + 1}`}
+                          #{rec.record_number || i + 1} — {recordDisplayName(recordType, rec) || `Record ${i + 1}`}
                         </MenuItem>
                       ))}
                     </Select>
@@ -1458,6 +1551,7 @@ const OcrReviewPage: React.FC = () => {
                       {fieldDefs.map((def) => {
                         const fieldColor = REVIEW_FIELD_COLORS[def.name];
                         const isFocused = focusedField === def.name;
+                        const hasSnippetLink = fieldHighlightBoxes.some((b) => b.fieldKey === def.name);
                         const fieldValue = editorReadOnly
                           ? (agent2DisplayFields[def.name] || '')
                           : (fields[def.name] || '');
@@ -1491,7 +1585,14 @@ const OcrReviewPage: React.FC = () => {
                             InputProps={fieldColor ? {
                               startAdornment: (
                                 <InputAdornment position="start">
-                                  <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: fieldColor, flexShrink: 0 }} />
+                                  <Box sx={{
+                                    width: 10,
+                                    height: 10,
+                                    borderRadius: '50%',
+                                    bgcolor: hasSnippetLink ? fieldColor : `${fieldColor}44`,
+                                    border: hasSnippetLink ? 'none' : `1px solid ${fieldColor}`,
+                                    flexShrink: 0,
+                                  }} />
                                 </InputAdornment>
                               ),
                             } : undefined}
@@ -1677,7 +1778,7 @@ const OcrReviewPage: React.FC = () => {
               {fieldHighlightBoxes.length > 0 && (
                 <Box sx={{ px: 1.5, py: 1, borderBottom: '1px solid', borderColor: 'divider', bgcolor: 'background.paper', display: 'flex', flexWrap: 'wrap', gap: 0.75 }}>
                   {fieldDefs
-                    .filter((d) => fieldHighlightBoxes.some((b) => b.label === d.name.replace(/_/g, ' ')))
+                    .filter((d) => fieldHighlightBoxes.some((b) => b.fieldKey === d.name))
                     .map((def) => {
                       const color = REVIEW_FIELD_COLORS[def.name] || '#1976d2';
                       const active = focusedField === def.name;

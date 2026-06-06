@@ -469,6 +469,119 @@ function assignTokensToColumns(
 }
 
 /**
+ * Adapt template coordinates dynamically to the actual page contents (scaling & gap-snapping).
+ */
+export function adaptTemplateSpec(
+  visionJson: any,
+  template: TemplateSpec,
+  pageIndex: number = 0
+): TemplateSpec {
+  const allTokens = extractTokens(visionJson, pageIndex);
+  if (allTokens.length < 10) return template;
+
+  // Filter out headers and marginal noise
+  const dataTokens = allTokens.filter(t => t.cy >= template.headerCutNorm && t.cx > 0.01 && t.cx < 0.98);
+  if (dataTokens.length < 5) return template;
+
+  // 1. Estimate table horizontal bounds using percentiles of token centers
+  const sortedXs = dataTokens.map(t => t.cx).sort((a, b) => a - b);
+  const tableLeft = sortedXs[Math.floor(sortedXs.length * 0.02)] || 0.01;
+  const tableRight = sortedXs[Math.floor(sortedXs.length * 0.98)] || 0.99;
+
+  // 2. Cluster data tokens into Y-axis rows to build occupancy histogram
+  const rowTol = 0.015;
+  const sortedByY = [...dataTokens].sort((a, b) => a.cy - b.cy);
+  const rows: WordToken[][] = [];
+  let curRow = [sortedByY[0]];
+  let curCy = sortedByY[0].cy;
+  for (let i = 1; i < sortedByY.length; i++) {
+    const t = sortedByY[i];
+    if (Math.abs(t.cy - curCy) <= rowTol) {
+      curRow.push(t);
+    } else {
+      rows.push(curRow);
+      curRow = [t];
+      curCy = t.cy;
+    }
+  }
+  if (curRow.length > 0) rows.push(curRow);
+
+  const BINS = 200;
+  const coverage = new Float32Array(BINS);
+  for (const row of rows) {
+    const rowBins = new Set<number>();
+    for (const t of row) {
+      const startBin = Math.max(0, Math.floor(t.bbox[0] * BINS));
+      const endBin = Math.min(BINS - 1, Math.floor(t.bbox[2] * BINS));
+      for (let b = startBin; b <= endBin; b++) {
+        rowBins.add(b);
+      }
+    }
+    for (const b of rowBins) {
+      coverage[b]++;
+    }
+  }
+
+  const threshold = rows.length * 0.12;
+  const gaps: Array<{ start: number; end: number; center: number }> = [];
+  let gapStart: number | null = null;
+  for (let b = 0; b < BINS; b++) {
+    if (coverage[b] < threshold) {
+      if (gapStart === null) gapStart = b;
+    } else {
+      if (gapStart !== null) {
+        gaps.push({ start: gapStart / BINS, end: b / BINS, center: ((gapStart + b) / 2) / BINS });
+        gapStart = null;
+      }
+    }
+  }
+  if (gapStart !== null) {
+    gaps.push({ start: gapStart / BINS, end: 1.0, center: ((gapStart + BINS) / 2) / BINS });
+  }
+
+  // 3. Map & snap template coordinates
+  const snapWindow = 0.04;
+  const boundaries: number[] = [];
+  for (let i = 0; i <= template.columns.length; i++) {
+    let originalX = i === 0 ? 0.0 : template.columns[i - 1].x1Norm;
+    let scaledX = tableLeft + originalX * (tableRight - tableLeft);
+    if (i === 0) scaledX = 0.0;
+    if (i === template.columns.length) scaledX = 1.0;
+    boundaries.push(scaledX);
+  }
+
+  for (let i = 1; i < boundaries.length - 1; i++) {
+    const target = boundaries[i];
+    let closestGap: number | null = null;
+    let minDist = snapWindow;
+    for (const gap of gaps) {
+      const dist = Math.abs(gap.center - target);
+      if (dist < minDist) {
+        minDist = dist;
+        closestGap = gap.center;
+      }
+    }
+    if (closestGap !== null) {
+      boundaries[i] = closestGap;
+    }
+  }
+
+  // Re-assign boundaries to template columns
+  const adaptedColumns = template.columns.map((col, i) => ({
+    ...col,
+    x0Norm: boundaries[i],
+    x1Norm: boundaries[i + 1],
+  }));
+
+  console.log(`  [AdaptiveTemplateSpec] Adapted coordinates for template ${template.templateId} using width [${tableLeft.toFixed(3)}, ${tableRight.toFixed(3)}]`);
+
+  return {
+    ...template,
+    columns: adaptedColumns,
+  };
+}
+
+/**
  * Template-locked table extraction.
  *
  * Extracts tokens from Vision JSON, clusters into rows, assigns to
@@ -486,22 +599,30 @@ export function extractWithTemplate(
   const pageW = page?.width || 1;
   const pageH = page?.height || 1;
 
+  // Try to adapt the template coordinates dynamically to the page
+  let activeTemplate = template;
+  try {
+    activeTemplate = adaptTemplateSpec(visionJson, template, pageIndex);
+  } catch (adaptErr: any) {
+    console.warn(`  [AdaptiveTemplateSpec] Coordinate scaling failed (using default): ${adaptErr.message}`);
+  }
+
   // 1. Extract tokens
   const allTokens = extractTokens(visionJson, pageIndex);
   const totalTokens = allTokens.length;
 
   // 2. Filter tokens below header cut
-  const headerCut = template.headerCutNorm;
+  const headerCut = activeTemplate.headerCutNorm;
   const headerTokens = allTokens.filter(t => t.cy < headerCut);
   const dataTokens = allTokens.filter(t => t.cy >= headerCut);
 
   // 3. Cluster data tokens into rows
-  const mergeGapFrac = template.rowModel?.mergeGapFrac ?? 0.6;
-  const maxRows = template.rowModel?.maxRows ?? 200;
+  const mergeGapFrac = activeTemplate.rowModel?.mergeGapFrac ?? 0.6;
+  const maxRows = activeTemplate.rowModel?.maxRows ?? 200;
   let dataRows = clusterRows(dataTokens, mergeGapFrac);
 
   // Apply stop keywords
-  const stopKw = template.rowModel?.stopKeywords;
+  const stopKw = activeTemplate.rowModel?.stopKeywords;
   if (stopKw && stopKw.length > 0) {
     const stopSet = new Set(stopKw.map(k => k.toLowerCase()));
     const stopIdx = dataRows.findIndex(row => {
@@ -521,8 +642,8 @@ export function extractWithTemplate(
   // 4. Build header row from header tokens
   const headerRow = clusterRows(headerTokens, mergeGapFrac);
   const headerAssignment = headerRow.length > 0
-    ? assignTokensToColumns(headerRow.flat(), template.columns)
-    : { cells: template.columns.map(c => ({ key: c.key, tokens: [], content: '', confidence: 0, tokenCount: 0, bbox: null })), ambiguousCount: 0 };
+    ? assignTokensToColumns(headerRow.flat(), activeTemplate.columns)
+    : { cells: activeTemplate.columns.map(c => ({ key: c.key, tokens: [], content: '', confidence: 0, tokenCount: 0, bbox: null })), ambiguousCount: 0 };
 
   // 5. Assign data tokens to columns per row
   let totalAmbiguous = headerAssignment.ambiguousCount;
@@ -546,7 +667,7 @@ export function extractWithTemplate(
   // Data rows
   for (let ri = 0; ri < dataRows.length; ri++) {
     const row = dataRows[ri];
-    const { cells, ambiguousCount } = assignTokensToColumns(row, template.columns);
+    const { cells, ambiguousCount } = assignTokensToColumns(row, activeTemplate.columns);
     totalAmbiguous += ambiguousCount;
     totalAssigned += cells.reduce((s, c) => s + c.tokenCount, 0);
     dataTokenCount += cells.reduce((s, c) => s + c.tokenCount, 0);
@@ -568,30 +689,30 @@ export function extractWithTemplate(
 
   // 6. Build column_bands
   const columnBands: Record<string, [number, number]> = {};
-  for (const col of template.columns) {
+  for (const col of activeTemplate.columns) {
     columnBands[col.key] = [col.x0Norm, col.x1Norm];
   }
 
   return {
-    layout_id: `template_locked_${template.templateId}`,
+    layout_id: `template_locked_${activeTemplate.templateId}`,
     page_number: pageIndex + 1,
     page_dimensions: { width: pageW, height: pageH },
     tables: [{
       row_count: tableRows.length,
-      column_count: template.columns.length,
+      column_count: activeTemplate.columns.length,
       table_number: 1,
       has_header_row: true,
       rows: tableRows,
     }],
     column_bands: columnBands,
-    columns_detected: template.columns.length,
+    columns_detected: activeTemplate.columns.length,
     header_y_threshold: headerCut,
     total_tokens: totalTokens,
     data_tokens: dataTokenCount,
     data_rows: dataRows.length,
     extracted_at: new Date().toISOString(),
     _template_locked: true,
-    _template_id: template.templateId,
+    _template_id: activeTemplate.templateId,
     _ambiguous_tokens: totalAmbiguous,
     _total_assigned_tokens: totalAssigned,
   };

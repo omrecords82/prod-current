@@ -11,9 +11,9 @@ function parseLedgerDate(s: string): Date | null {
 }
 
 const REQUIRED: Record<string, string[]> = {
-  baptism: ['child_name', 'date_of_baptism'],
-  marriage: ['groom_name', 'bride_name', 'date_of_marriage'],
-  funeral: ['deceased_name'],
+  baptism: ['child_first_name', 'child_last_name', 'date_of_baptism'],
+  marriage: ['date_of_marriage', 'groom_first_name', 'groom_last_name', 'bride_first_name', 'bride_last_name'],
+  funeral: ['deceased_first_name', 'deceased_last_name'],
 };
 
 export function validateJobLocally(jobId: number, churchId: number, detail: JobDetail, extract: unknown): ValidationReport {
