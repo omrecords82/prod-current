@@ -147,7 +147,7 @@ router.get('/rules', async (req: any, res: any) => {
   try {
     const churchId = parseInt(req.params.churchId, 10);
     const [rows] = await promisePool.query(
-      `SELECT * FROM ocr_parish_rules WHERE (church_id IS NULL OR church_id = ?) AND is_active = 1 ORDER BY priority ASC`,
+      `SELECT * FROM ocr_parish_rules WHERE (church_id IS NULL OR church_id = ?) ORDER BY priority ASC`,
       [churchId]
     );
     res.json({ ok: true, rules: rows });
