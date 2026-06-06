@@ -17,7 +17,7 @@ const CHURCH_ID = 278; // Test Church
 interface CorpusItem {
   name: string;
   relativePath: string;
-  absolutePath: string;
+  absolutePath?: string;
   recordType: 'baptism' | 'marriage' | 'funeral';
   layoutGroup: string; // 'layout1' | 'layout2' | 'layout3' | 'layout4'
   expectedLayoutType: 'tabular' | 'form' | 'narrative';
