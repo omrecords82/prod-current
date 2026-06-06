@@ -2077,6 +2077,60 @@ async function processPage(tenantPool: Pool, page: PageRow, churchId: number): P
             tableExtractionResult = prevResult;
             console.log(`  [TemplateExtract] Page ${page.id}: Keeping template result (${prevResult.data_rows} rows vs generic ${tableExtractionResult?.data_rows ?? 0})`);
           }
+
+          // If we did generic extraction and successfully detected columns,
+          // automatically register it as a layout template for the church & record type!
+          if (!templateId && tableExtractionResult && tableExtractionResult.columns_detected > 0 && tableExtractionResult.data_rows > 0) {
+            try {
+              const bandsArray = Object.values(tableExtractionResult.column_bands);
+              const templateName = `Auto-Imported Layout #${page.job_id}`;
+              const headerYThreshold = tableExtractionResult.header_y_threshold || 0.15;
+              const targetChurchId = jobChurchId || churchId;
+              
+              console.log(`  [AutoTemplate] New layout detected. Automatically importing as template for church ${targetChurchId}...`);
+              
+              // 1. Reset is_default flag for existing templates of same record type and church
+              if (targetChurchId) {
+                await platformPool.query(
+                  `UPDATE ocr_extractors SET is_default = 0 
+                   WHERE record_type = ? AND church_id = ?`,
+                  [recordType, targetChurchId]
+                );
+              }
+              
+              // 2. Insert new auto-detected template
+              const [insResult] = await platformPool.query(
+                `INSERT INTO ocr_extractors (name, description, record_type, page_mode, extraction_mode, column_bands, header_y_threshold, is_default, church_id, created_at, updated_at)
+                 VALUES (?, ?, ?, 'single', 'tabular', ?, ?, 1, ?, NOW(), NOW())`,
+                [
+                  templateName,
+                  `Automatically imported layout template from Job #${page.job_id}`,
+                  recordType,
+                  JSON.stringify(bandsArray),
+                  headerYThreshold,
+                  targetChurchId
+                ]
+              );
+              
+              templateId = insResult.insertId;
+              if (templateMatchResult) {
+                templateMatchResult.selectedTemplateId = templateId;
+                templateMatchResult.confidence = 1.0;
+                templateMatchResult.reasons.push('AUTO_IMPORTED_TEMPLATE');
+              } else {
+                templateMatchResult = {
+                  method: 'template_selector_v1',
+                  selectedTemplateId: templateId,
+                  confidence: 1.0,
+                  reasons: ['AUTO_IMPORTED_TEMPLATE'],
+                  candidates: [{ templateId, score: 1.0 }]
+                };
+              }
+              console.log(`  [AutoTemplate] Successfully created template #${templateId} and set as default.`);
+            } catch (autoTplErr: any) {
+              console.warn(`  [AutoTemplate] Failed to automatically import layout as template:`, autoTplErr.message);
+            }
+          }
         }
       }
 
