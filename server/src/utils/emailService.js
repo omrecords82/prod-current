@@ -1461,7 +1461,7 @@ const sendEnrollmentConfirmationEmail = async ({
                 <strong>${safeChurch}</strong> has been submitted successfully. Our team will review your
                 information and follow up within the next 48 hours.
               </p>
-              ${safeReference ? `<p style="margin:0 0 16px;"><strong>Reference:</strong> ${safeReference}</p>` : ''}
+              ${safeReference ? `<p style="margin:0 0 16px;"><strong>Enrollment Reference:</strong> ${safeReference}</p>` : ''}
             </td>
           </tr>
           <tr>
@@ -1521,7 +1521,7 @@ const sendEnrollmentConfirmationEmail = async ({
       `Hello ${firstName || 'there'},`,
       '',
       `Thank you for contacting Orthodox Metrics. Your enrollment request for ${churchName || 'your parish'} has been submitted successfully.`,
-      reference ? `Reference: ${reference}` : '',
+      reference ? `Enrollment Reference: ${reference}` : '',
       '',
       'What happens next:',
       ...ENROLLMENT_CONFIRM_STEPS.map((step, i) => `${i + 1}. ${step}`),
@@ -1552,6 +1552,139 @@ const sendEnrollmentConfirmationEmail = async ({
   }
 };
 
+const ENROLLMENT_INTERNAL_EMAIL = process.env.ENROLLMENT_INTERNAL_EMAIL || 'info@orthodoxmetrics.com';
+const ENROLLMENT_FROM_EMAIL = process.env.ENROLLMENT_FROM_EMAIL || null;
+const OMAI_ADMIN_URL = process.env.OMAI_ADMIN_URL || 'https://orthodoxmetrics.com/admin/onboarding';
+const TEMP_ADMIN_LOGIN_URL = process.env.TEMP_ADMIN_LOGIN_URL || process.env.OM_PUBLIC_URL || 'https://orthodoxmetrics.com/login';
+
+const sendEnrollmentInternalNotificationEmail = async ({
+  onboardingRequestId,
+  parishName,
+  submitterName,
+  submitterEmail,
+  submitterPhone,
+  location,
+  recordTables = [],
+  modules = [],
+  features = [],
+  notes,
+}) => {
+  try {
+    const transporter = await createTransporter();
+    const dbConfig = await getActiveEmailConfig();
+    const senderName = dbConfig?.sender_name || 'Orthodox Metrics';
+    const senderEmail = ENROLLMENT_FROM_EMAIL || dbConfig?.sender_email || process.env.SMTP_USER || process.env.EMAIL_USER;
+    const adminLink = `${OMAI_ADMIN_URL}/${encodeURIComponent(onboardingRequestId)}`;
+
+    const htmlContent = `
+<!DOCTYPE html><html><head><meta charset="utf-8"></head>
+<body style="font-family:Arial,sans-serif;color:#1a2e52;line-height:1.6;">
+  <div style="background:linear-gradient(90deg,#1a2e52,#d4af37,#1a2e52);height:4px;"></div>
+  <div style="padding:24px;max-width:640px;">
+    <h1 style="color:#1a2e52;">New Enrollment Request</h1>
+    <p><strong>Enrollment Reference:</strong> ${escapeHtml(onboardingRequestId)}</p>
+    <p><strong>Parish:</strong> ${escapeHtml(parishName)}</p>
+    <p><strong>Submitter:</strong> ${escapeHtml(submitterName)} &lt;${escapeHtml(submitterEmail)}&gt;</p>
+    <p><strong>Phone:</strong> ${escapeHtml(submitterPhone || '(not provided)')}</p>
+    <p><strong>Location:</strong> ${escapeHtml(location || 'Not specified')}</p>
+    <p><strong>Record tables:</strong> ${escapeHtml(recordTables.join(', ') || 'None')}</p>
+    <p><strong>Modules/features:</strong> ${escapeHtml((modules.length ? modules : features).join(', ') || 'None')}</p>
+    ${notes ? `<p><strong>Notes:</strong><br/>${escapeHtml(notes).replace(/\n/g, '<br/>')}</p>` : ''}
+    <p style="margin-top:24px;"><a href="${adminLink}" style="background:#1a2e52;color:#fff;padding:12px 20px;text-decoration:none;border-radius:6px;">View in OMAI</a></p>
+  </div>
+</body></html>`;
+
+    const text = [
+      `New Enrollment Request — ${onboardingRequestId}`,
+      `Parish: ${parishName}`,
+      `Submitter: ${submitterName} <${submitterEmail}>`,
+      `Phone: ${submitterPhone || '(not provided)'}`,
+      `Location: ${location || 'Not specified'}`,
+      `Record tables: ${recordTables.join(', ') || 'None'}`,
+      `Modules: ${(modules.length ? modules : features).join(', ') || 'None'}`,
+      notes ? `Notes:\n${notes}` : '',
+      `Admin link: ${adminLink}`,
+    ].filter(Boolean).join('\n');
+
+    const info = await transporter.sendMail({
+      from: `"${senderName}" <${senderEmail}>`,
+      to: ENROLLMENT_INTERNAL_EMAIL,
+      replyTo: submitterEmail,
+      subject: `New Enrollment Request - ${onboardingRequestId} - ${parishName}`,
+      html: htmlContent,
+      text,
+    });
+    return { success: true, messageId: info.messageId };
+  } catch (error) {
+    console.error('❌ Failed to send internal enrollment notification:', error.message);
+    return { success: false, error: error.message };
+  }
+};
+
+const sendTemporaryAdminInstructionsEmail = async ({
+  email,
+  firstName,
+  churchName,
+  onboardingRequestId,
+  tempPassword,
+}) => {
+  try {
+    const transporter = await createTransporter();
+    const dbConfig = await getActiveEmailConfig();
+    const senderName = dbConfig?.sender_name || 'Orthodox Metrics';
+    const senderEmail = ENROLLMENT_FROM_EMAIL || dbConfig?.sender_email || process.env.SMTP_USER || process.env.EMAIL_USER;
+    const loginUrl = TEMP_ADMIN_LOGIN_URL;
+
+    const htmlContent = `
+<!DOCTYPE html><html><head><meta charset="utf-8"></head>
+<body style="margin:0;padding:0;background:#f3f4f6;font-family:Arial,sans-serif;color:#1a2e52;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="padding:24px;">
+    <tr><td align="center">
+      <table role="presentation" width="600" style="background:#fff;border-radius:8px;overflow:hidden;">
+        <tr><td style="height:6px;background:linear-gradient(90deg,#1a2e52,#d4af37,#1a2e52);"></td></tr>
+        <tr><td style="padding:32px;">
+          <h1 style="margin:0 0 16px;">Your Orthodox Metrics Admin Account</h1>
+          <p>Hello ${escapeHtml(firstName || 'there')},</p>
+          <p>Your temporary admin account for <strong>${escapeHtml(churchName)}</strong> is ready.</p>
+          <table style="background:#f5f3ef;border-left:4px solid #d4af37;padding:16px;margin:16px 0;width:100%;">
+            <tr><td><strong>Login URL:</strong> <a href="${loginUrl}">${loginUrl}</a></td></tr>
+            <tr><td><strong>Username:</strong> ${escapeHtml(email)}</td></tr>
+            <tr><td><strong>Temporary password:</strong> ${escapeHtml(tempPassword)}</td></tr>
+            <tr><td><strong>Enrollment Reference:</strong> ${escapeHtml(onboardingRequestId)}</td></tr>
+          </table>
+          <p><strong>Important:</strong> You must change your password at first login.</p>
+          <p>After signing in, you will review and configure your selected sacramental record table columns before accessing the full portal.</p>
+          <p>Questions? Contact <a href="mailto:support@orthodoxmetrics.com">support@orthodoxmetrics.com</a></p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body></html>`;
+
+    const text = [
+      `Your Orthodox Metrics admin account for ${churchName} is ready.`,
+      `Login URL: ${loginUrl}`,
+      `Username: ${email}`,
+      `Temporary password: ${tempPassword}`,
+      `Enrollment Reference: ${onboardingRequestId}`,
+      'You must change your password at first login.',
+      'After signing in, configure your record table columns before using the portal.',
+    ].join('\n');
+
+    const info = await transporter.sendMail({
+      from: `"${senderName}" <${senderEmail}>`,
+      to: email,
+      subject: `Your Orthodox Metrics login — ${churchName}`,
+      html: htmlContent,
+      text,
+    });
+    return { success: true, messageId: info.messageId };
+  } catch (error) {
+    console.error('❌ Failed to send temporary admin instructions:', error.message);
+    return { success: false, error: error.message };
+  }
+};
+
 module.exports = {
   sendOCRReceipt,
   sendSessionVerification,
@@ -1564,6 +1697,8 @@ module.exports = {
   sendContactEmail,
   sendEnrollmentEmail,
   sendEnrollmentConfirmationEmail,
+  sendEnrollmentInternalNotificationEmail,
+  sendTemporaryAdminInstructionsEmail,
   sendPasswordResetEmail,
   sendInviteEmail,
   sendVerificationEmail,

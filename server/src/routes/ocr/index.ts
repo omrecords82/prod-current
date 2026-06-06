@@ -77,10 +77,16 @@ export function mountOcrRoutes(app: any, upload: any) {
   app.use('/api/church/:churchId/ocr', reviewRouter);
 
   // -------------------------------------------------------------------------
-  // 8. Church OCR statistics (dashboard widget)
+  // 8. OCR parish rules validation & inference
+  // -------------------------------------------------------------------------
+  const rulesRouter = require('./rules').default;
+  app.use('/api/church/:churchId/ocr', rulesRouter);
+
+  // -------------------------------------------------------------------------
+  // 9. Church OCR statistics (dashboard widget)
   // -------------------------------------------------------------------------
   const statsRouter = require('./stats');
   app.use('/api/church/:churchId/ocr', statsRouter);
 
-  console.log('✅ [OCR] All OCR routes mounted (admin + 7 church-scoped modules)');
+  console.log('✅ [OCR] All OCR routes mounted (admin + 8 church-scoped modules)');
 }

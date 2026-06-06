@@ -322,8 +322,22 @@ router.post('/login', async (req, res) => {
         role: user.role,
         church_id: user.church_id,
         nick: user.Nick || user.nick || user.display_name || null,
-        last_login: user.last_login
-      }
+        last_login: user.last_login,
+        must_change_password: !!user.must_change_password,
+        onboarding_request_id: user.onboarding_request_id || null,
+      },
+      onboarding_redirect: user.must_change_password
+        ? '/onboarding/change-password'
+        : (user.onboarding_request_id ? await (async () => {
+            try {
+              const onboardingService = require('../services/onboardingService');
+              const ob = await onboardingService.getByPublicId(user.onboarding_request_id);
+              if (ob && !ob.table_configuration_completed && ob.status !== 'active') {
+                return ob.first_login_completed ? '/onboarding/record-tables' : '/onboarding/change-password';
+              }
+            } catch (_) { /* ignore */ }
+            return null;
+          })() : null),
     });
   } catch (error) {
     console.error('[AUTH] Login error:', error);

@@ -14,6 +14,7 @@ import {
   compareAgentFieldDiffs,
   normalizeBaptismDates,
 } from '../../utils/ocrClassifier';
+import { ParishRulesEngine } from '../../services/ocr/rules/ParishRulesEngine';
 
 let agent2SchemaReady = false;
 async function ensureAgent2Schema() {
@@ -431,6 +432,95 @@ async function runAndPersistAgent2(job: any, jobId: number) {
   return null;
 }
 
+async function evaluateAndPersistRulesForJob(churchId: number, jobId: number, payload: any, recordType: string) {
+  try {
+    const engine = new ParishRulesEngine(churchId);
+    await engine.init();
+
+    const recordsList = payload.records || (payload.fields ? [payload.fields] : []);
+    const evaluatedRecords: any[] = [];
+    let hasBlockers = false;
+    let hasWarnings = false;
+
+    // Clear previous outcomes for this job to prevent duplicates
+    await promisePool.query(
+      `DELETE FROM ocr_rule_evaluation_logs WHERE ocr_job_id = ?`,
+      [jobId]
+    );
+
+    for (let i = 0; i < recordsList.length; i++) {
+      const rec = recordsList[i];
+      const evalResult = await engine.evaluateRecord(recordType, rec, {
+        ocrJobId: jobId,
+        recordIndex: i
+      });
+      
+      await ParishRulesEngine.persistEvaluationLogs(churchId, jobId, null, i, evalResult.outcomes);
+      evaluatedRecords.push(evalResult.fields);
+
+      if (evalResult.has_blockers) hasBlockers = true;
+      if (evalResult.has_warnings) hasWarnings = true;
+    }
+
+    if (payload.records) payload.records = evaluatedRecords;
+    if (payload.fields && evaluatedRecords.length > 0) payload.fields = evaluatedRecords[0];
+
+    // Fetch the persisted logs with DB IDs
+    const [dbOutcomes]: any = await promisePool.query(
+      `SELECT * FROM ocr_rule_evaluation_logs WHERE ocr_job_id = ? ORDER BY record_index ASC, id ASC`,
+      [jobId]
+    );
+
+    const outcomesByRecord = new Map<number, any[]>();
+    for (const log of dbOutcomes) {
+      let suggested = log.suggested_value;
+      if (typeof suggested === 'string' && (suggested.startsWith('[') || suggested.startsWith('{'))) {
+        try {
+          suggested = JSON.parse(suggested);
+        } catch (_) {}
+      }
+      let resolved = log.resolved_value;
+      if (typeof resolved === 'string' && (resolved.startsWith('[') || resolved.startsWith('{'))) {
+        try {
+          resolved = JSON.parse(resolved);
+        } catch (_) {}
+      }
+
+      const parsedLog = {
+        id: log.id,
+        rule_id: log.rule_id,
+        rule_name: log.rule_name,
+        target_field: log.target_field,
+        action_type: log.action_type,
+        severity: log.severity,
+        original_value: log.original_value,
+        suggested_value: suggested,
+        resolved_value: resolved,
+        explanation: log.explanation,
+        auto_applied: log.auto_applied === 1,
+        reviewer_decision: log.reviewer_decision
+      };
+
+      const idx = log.record_index ?? 0;
+      if (!outcomesByRecord.has(idx)) outcomesByRecord.set(idx, []);
+      outcomesByRecord.get(idx)!.push(parsedLog);
+    }
+
+    const allOutcomes: any[] = [];
+    for (const [idx, list] of outcomesByRecord.entries()) {
+      allOutcomes.push({ record_index: idx, outcomes: list });
+    }
+
+    payload.rules = {
+      has_blockers: hasBlockers,
+      has_warnings: hasWarnings,
+      outcomes: allOutcomes
+    };
+  } catch (err: any) {
+    console.error('[OCR Rules Engine] Helper evaluation failed:', err);
+  }
+}
+
 router.post('/jobs/:jobId/agent-extract', async (req: any, res: any) => {
   try {
     const churchId = parseInt(req.params.churchId);
@@ -447,12 +537,15 @@ router.post('/jobs/:jobId/agent-extract', async (req: any, res: any) => {
     );
 
     const extract = await extractAgentFieldsForJob(jobId, job.ocr_text, job.record_type);
-    const payload = {
+    const payload: any = {
       ...extract,
       agent: 'agent1' as const,
       extracted_at: new Date().toISOString(),
       confirmed: false,
     };
+
+    // Evaluate rules and persist outcomes
+    await evaluateAndPersistRulesForJob(churchId, jobId, payload, extract.record_type !== 'custom' ? extract.record_type : job.record_type);
 
     await promisePool.query(
       `UPDATE ocr_jobs SET
@@ -521,6 +614,12 @@ router.get('/jobs/:jobId/agent-extract', async (req: any, res: any) => {
     if (!job) return res.status(404).json({ error: 'Job not found' });
 
     const extract = parseJsonColumn(job.agent_extract_json);
+    
+    // Dynamically evaluate rules on GET to ensure rules reflect current DB configs/entities
+    if (extract) {
+      await evaluateAndPersistRulesForJob(churchId, jobId, extract, extract.record_type || job.record_type);
+    }
+
     const agent2Extract = parseJsonColumn(job.agent2_extract_json);
     const recordIndex = parseInt(req.query.record_index as string, 10) || 0;
 
@@ -622,6 +721,18 @@ router.post('/jobs/:jobId/seed', async (req: any, res: any) => {
     if (!job) return res.status(404).json({ error: 'Job not found' });
     if (!job.ready_to_seed) {
       return res.status(400).json({ error: 'Job is not ready to seed — confirm extraction first' });
+    }
+
+    // Validate unresolved blockers
+    const [unresolvedBlockers]: any = await promisePool.query(
+      `SELECT COUNT(*) as count FROM ocr_rule_evaluation_logs 
+       WHERE ocr_job_id = ? AND severity = 'blocker' AND reviewer_decision = 'pending'`,
+      [jobId]
+    );
+    if (unresolvedBlockers[0]?.count > 0) {
+      return res.status(400).json({
+        error: 'Cannot seed records: Job has unresolved date or data sequence blockers. Correct the invalid dates or resolve blockers before seeding.'
+      });
     }
 
     let extract: any = null;

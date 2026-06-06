@@ -214,8 +214,6 @@ export function Onboarding({ onCancel, onComplete, theme, onToggleTheme }: Props
   const [submitError, setSubmitError] = useState("");
   const [confirmation, setConfirmation] = useState<{
     reference: string;
-    inquiryId: number;
-    leadId: number;
   } | null>(null);
 
   // Location auto-fill: remembers where each inferred field's value came from
@@ -281,8 +279,7 @@ export function Onboarding({ onCancel, onComplete, theme, onToggleTheme }: Props
         success: boolean;
         message?: string;
         reference?: string;
-        inquiryId?: number;
-        leadId?: number;
+        onboarding_request_id?: string;
       }>("/crm-public/enroll", {
         churchId: parish.selected?.id ?? null,
         churchName: profile.churchName.trim(),
@@ -314,9 +311,7 @@ export function Onboarding({ onCancel, onComplete, theme, onToggleTheme }: Props
         return;
       }
       setConfirmation({
-        reference: data.reference || `OM-ENR-${data.inquiryId}`,
-        inquiryId: data.inquiryId ?? 0,
-        leadId: data.leadId ?? 0,
+        reference: data.onboarding_request_id || data.reference || "",
       });
       setTriedNext(false);
       setStep("confirm");

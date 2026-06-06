@@ -434,7 +434,7 @@ router.get('/parishes-geo', async (req, res) => {
 
 // ── POST /api/crm-public/enroll ────────────────────────────────
 // Parish enrollment wizard — creates CRM inquiry + follow-up (no auth)
-router.post('/enroll', async (req, res) => {
+async function handlePublicEnroll(req, res) {
   try {
     const {
       churchId,
@@ -639,6 +639,51 @@ router.post('/enroll', async (req, res) => {
 
     const reference = `OM-ENR-${result.insertId}`;
 
+    // Create onboarding request (ONB_<ULID>) — source of truth for enrollment lifecycle
+    let onboardingRequestId = null;
+    try {
+      const onboardingService = require('../services/onboardingService');
+      const { request: obReq } = await onboardingService.createFromEnrollment(
+        {
+          churchName,
+          firstName,
+          lastName,
+          email,
+          phone,
+          website,
+          address,
+          city,
+          state,
+          stateCode: effectiveState,
+          zip,
+          country,
+          timezone,
+          jurisdiction,
+          parishSize,
+          referral,
+          modules,
+          recordImportMethod,
+          startTimeline,
+          adminFirstName,
+          adminLastName,
+          adminEmail,
+          secondAdmin,
+          crmInquiryId: result.insertId,
+        },
+        { crmRecordId: resolvedLeadId, sourcePage: '/enroll' }
+      );
+      onboardingRequestId = obReq.onboarding_request_id;
+
+      if (obReq.crm_record_id !== resolvedLeadId) {
+        await pool.query(
+          'UPDATE onboarding_requests SET crm_record_id = ? WHERE onboarding_request_id = ?',
+          [resolvedLeadId, onboardingRequestId]
+        );
+      }
+    } catch (obErr) {
+      console.error('Onboarding request creation failed (CRM enrollment still saved):', obErr);
+    }
+
     try {
       await pool.query(
         `INSERT INTO omai_crm_activities (church_id, activity_type, subject, body, metadata)
@@ -651,6 +696,7 @@ router.post('/enroll', async (req, res) => {
             source: 'enrollment_wizard',
             inquiryId: result.insertId,
             reference,
+            onboarding_request_id: onboardingRequestId || null,
             modules: moduleList,
             recordImportMethod: recordImportMethod || null,
             startTimeline: startTimeline || null,
@@ -667,35 +713,85 @@ router.post('/enroll', async (req, res) => {
       console.error('Failed to create enrollment CRM activity:', actErr);
     }
 
-    console.log(`✅ CRM enrollment ${reference} from ${email} (church: ${churchName}, lead #${resolvedLeadId})`);
+    console.log(`✅ CRM enrollment ${onboardingRequestId || reference} from ${email} (church: ${churchName}, lead #${resolvedLeadId})`);
+
+    const moduleListForEmail = moduleList;
+    const locationParts = [city, effectiveState, country].filter(Boolean).join(', ');
 
     try {
-      const { sendEnrollmentConfirmationEmail } = require('../utils/emailService');
-      await sendEnrollmentConfirmationEmail({
+      const { sendEnrollmentConfirmationEmail, sendEnrollmentInternalNotificationEmail } = require('../utils/emailService');
+      const publicRef = onboardingRequestId || reference;
+      const confirmResult = await sendEnrollmentConfirmationEmail({
         firstName,
         email,
         churchName,
-        reference,
-        modules: moduleList,
+        reference: publicRef,
+        modules: moduleListForEmail,
         recordImportMethod: importLabels[recordImportMethod] || recordImportMethod || null,
         startTimeline: timelineLabels[startTimeline] || startTimeline || null,
       });
+      if (onboardingRequestId) {
+        const onboardingService = require('../services/onboardingService');
+        const { getAppPool } = require('../config/db');
+        const obPool = getAppPool();
+        if (confirmResult.success) {
+          await onboardingService.recordEvent(obPool, onboardingRequestId, 'confirmation_email_sent', {
+            metadata: { messageId: confirmResult.messageId },
+          });
+        } else {
+          await onboardingService.recordEvent(obPool, onboardingRequestId, 'confirmation_email_failed', {
+            notes: confirmResult.error,
+          });
+        }
+      }
     } catch (confirmEmailErr) {
       console.error('Enrollment confirmation email failed (enrollment still saved):', confirmEmailErr);
     }
 
+    if (onboardingRequestId) {
+      try {
+        const { sendEnrollmentInternalNotificationEmail } = require('../utils/emailService');
+        const onboardingService = require('../services/onboardingService');
+        const { getAppPool } = require('../config/db');
+        const internalResult = await sendEnrollmentInternalNotificationEmail({
+          onboardingRequestId,
+          parishName: churchName,
+          submitterName: `${firstName} ${lastName || ''}`.trim(),
+          submitterEmail: email,
+          submitterPhone: phone,
+          location: locationParts,
+          recordTables: moduleListForEmail,
+          modules: moduleListForEmail,
+          notes: enrollmentNote,
+        });
+        const obPool = getAppPool();
+        if (internalResult.success) {
+          await onboardingService.recordEvent(obPool, onboardingRequestId, 'internal_email_sent', {
+            metadata: { messageId: internalResult.messageId },
+          });
+        } else {
+          await onboardingService.recordEvent(obPool, onboardingRequestId, 'internal_email_failed', {
+            notes: internalResult.error,
+          });
+        }
+      } catch (internalEmailErr) {
+        console.error('Internal enrollment notification failed:', internalEmailErr);
+      }
+    }
+
     res.json({
       success: true,
-      inquiryId: result.insertId,
-      leadId: resolvedLeadId,
-      reference,
+      onboarding_request_id: onboardingRequestId || undefined,
+      reference: onboardingRequestId || reference,
       message: 'Thank you! Your enrollment request has been received. Our team will review it within 1–2 business days.',
     });
   } catch (error) {
     console.error('Enrollment submission error:', error);
     res.status(500).json({ success: false, message: 'Failed to submit enrollment. Please try again.' });
   }
-});
+}
+
+router.post('/enroll', handlePublicEnroll);
 
 // Helper: format minutes to 12-hour display
 function formatTime(totalMinutes) {
@@ -707,3 +803,4 @@ function formatTime(totalMinutes) {
 }
 
 module.exports = router;
+module.exports.handlePublicEnroll = handlePublicEnroll;

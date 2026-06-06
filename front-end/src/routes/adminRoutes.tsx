@@ -38,6 +38,10 @@ const OMAIDiscoveryPanelMobile = Loadable(lazy(() => import('../features/admin/O
 const LogSearch = Loadable(lazy(() => import('../features/admin/dashboard/LogSearch')));
 const ChurchAdminList = Loadable(lazy(() => import('../features/admin/ChurchAdminList')));
 const ChurchAdminPanel = Loadable(lazy(() => import('../features/admin/ChurchAdminPanelWorking')));
+const OnboardingRequestsListPage = Loadable(lazy(() => import('../features/admin/control-panel/OnboardingEnrollmentPage')));
+const OnboardingRequestDetailPage = Loadable(lazy(() => import('../features/admin/control-panel/OnboardingEnrollmentPage').then(m => ({ default: m.OnboardingRequestDetailPage }))));
+const OnboardingChangePasswordPage = Loadable(lazy(() => import('../features/account/OnboardingSetupPage').then(m => ({ default: m.OnboardingChangePasswordPage }))));
+const OnboardingRecordTablesPage = Loadable(lazy(() => import('../features/account/OnboardingSetupPage').then(m => ({ default: m.OnboardingRecordTablesPage }))));
 
 /**
  * All /admin/* route definitions.
@@ -70,4 +74,6 @@ export const adminRoutes = [
   guardedRoute('/admin/log-search', <LogSearch />, ROLE_ADMIN_SUPER),
   protectedRoute('/admin/churches', <ChurchAdminList />, ROLE_ADMIN_SUPER),
   protectedRoute('/admin/church/:id', <ChurchAdminPanel />, ROLE_ADMIN_SUPER),
+  guardedRoute('/admin/onboarding', <OnboardingRequestsListPage />, ROLE_ADMIN_SUPER),
+  guardedRoute('/admin/onboarding/:onboarding_request_id', <OnboardingRequestDetailPage />, ROLE_ADMIN_SUPER),
 ];

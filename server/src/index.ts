@@ -294,6 +294,8 @@ const churchRegisterRouter = require('./routes/church-register');
 const crmPublicRouter = require('./routes/crm-public');
 const churchOnboardingRouter = require('./routes/admin/church-onboarding');
 const onboardingPipelineRouter = require('./routes/admin/onboarding-pipeline');
+const adminOnboardingRouter = require('./routes/admin/onboarding');
+const userOnboardingRouter = require('./routes/onboarding');
 const orthodoxScheduleGuidelinesRouter = require('./routes/admin/orthodox-schedule-guidelines');
 const changeSetsRouter = require('./routes/admin/change-sets');
 // Import new modular admin route files (extracted from monolithic admin.js)
@@ -617,6 +619,10 @@ app.use('/api/admin/church-onboarding', churchOnboardingRouter);
 console.log('✅ [Server] Mounted /api/admin/church-onboarding route (Phase 2 onboarding pipeline)');
 app.use('/api/admin/onboarding-pipeline', onboardingPipelineRouter);
 console.log('✅ [Server] Mounted /api/admin/onboarding-pipeline route (Layer 3 extended pipeline)');
+app.use('/api/admin/onboarding', adminOnboardingRouter);
+console.log('✅ [Server] Mounted /api/admin/onboarding route (enrollment onboarding requests)');
+app.use('/api/onboarding', userOnboardingRouter);
+console.log('✅ [Server] Mounted /api/onboarding route (temporary admin first-login flow)');
 app.use('/api/admin/orthodox-schedule-guidelines', orthodoxScheduleGuidelinesRouter);
 console.log('✅ [Server] Mounted /api/admin/orthodox-schedule-guidelines route');
 app.use('/api/admin/change-sets', changeSetsRouter);
@@ -950,6 +956,7 @@ app.use('/api/upload', profileUploadRouter);
 // Parish enrollment form (public - no auth required)
 const enrollRouter = require('./routes/enroll');
 app.use('/api/enroll', enrollRouter);
+app.use('/api/enrollment', enrollRouter);
 
 // Contact form (public - no auth required)
 app.post('/api/contact', async (req: any, res: any) => {

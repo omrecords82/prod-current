@@ -113,6 +113,8 @@ const AccountBrandingPage = Loadable(lazy(() => import('../features/account/Acco
 const AccountSessionsPage = Loadable(lazy(() => import('../features/account/AccountSessionsPage')));
 const AccountNotificationsPage = Loadable(lazy(() => import('../features/account/AccountNotificationsPage')));
 const AccountOcrPreferencesPage = Loadable(lazy(() => import('../features/account/AccountOcrPreferencesPage')));
+const OnboardingChangePasswordPage = Loadable(lazy(() => import('../features/account/OnboardingSetupPage').then(m => ({ default: m.OnboardingChangePasswordPage }))));
+const OnboardingRecordTablesPage = Loadable(lazy(() => import('../features/account/OnboardingSetupPage').then(m => ({ default: m.OnboardingRecordTablesPage }))));
 
 /* ****Parish Management Hub***** */
 const ParishManagementLayout = Loadable(lazy(() => import('../features/account/parish-management/ParishManagementLayout')));
@@ -872,6 +874,18 @@ const Router = [
           { path: 'system-behavior', element: <SystemBehaviorPage /> },
         ],
       },
+    ],
+  },
+  {
+    path: '/onboarding',
+    element: (
+      <ProtectedRoute>
+        <FullLayout />
+      </ProtectedRoute>
+    ),
+    children: [
+      { path: 'change-password', element: <OnboardingChangePasswordPage /> },
+      { path: 'record-tables', element: <OnboardingRecordTablesPage /> },
     ],
   },
   {
