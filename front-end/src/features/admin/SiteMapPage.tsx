@@ -145,19 +145,10 @@ const ADMIN_MAP: SiteNode[] = [
     ],
   },
   {
-    label: 'Church Management', icon: <ChurchIcon />, roles: ['admin', 'super_admin'], children: [
-      { label: 'Church List', path: '/apps/church-management', icon: <ChurchIcon /> },
-      { label: 'Create Church', path: '/apps/church-management/create', icon: <ChurchIcon /> },
-      { label: 'Church Setup Wizard', path: '/apps/church-management/wizard', icon: <ChurchIcon />, roles: ['super_admin'] },
-      { label: 'Church Admin List', path: '/admin/churches', icon: <ChurchIcon /> },
-    ],
-  },
-  {
     label: 'Admin', icon: <AdminIcon />, roles: ['admin', 'super_admin'], children: [
       { label: 'Admin Home', path: '/admin', icon: <AdminIcon /> },
       // User Management — migrated to OMAI (/omai/ops/users)
       { label: 'Session Management', path: '/admin/sessions', icon: <SecurityIcon /> },
-      { label: 'Admin Settings', path: '/admin/settings', icon: <SettingsIcon /> },
       { label: 'Activity Logs', path: '/admin/activity-logs', icon: <RecordIcon /> },
       { label: 'Log Search', path: '/admin/log-search', icon: <RecordIcon /> },
       { label: 'Menu Permissions', path: '/admin/menu-permissions', icon: <SecurityIcon /> },
@@ -166,14 +157,13 @@ const ADMIN_MAP: SiteNode[] = [
       // Tutorials — migrated to OMAI (/omai/ops/tutorials)
       { label: 'Headlines Config', path: '/admin/headlines-config', icon: <BlogIcon /> },
       { label: 'Script Runner', path: '/admin/script-runner', icon: <CodeIcon /> },
-      { label: 'AI Admin Panel', path: '/admin/ai', icon: <AIIcon /> },
+      { label: 'Church Admin List', path: '/admin/churches', icon: <ChurchIcon /> },
       { label: 'OrthodoxMetrics Admin', path: '/admin/orthodox-metrics', icon: <DashIcon /> },
       { label: 'Big Book', path: '/admin/bigbook', icon: <BookIcon /> },
       { label: 'OMAI Mobile', path: '/admin/omai/mobile', icon: <AIIcon />, roles: ['super_admin'] },
       { label: 'Ops Reports', path: '/admin/ops', icon: <AnalyticsIcon /> },
       { label: 'Build Console', path: '/admin/build', icon: <DevToolsIcon /> },
       { label: 'Publishing Guide', path: '/admin/publishing-guide', icon: <BookIcon /> },
-      { label: 'Site Survey', path: '/admin/tools/survey', icon: <DevToolsIcon />, roles: ['super_admin'] },
     ],
   },
   {

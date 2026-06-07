@@ -204,7 +204,7 @@ const ChurchAdminList: React.FC = () => {
                                                 <Tooltip title="View Church Details">
                                                     <IconButton
                                                         size="small"
-                                                        onClick={() => navigate('/apps/church-management')}
+                                                        onClick={() => navigate(`/admin/church/${church.id}`)}
                                                     >
                                                         <IconEye />
                                                     </IconButton>

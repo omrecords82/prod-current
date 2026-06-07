@@ -177,17 +177,12 @@ const QuickToolsContent = () => {
     ];
 
     const systemTools = [
-        { title: 'Settings', description: 'System configuration and preferences', icon: <IconSettings size={24} />, href: '/admin/settings' },
         { title: 'Menu Management', description: 'Configure navigation and menus', icon: <IconMenu2 size={24} />, href: '/admin/menu-management' },
         { title: 'Headlines Configuration', description: 'Manage news and headline sources', icon: <IconNews size={24} />, href: '/admin/headlines-config' },
-        { title: 'AI Administration', description: 'Artificial Intelligence management', icon: <IconBrain size={24} />, href: '/admin/ai' }
     ];
 
     const developmentTools = [
         { title: 'Site Editor', description: 'Visual site editing and customization', icon: <IconEdit size={24} />, href: '/admin/site-editor' },
-        { title: 'JIT Terminal (Console)', description: 'Command line access and debugging', icon: <IconTerminal size={24} />, href: '/admin/jit-terminal' },
-        { title: 'JIT Terminal Settings', description: 'Configure terminal access and security', icon: <IconSettings size={24} />, href: '/settings/jit-terminal' },
-        { title: 'Site Survey (SuperAdmin)', description: 'Comprehensive site analysis', icon: <IconBug size={24} />, href: '/admin/tools/survey' },
         { title: 'Page Editor', description: 'Edit and manage individual pages', icon: <IconEdit size={24} />, href: '/admin/tools/page-editor' },
         { title: 'Site Structure Visualizer', description: 'Visualize site architecture and APIs', icon: <IconSitemap size={24} />, href: '/tools/site-structure' },
         { title: '🔨 Build Console', description: 'Frontend build system and deployment', icon: <IconCode size={24} />, href: '/admin/build' }

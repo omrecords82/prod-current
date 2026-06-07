@@ -185,26 +185,6 @@ export const SuperAdminMenuTemplate: MenuTemplateItem[] = [
     subheader: '⛪ Church',
   },
   {
-    id: 'church.management',
-    title: 'Church Management',
-    icon: OrthodoxChurchIcon,
-    href: '#',
-    children: [
-      {
-        id: 'church.all-churches',
-        title: 'All Churches',
-        icon: IconPoint,
-        href: '/apps/church-management',
-      },
-      {
-        id: 'church.setup-wizard',
-        title: 'Church Setup Wizard',
-        icon: IconPoint,
-        href: '/apps/church-management/wizard',
-      },
-    ],
-  },
-  {
     id: 'church.records-systems',
     title: 'Records Systems',
     icon: IconFileDescription,
@@ -366,20 +346,6 @@ export const SuperAdminMenuTemplate: MenuTemplateItem[] = [
     ],
   },
   {
-    id: 'devel.ai-automation',
-    title: 'AI & Automation',
-    icon: IconRocket,
-    href: '#',
-    children: [
-      {
-        id: 'devel.ai-admin',
-        title: 'AI Admin Panel',
-        icon: IconRocket,
-        href: '/admin/ai',
-      },
-    ],
-  },
-  {
     id: 'devel.testing',
     title: 'Testing & QA',
     icon: IconBug,
@@ -389,7 +355,7 @@ export const SuperAdminMenuTemplate: MenuTemplateItem[] = [
         id: 'testing.site-survey',
         title: 'Site Survey',
         icon: IconBug,
-        href: '/admin/tools/survey',
+        href: '/site-map',
       },
     ],
   },
@@ -427,16 +393,10 @@ export const SuperAdminMenuTemplate: MenuTemplateItem[] = [
         href: '/devel-tools/om-permission-center',
       },
       {
-        id: 'broken.admin-settings',
-        title: 'Admin Settings',
-        icon: IconSettings,
-        href: '/admin/settings',
-      },
-      {
         id: 'broken.task-assignment',
         title: 'Task Assignment',
         icon: IconEdit,
-        href: '/admin/settings',
+        href: '/admin',
       },
     ],
   },

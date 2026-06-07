@@ -337,7 +337,6 @@ export const useGlobalErrorStore = () => {
 // Helper functions
 const getComponentNameFromPath = (pathname: string): string => {
   const pathMap: { [key: string]: string } = {
-    '/admin/ai': 'AI Administration Panel',
     '/admin/bigbook': 'OM Big Book Console',
     '/admin/build': 'Build Console',
     '/admin/users': 'User Management',

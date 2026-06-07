@@ -163,7 +163,7 @@ const BigBookDynamicRoute: React.FC = () => {
   };
 
   const handleBack = () => {
-    navigate('/admin/settings');
+    navigate('/admin/bigbook');
   };
 
   const handleRefresh = () => {

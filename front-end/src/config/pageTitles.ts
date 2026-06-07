@@ -30,7 +30,6 @@ export const PAGE_TITLES: Record<string, string> = {
   '/admin': 'Admin Panel',
   '/admin/churches': 'Church Management',
   '/admin/users': 'User Management',
-  '/admin/settings': 'Settings',
   
   // Profile
   '/profile': 'Profile',

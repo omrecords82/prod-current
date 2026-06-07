@@ -45,10 +45,10 @@ const AdminPageFallback: React.FC = () => {
       color: '#1976d2'
     },
     {
-      title: 'Admin Settings',
-      description: 'Configure system settings and preferences',
+      title: 'Church Admin',
+      description: 'View and manage registered churches',
       icon: <SettingsIcon />,
-      path: '/admin/settings',
+      path: '/admin/churches',
       color: '#388e3c'
     },
     {
@@ -217,10 +217,10 @@ const AdminPageFallback: React.FC = () => {
             </Button>
             <Button
               variant="outlined"
-              onClick={() => navigate('/admin/settings')}
+              onClick={() => navigate('/admin/churches')}
               startIcon={<SettingsIcon />}
             >
-              System Settings
+              Church Admin
             </Button>
             <Button
               variant="outlined"

@@ -110,7 +110,7 @@ const NotFound404: React.FC = () => {
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
             <Box
               component="button"
-              onClick={() => navigate('/apps/church-management')}
+              onClick={() => navigate('/apps/records/baptism')}
               sx={{ display: 'flex', alignItems: 'center', gap: 0.5, background: 'none', border: 'none', cursor: 'pointer', color: linkColor, fontSize: '0.8125rem', p: 0, '&:hover': { opacity: 0.75 } }}
             >
               <BookmarkBorderIcon sx={{ fontSize: 14 }} />

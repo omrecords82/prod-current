@@ -11,8 +11,6 @@ import { DEPRECATION_REGISTRY } from '@/config/deprecationRegistry';
 import { FEATURE_REGISTRY } from '@/config/featureRegistry';
 import PageContainer from '@/shared/ui/PageContainer';
 import {
-    Psychology as AIIcon,
-    Business as ChurchIcon,
     Description as RecordsIcon,
     Dns as ServerIcon,
     Widgets as SuiteIcon,
@@ -62,22 +60,6 @@ interface Category {
 
 const CATEGORIES: Category[] = [
   {
-    key: 'church',
-    title: 'Church Management',
-    description: 'Manage churches, setup wizards, field mapping, and provisioning',
-    icon: <ChurchIcon sx={{ fontSize: 28 }} />,
-    color: '#1976d2',
-    bgLight: 'rgba(25, 118, 210, 0.08)',
-    bgDark: 'rgba(25, 118, 210, 0.15)',
-    href: '/admin/control-panel/church-management',
-    quickLinks: [
-      { label: 'All Churches', href: '/apps/church-management' },
-      { label: 'Jurisdictions', href: '/admin/control-panel/jurisdictions' },
-      { label: 'Demo Churches', href: '/admin/control-panel/demo-churches' },
-      { label: 'Sacramental Restrictions', href: '/admin/control-panel/church-management/sacramental-restrictions' },
-    ],
-  },
-  {
     key: 'records',
     title: 'Records & OCR',
     description: 'Church metric records, OCR document processing, data tools, and reports',
@@ -97,31 +79,15 @@ const CATEGORIES: Category[] = [
   {
     key: 'system',
     title: 'System & Server',
-    description: 'Users, security, content, server diagnostics, monitoring, and social features',
+    description: 'Site map, monitoring, and platform diagnostics',
     icon: <ServerIcon sx={{ fontSize: 28 }} />,
     color: '#d32f2f',
     bgLight: 'rgba(211, 47, 47, 0.08)',
     bgDark: 'rgba(211, 47, 47, 0.15)',
-    href: '/admin/control-panel/system-server',
+    href: '/site-map',
     quickLinks: [
-      // User Management — migrated to OMAI (/omai/ops/users)
-      { label: 'Code Safety System', href: '/admin/control-panel/system-server/code-safety' },
       { label: 'Site Map', href: '/site-map' },
-      // API Explorer — migrated to OMAI (OMD-1283)
-    ],
-  },
-  {
-    key: 'ai',
-    title: 'AI & Automation',
-    description: 'AI admin panel, OMAI logger, and automation settings',
-    icon: <AIIcon sx={{ fontSize: 28 }} />,
-    color: '#f57c00',
-    bgLight: 'rgba(245, 124, 0, 0.08)',
-    bgDark: 'rgba(245, 124, 0, 0.15)',
-    href: '/admin/control-panel/ai-automation',
-    quickLinks: [
-      { label: 'AI Admin Panel', href: '/admin/ai' },
-      { label: 'OMAI Logger', href: '/church/omai-logger' },
+      { label: 'Church Admin List', href: '/admin/churches' },
     ],
   },
   {

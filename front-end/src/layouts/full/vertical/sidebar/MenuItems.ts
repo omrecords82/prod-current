@@ -1,23 +1,11 @@
-import OrthodoxChurchIcon from '@/shared/ui/OrthodoxChurchIcon';
 import {
-    IconActivity,
     IconBell,
-    IconBorderAll,
-    IconBug,
     IconChartBar,
-    IconClock,
-    IconCode,
-    IconDatabase,
-    IconEdit,
     IconFileDescription,
-    IconLayout,
     IconLayoutDashboard,
     IconMessage,
     IconNotes,
-    IconPoint,
     IconRocket,
-    IconSettings,
-    IconTerminal,
     IconUpload,
     IconUser,
     IconUserPlus
@@ -68,165 +56,11 @@ const Menuitems: MenuitemsType[] = [
     href: '/omai/dashboard/default',
     external: true,
   },
-
-  // ========================================================================
-  // CHURCH MANAGEMENT (matches Control Panel category 1)
-  // ========================================================================
-  {
-    navlabel: true,
-    subheader: '⛪ Church Management',
-  },
-  {
-    id: uniqueId(),
-    title: 'Church Management',
-    icon: OrthodoxChurchIcon,
-    href: '#',
-    children: [
-      {
-        id: uniqueId(),
-        title: 'All Churches',
-        icon: IconPoint,
-        href: '/apps/church-management',
-      },
-      {
-        id: uniqueId(),
-        title: 'Church Setup Wizard',
-        icon: IconPoint,
-        href: '/apps/church-management/wizard',
-      },
-      {
-        id: uniqueId(),
-        title: 'Records Branding',
-        icon: IconPoint,
-        href: '/admin/church-branding/records-landing',
-      },
-    ],
-  },
-
-
-  // ========================================================================
-  // SYSTEM & SERVER (matches Control Panel category 4)
-  // ========================================================================
-  {
-    navlabel: true,
-    subheader: '🖥️ System & Server',
-  },
-  {
-    id: uniqueId(),
-    title: 'Site Management',
-    icon: IconSettings,
-    href: '#',
-    children: [
-      {
-        id: uniqueId(),
-        title: 'Admin Settings',
-        icon: IconSettings,
-        href: '/admin/settings',
-      },
-    ],
-  },
-
-  // ========================================================================
-  // AI & AUTOMATION (matches Control Panel category 5)
-  // ========================================================================
-  {
-    navlabel: true,
-    subheader: '🤖 AI & Automation',
-  },
-  {
-    id: uniqueId(),
-    title: 'AI & Automation',
-    icon: IconRocket,
-    href: '#',
-    children: [
-      {
-        id: uniqueId(),
-        title: 'AI Admin Panel',
-        icon: IconRocket,
-        href: '/admin/ai',
-      },
-      {
-        id: uniqueId(),
-        title: 'Code Change Detection',
-        icon: IconCode,
-        href: '/admin/ai/code-changes',
-      },
-    ],
-  },
-
-  // ========================================================================
-  // DEVELOPER TOOLS (super_admin only)
-  // ========================================================================
-  {
-    navlabel: true,
-    subheader: '🛠️ Developer Tools',
-  },
-  {
-    id: uniqueId(),
-    title: 'Development Console',
-    icon: IconTerminal,
-    href: '#',
-    children: [
-      {
-        id: uniqueId(),
-        title: 'Badge State Manager',
-        icon: IconBell,
-        href: '/devel-tools/badge-state-manager',
-      },
-      {
-        id: uniqueId(),
-        title: 'Work Session Admin',
-        icon: IconClock,
-        href: '/devel-tools/work-session-admin',
-      },
-    ],
-  },
-  {
-    id: uniqueId(),
-    title: 'Testing & QA',
-    icon: IconBug,
-    href: '#',
-    children: [
-      {
-        id: uniqueId(),
-        title: 'Site Survey',
-        icon: IconBug,
-        href: '/admin/tools/survey',
-      },
-    ],
-  },
 ];
 
 export const getMenuItems = (user: any) => {
-  const churchId = user?.church_id || 46; // fallback to default church ID
-  
   if (user && (user.role === 'super_admin' || user.role === 'admin')) {
-    // Create dynamic menu items with church-aware URLs
-    let dynamicMenuItems = Menuitems.map(item => {
-      if (item.title === 'Records Systems' && item.children) {
-        return {
-          ...item,
-          children: item.children.map(child => {
-            switch (child.title) {
-              default:
-                return child;
-            }
-          })
-        };
-      }
-      return item;
-    });
-    
-    // Filter out Developer Tools for non-super_admin users
-    if (user.role !== 'super_admin') {
-      dynamicMenuItems = dynamicMenuItems.filter(item => {
-        // Remove Developer Tools section and its items
-        if (item.subheader === '🛠️ Developer Tools') return false;
-        return true;
-      });
-    }
-    
-    return dynamicMenuItems;
+    return Menuitems;
   }
   
   // For priest role, show portal-focused menu

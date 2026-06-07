@@ -328,7 +328,7 @@ const OrthodoxMetricsAdminDashboard: React.FC = () => {
                                         <Button
                                             variant="contained"
                                             startIcon={<IconPlus />}
-                                            href="/apps/church-management/wizard"
+                                            href="/admin/onboarding"
                                         >
                                             Add New Client
                                         </Button>

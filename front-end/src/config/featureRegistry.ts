@@ -103,8 +103,6 @@ export const FEATURE_REGISTRY: FeatureEntry[] = [
   { id: 'onboarding-record-tables', name: 'Onboarding Record Tables', stage: 2, route: '/onboarding/record-tables', description: 'Temporary admin first-login record table column configuration', since: '2026-06-05' },
   { id: 'onboarding-pipeline', name: 'Onboarding Pipeline', stage: 2, route: '/admin/control-panel/onboarding-pipeline', description: 'Extended church onboarding pipeline with record requirements, email workflow, and provisioning checklist', since: '2026-03-24' },
   { id: 'onboarding-pipeline-detail', name: 'Onboarding Pipeline Detail', stage: 2, route: '/admin/control-panel/onboarding-pipeline/:id', description: 'Church onboarding workspace with contacts, requirements, email drafts, and provisioning', since: '2026-03-24' },
-  { id: 'records-landing-branding', name: 'Records Landing Branding', stage: 2, route: '/admin/church-branding/records-landing', description: 'Church-level customization for records landing page header', since: '2026-03-10' },
-  { id: 'code-change-detection', name: 'Code Change Detection', stage: 2, route: '/admin/ai/code-changes', description: 'Tracks page content edits, notifies admins, and triggers frontend builds', since: '2026-03-08' },
   { id: 'sdlc-wizard', name: 'SDLC Pipeline Wizard', stage: 2, route: '/omai/tools/om-daily', description: 'Wizard-driven SDLC pipeline — migrated to OMAI Operations Hub', since: '2026-03-12', changeSetCode: 'CS-0037', scope: 'shared', canonicalParent: 'omai' },
   { id: 'ocr-workbench', name: 'OCR Workbench & Review UX', stage: 2, route: '/devel/ocr-studio', description: 'Full OCR document review workbench with overlay editing', since: '2026-02-01', changeSetCode: 'CS-0042' },
   { id: 'ocr-admin-dashboard', name: 'OCR Admin & Analytics', stage: 2, description: 'Admin dashboard for OCR job monitoring, stats, and quality metrics', since: '2026-03-08', changeSetCode: 'CS-0043' },
@@ -123,7 +121,6 @@ export const FEATURE_REGISTRY: FeatureEntry[] = [
   // record-creation-wizard: removed (see deprecationRegistry.ts, stage 4 — deleted 2026-04-11)
   { id: 'parish-onboarding-wizard', name: 'Parish Onboarding Wizard', stage: 2, route: '/portal/onboarding', description: 'Guided parish setup wizard for configuring record field labels, order, and visibility', since: '2026-03-24' },
   { id: 'translation-manager', name: 'Translation Manager', stage: 2, route: '/devel-tools/translation-manager', description: 'Professional translation management with source versioning, hash-based staleness, and per-language workflow', since: '2026-03-28' },
-  { id: 'badge-state-manager', name: 'Badge State Manager', stage: 2, route: '/devel-tools/badge-state-manager', description: 'Manage menu item badge lifecycle (NEW/UPDATED) from the control panel', since: '2026-03-31' },
   { id: 'live-table-builder', name: 'Live Table Builder', stage: 1, route: '/devel-tools/live-table-builder', since: '2026-01-20' },
   { id: 'liturgical-calendar', name: 'Liturgical Calendar', stage: 5, route: '/apps/liturgical-calendar', description: 'Eastern Orthodox liturgical calendar with auto-theme', since: '2026-02-27' },
 ];

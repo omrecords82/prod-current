@@ -16,8 +16,6 @@ import {
 } from './routeConfigHelpers';
 
 /* ── Lazy imports ── */
-const WorkSessionAdmin = Loadable(lazy(() => import('../features/devel-tools/work-sessions/WorkSessionAdminPage')));
-const BadgeStateManagerPage = Loadable(lazy(() => import('../features/devel-tools/badge-state-manager/BadgeStateManagerPage')));
 const OCRSettingsPage = Loadable(lazy(() => import('../features/devel-tools/om-ocr/pages/OCRSettingsPage')));
 const PMRecordSettingsPage = Loadable(lazy(() => import('../features/account/parish-management/RecordSettingsPage')));
 const OcrSetupWizardPage = Loadable(lazy(() => import('../features/devel-tools/om-ocr/pages/OcrSetupWizardPage')));
@@ -33,9 +31,6 @@ const UploadRecordsPage = Loadable(lazy(() => import('../features/records-centra
  * These are children of the FullLayout route.
  */
 export const develRoutes = [
-  // OM Tasks, Daily Tasks — retired from OM, now managed via OMAI OM Daily
-  guardedRoute('/devel-tools/work-session-admin', <WorkSessionAdmin />, ROLE_SUPER),
-  featureRoute('/devel-tools/badge-state-manager', <BadgeStateManagerPage />, ROLE_SUPER, { featureId: 'badge-state-manager' }),
   // OCR Studio routes
   guardedFeatureRoute('/devel/ocr-studio', <OCRStudioPage />, ROLE_STAFF, { featureId: 'ocr-studio', priority: 4, featureName: 'OCR Studio' }),
   guardedRoute('/devel/ocr-setup-wizard', <OcrSetupWizardPage />, ROLE_STAFF),

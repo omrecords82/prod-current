@@ -258,7 +258,7 @@ class AdminErrorBoundary extends Component<Props, State> {
                                         size="small"
                                         variant="outlined"
                                         startIcon={<IconSettings />}
-                                        onClick={() => window.location.href = '/admin/settings'}
+                                        onClick={() => window.location.href = '/admin'}
                                     >
                                         Admin Settings
                                     </Button>
