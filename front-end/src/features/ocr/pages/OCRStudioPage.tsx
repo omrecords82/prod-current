@@ -12,10 +12,9 @@ import {
   TableChart as GridIcon,
   AutoAwesome as AgentIcon,
 } from '@mui/icons-material';
-import { Box, Button, Card, CardContent, Grid, Typography, useTheme } from '@mui/material';
+import { Box, Button, Card, CardContent, Grid, Typography } from '@mui/material';
 import React, { useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import OcrPipelineOverview from '../components/OcrPipelineOverview';
 import OcrStudioNav from '@/features/devel-tools/om-ocr/components/OcrStudioNav';
 
 
@@ -24,7 +23,6 @@ import OcrStudioNav from '@/features/devel-tools/om-ocr/components/OcrStudioNav'
 const OCRStudioPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const theme = useTheme();
   const { user } = useAuth();
   const isPortal = location.pathname.startsWith('/portal');
   const { selectedChurchId } = useOcrChurchSelector();
@@ -110,15 +108,6 @@ const OCRStudioPage: React.FC = () => {
           </Card>
         </Grid>
       </Grid>
-
-      {/* Live pipeline status */}
-      <OcrPipelineOverview
-        churchId={effectiveChurchId}
-        onStageClick={(stageKey) => {
-          if (stageKey === 'intake') navigate(routes.upload);
-          if (stageKey === 'agent_review') navigate(routes.review);
-        }}
-      />
     </Box>
   );
 };
