@@ -74,13 +74,23 @@ const AuthLogin = ({ subtitle, subtext }: loginType) => {
       } else {
         try {
           const { apiClient } = await import('@/api/utils/axiosInstance');
-          const me = await apiClient.get<{ onboarding?: { must_change_password?: boolean; table_configuration_completed?: boolean } }>('/api/onboarding/me');
+          const me = await apiClient.get<{
+            onboarding?: {
+              must_change_password?: boolean;
+              table_configuration_completed?: boolean;
+              layout_configuration_completed?: boolean;
+            };
+          }>('/api/onboarding/me');
           if (me.onboarding?.must_change_password) {
             navigate('/onboarding/change-password', { replace: true });
             return;
           }
           if (me.onboarding && !me.onboarding.table_configuration_completed) {
             navigate('/onboarding/record-tables', { replace: true });
+            return;
+          }
+          if (me.onboarding && !me.onboarding.layout_configuration_completed) {
+            navigate('/onboarding/record-layouts', { replace: true });
             return;
           }
         } catch {

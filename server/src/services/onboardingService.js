@@ -6,6 +6,7 @@ const crypto = require('crypto');
 const { getAppPool } = require('../config/db');
 const { generateOnboardingRequestId, isValidOnboardingRequestId } = require('../utils/onboardingId');
 const onboardingCrm = require('./onboardingCrmService');
+const layoutCatalog = require('./ocrLayoutCatalogService');
 
 const VALID_RECORD_TYPES = ['baptism', 'marriage', 'funeral', 'chrismation', 'custom', 'other'];
 const MODULE_TO_RECORD = { baptism: 'baptism', marriage: 'marriage', funeral: 'funeral', custom: 'custom' };
@@ -764,6 +765,7 @@ async function getRecordTableDraft(userId) {
     onboarding_request_id: ctx.request.onboarding_request_id,
     status: ctx.request.status,
     table_configuration_completed: !!ctx.request.table_configuration_completed,
+    layout_configuration_completed: !!ctx.request.layout_configuration_completed,
     must_change_password: ctx.mustChangePassword,
     tables,
   };
@@ -825,14 +827,97 @@ async function completeRecordTables(userId) {
   await pool.query(
     `UPDATE onboarding_requests SET
       table_configuration_completed = 1, first_login_completed = 1,
-      status = 'active', updated_at = NOW()
+      status = 'record_tables_review', updated_at = NOW()
      WHERE onboarding_request_id = ?`,
     [onboardingRequestId]
   );
 
   await recordEvent(pool, onboardingRequestId, 'table_configuration_completed', {
     actorUserId: userId,
+    newStatus: 'record_tables_review',
+  });
+
+  return getByPublicId(onboardingRequestId);
+}
+
+function parseLayoutSelections(raw) {
+  if (!raw) return {};
+  if (typeof raw === 'string') {
+    try { return JSON.parse(raw); } catch (_) { return {}; }
+  }
+  return raw;
+}
+
+async function getRecordLayoutDraft(userId) {
+  const ctx = await getForUser(userId);
+  if (!ctx) throw new Error('No onboarding request for this user');
+  const selectedTypes = ctx.request.selected_record_tables_json || [];
+  const saved = parseLayoutSelections(ctx.request.selected_layout_catalog_json);
+  const catalog = layoutCatalog.getLayoutsForRecordTypes(selectedTypes);
+
+  const byType = {};
+  for (const rt of selectedTypes) {
+    byType[rt] = catalog.filter((l) => l.record_type === rt);
+  }
+
+  return {
+    onboarding_request_id: ctx.request.onboarding_request_id,
+    status: ctx.request.status,
+    table_configuration_completed: !!ctx.request.table_configuration_completed,
+    layout_configuration_completed: !!ctx.request.layout_configuration_completed,
+    must_change_password: ctx.mustChangePassword,
+    selected_record_types: selectedTypes,
+    catalog_by_type: byType,
+    selections: saved,
+  };
+}
+
+async function saveRecordLayouts(userId, selections, { draft = true } = {}) {
+  const ctx = await getForUser(userId);
+  if (!ctx) throw new Error('No onboarding request for this user');
+  if (!ctx.request.table_configuration_completed) {
+    throw new Error('Complete record table configuration first');
+  }
+  if (ctx.request.layout_configuration_completed && !draft) {
+    throw new Error('Layout configuration already completed');
+  }
+
+  const selectedTypes = ctx.request.selected_record_tables_json || [];
+  layoutCatalog.validateSelections(selectedTypes, selections);
+
+  const pool = getAppPool();
+  await pool.query(
+    `UPDATE onboarding_requests SET selected_layout_catalog_json = ?, updated_at = NOW()
+     WHERE onboarding_request_id = ?`,
+    [JSON.stringify(selections), ctx.request.onboarding_request_id]
+  );
+
+  await recordEvent(pool, ctx.request.onboarding_request_id, draft ? 'layout_config_draft_saved' : 'layout_config_saved', {
+    actorUserId: userId,
+    metadata: { recordTypes: selectedTypes, draft },
+  });
+
+  return getRecordLayoutDraft(userId);
+}
+
+async function completeRecordLayouts(userId) {
+  const draft = await getRecordLayoutDraft(userId);
+  const pool = getAppPool();
+  const onboardingRequestId = draft.onboarding_request_id;
+  const selectedTypes = draft.selected_record_types || [];
+  layoutCatalog.validateSelections(selectedTypes, draft.selections);
+
+  await pool.query(
+    `UPDATE onboarding_requests SET
+      layout_configuration_completed = 1, status = 'active', updated_at = NOW()
+     WHERE onboarding_request_id = ?`,
+    [onboardingRequestId]
+  );
+
+  await recordEvent(pool, onboardingRequestId, 'layout_configuration_completed', {
+    actorUserId: userId,
     newStatus: 'active',
+    metadata: { selections: draft.selections },
   });
   await recordEvent(pool, onboardingRequestId, 'onboarding_activated', {
     actorUserId: userId,
@@ -888,22 +973,29 @@ async function linkCrm(onboardingRequestId, crmRecordId, req) {
 function getProgressSteps(request, events) {
   const stepKeys = [
     'submitted', 'reviewing', 'payment', 'provisioning',
-    'admin_created', 'first_login', 'table_configuration', 'active',
+    'admin_created', 'first_login', 'table_configuration', 'layout_configuration', 'active',
   ];
-  const statusToStep = {
-    submitted: 0,
-    reviewing: 1,
-    payment_pending: 2,
-    payment_received: 2,
-    provisioning: 3,
-    admin_account_created: 4,
-    awaiting_first_login: 5,
-    record_tables_review: 6,
-    active: 7,
-    rejected: -1,
-    cancelled: -1,
-  };
-  const currentIdx = statusToStep[request.status] ?? 0;
+  let currentIdx;
+  if (request.status === 'active') {
+    currentIdx = 8;
+  } else if (request.status === 'record_tables_review') {
+    if (!request.table_configuration_completed) currentIdx = 6;
+    else if (!request.layout_configuration_completed) currentIdx = 7;
+    else currentIdx = 8;
+  } else {
+    const statusToStep = {
+      submitted: 0,
+      reviewing: 1,
+      payment_pending: 2,
+      payment_received: 2,
+      provisioning: 3,
+      admin_account_created: 4,
+      awaiting_first_login: 5,
+      rejected: -1,
+      cancelled: -1,
+    };
+    currentIdx = statusToStep[request.status] ?? 0;
+  }
   const eventTimes = {};
   for (const ev of events) {
     if (ev.event_type === 'status_changed' && ev.new_status) {
@@ -1026,6 +1118,9 @@ module.exports = {
   getRecordTableDraft,
   saveRecordTables,
   completeRecordTables,
+  getRecordLayoutDraft,
+  saveRecordLayouts,
+  completeRecordLayouts,
   markFirstLoginComplete,
   updateAdminNotes,
   linkCrm,

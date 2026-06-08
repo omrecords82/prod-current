@@ -27,6 +27,7 @@ router.get('/me', async (req, res) => {
         status: ctx.request.status,
         must_change_password: ctx.mustChangePassword,
         table_configuration_completed: !!ctx.request.table_configuration_completed,
+        layout_configuration_completed: !!ctx.request.layout_configuration_completed,
         first_login_completed: !!ctx.request.first_login_completed,
         selected_record_tables: ctx.request.selected_record_tables_json,
       },
@@ -66,7 +67,46 @@ router.post('/record-tables/complete', async (req, res) => {
       return res.status(403).json({ success: false, message: 'Password must be changed first' });
     }
     const request = await onboarding.completeRecordTables(userId);
-    res.json({ success: true, request });
+    res.json({ success: true, request, redirectTo: '/onboarding/record-layouts' });
+  } catch (err) {
+    res.status(400).json({ success: false, message: err.message });
+  }
+});
+
+router.get('/record-layouts', async (req, res) => {
+  try {
+    const data = await onboarding.getRecordLayoutDraft(getUserId(req));
+    res.json({ success: true, ...data });
+  } catch (err) {
+    res.status(400).json({ success: false, message: err.message });
+  }
+});
+
+router.put('/record-layouts', async (req, res) => {
+  try {
+    const { selections, draft = true } = req.body;
+    if (!selections || typeof selections !== 'object') {
+      return res.status(400).json({ success: false, message: 'selections object required' });
+    }
+    const data = await onboarding.saveRecordLayouts(getUserId(req), selections, { draft });
+    res.json({ success: true, ...data });
+  } catch (err) {
+    res.status(400).json({ success: false, message: err.message });
+  }
+});
+
+router.post('/record-layouts/complete', async (req, res) => {
+  try {
+    const userId = getUserId(req);
+    const ctx = await onboarding.getForUser(userId);
+    if (ctx?.mustChangePassword) {
+      return res.status(403).json({ success: false, message: 'Password must be changed first' });
+    }
+    if (!ctx?.request?.table_configuration_completed) {
+      return res.status(403).json({ success: false, message: 'Record table configuration must be completed first' });
+    }
+    const request = await onboarding.completeRecordLayouts(userId);
+    res.json({ success: true, request, redirectTo: '/portal' });
   } catch (err) {
     res.status(400).json({ success: false, message: err.message });
   }

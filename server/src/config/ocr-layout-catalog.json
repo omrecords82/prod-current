@@ -1,0 +1,114 @@
+{
+  "version": "1.0.0",
+  "description": "Anonymized OCR layout families seen across OrthodoxMetrics parishes. No church names.",
+  "layouts": [
+    {
+      "id": "baptism-bilingual-ledger",
+      "record_type": "baptism",
+      "title": "Bilingual printed ledger (book spread)",
+      "description": "Pre-printed sacramental register with English and Church Slavonic headers, column grid, and numbered rows across a two-page spread.",
+      "extraction_mode": "tabular",
+      "era_hint": "1960s–2000s",
+      "thumbnail": "/onboarding/layout-thumbnails/baptism-bilingual-ledger.jpg"
+    },
+    {
+      "id": "baptism-handwritten-structured",
+      "record_type": "baptism",
+      "title": "Handwritten ledger — labeled fields",
+      "description": "Ruled book pages with semi-structured entries using labels like NAME OF PARENTS, ADDRESS, and DATE OF BIRTH.",
+      "extraction_mode": "form",
+      "era_hint": "1960s",
+      "thumbnail": "/onboarding/layout-thumbnails/baptism-handwritten-structured.jpg"
+    },
+    {
+      "id": "baptism-handwritten-narrative",
+      "record_type": "baptism",
+      "title": "Handwritten ledger — narrative blocks",
+      "description": "Ruled pages with block-style entries: SON OF / DAUGHTER OF, BORN, BAPTISM, godparents, and priest signature.",
+      "extraction_mode": "narrative_block",
+      "era_hint": "1960s–1970s",
+      "thumbnail": "/onboarding/layout-thumbnails/baptism-handwritten-narrative.jpg"
+    },
+    {
+      "id": "baptism-parish-slip",
+      "record_type": "baptism",
+      "title": "Parish record slip (printed form)",
+      "description": "Individual baptism certificates or slips with PART 1—BAPTISMS, label-and-line fields, often photographed singly or four per image.",
+      "extraction_mode": "form",
+      "era_hint": "1940s–1950s",
+      "thumbnail": "/onboarding/layout-thumbnails/baptism-parish-slip.jpg"
+    },
+    {
+      "id": "marriage-bilingual-ledger",
+      "record_type": "marriage",
+      "title": "Bilingual printed marriage ledger (book spread)",
+      "description": "Pre-printed marriage register with groom/bride columns, parents, witnesses, license notes, across a two-page spread.",
+      "extraction_mode": "tabular",
+      "era_hint": "1970s–2000s",
+      "thumbnail": "/onboarding/layout-thumbnails/marriage-bilingual-ledger.jpg"
+    },
+    {
+      "id": "marriage-handwritten-narrative",
+      "record_type": "marriage",
+      "title": "Handwritten marriage ledger — narrative",
+      "description": "Ruled book with SACRAMENT OF HOLY MATRIMONY entries: groom/bride, parents, ages, residence, civil ceremony notes.",
+      "extraction_mode": "narrative_block",
+      "era_hint": "1960s",
+      "thumbnail": "/onboarding/layout-thumbnails/marriage-handwritten-narrative.jpg"
+    },
+    {
+      "id": "marriage-parish-slip",
+      "record_type": "marriage",
+      "title": "Parish record slip — PART II MARRIAGES",
+      "description": "Printed marriage slips with groom and bride sections, witnesses, and rector signature; often photographed in batches.",
+      "extraction_mode": "multi_form",
+      "era_hint": "1940s",
+      "thumbnail": "/onboarding/layout-thumbnails/marriage-parish-slip.jpg"
+    },
+    {
+      "id": "marriage-handdrawn-grid",
+      "record_type": "marriage",
+      "title": "Hand-drawn marriage register grid",
+      "description": "Early ledger with hand-drawn columns; groom/bride details with vertical parent names in narrow columns.",
+      "extraction_mode": "tabular",
+      "era_hint": "1910s–1920s",
+      "thumbnail": "/onboarding/layout-thumbnails/marriage-handdrawn-grid.jpg"
+    },
+    {
+      "id": "funeral-bilingual-ledger",
+      "record_type": "funeral",
+      "title": "Bilingual printed death ledger (book spread)",
+      "description": "Pre-printed deaths register with date of death/burial, name, age, cause, priest, and interment columns.",
+      "extraction_mode": "tabular",
+      "era_hint": "1980s–2000s",
+      "thumbnail": "/onboarding/layout-thumbnails/funeral-bilingual-ledger.jpg"
+    },
+    {
+      "id": "funeral-handwritten-narrative",
+      "record_type": "funeral",
+      "title": "Handwritten death record list",
+      "description": "Ruled book with numbered entries: died/buried dates, age, cause, cemetery, and officiating priest.",
+      "extraction_mode": "narrative_block",
+      "era_hint": "1950s–1960s",
+      "thumbnail": "/onboarding/layout-thumbnails/funeral-handwritten-narrative.jpg"
+    },
+    {
+      "id": "funeral-handdrawn-grid",
+      "record_type": "funeral",
+      "title": "Hand-drawn funeral register grid",
+      "description": "Early table with Died, Buried, Name, Cause, confession, and burial location in hand-drawn columns.",
+      "extraction_mode": "tabular",
+      "era_hint": "1910s–1920s",
+      "thumbnail": "/onboarding/layout-thumbnails/funeral-handdrawn-grid.jpg"
+    },
+    {
+      "id": "funeral-year-list",
+      "record_type": "funeral",
+      "title": "Handwritten year-headed death list",
+      "description": "Free-form lists grouped by year with death/burial dates at the margin and narrative entry blocks.",
+      "extraction_mode": "narrative_block",
+      "era_hint": "1920s–1930s",
+      "thumbnail": "/onboarding/layout-thumbnails/funeral-year-list.jpg"
+    }
+  ]
+}

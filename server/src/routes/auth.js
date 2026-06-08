@@ -340,8 +340,16 @@ router.post('/login', async (req, res) => {
             try {
               const onboardingService = require('../services/onboardingService');
               const ob = await onboardingService.getByPublicId(user.onboarding_request_id);
-              if (ob && !ob.table_configuration_completed && ob.status !== 'active') {
-                return ob.first_login_completed ? '/onboarding/record-tables' : '/onboarding/change-password';
+              if (ob && ob.status !== 'active') {
+                if (!ob.first_login_completed || ob.status === 'awaiting_first_login') {
+                  return '/onboarding/change-password';
+                }
+                if (!ob.table_configuration_completed) {
+                  return '/onboarding/record-tables';
+                }
+                if (!ob.layout_configuration_completed) {
+                  return '/onboarding/record-layouts';
+                }
               }
             } catch (_) { /* ignore */ }
             return null;
