@@ -4,6 +4,7 @@
  */
 import PageContainer from '@/shared/ui/PageContainer';
 import { apiClient } from '@/api/utils/axiosInstance';
+import ZoomInIcon from '@mui/icons-material/ZoomIn';
 import {
   Alert,
   Box,
@@ -15,8 +16,13 @@ import {
   Checkbox,
   Chip,
   CircularProgress,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
   FormControlLabel,
   Grid,
+  IconButton,
   Stack,
   Step,
   StepLabel,
@@ -262,6 +268,7 @@ export const OnboardingRecordLayoutsPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [previewLayout, setPreviewLayout] = useState<CatalogLayout | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -369,19 +376,42 @@ export const OnboardingRecordLayoutsPage: React.FC = () => {
                       variant="outlined"
                       sx={{
                         height: '100%',
+                        display: 'flex',
+                        flexDirection: 'column',
                         borderColor: selected ? GOLD : 'divider',
                         borderWidth: selected ? 2 : 1,
                         bgcolor: selected ? 'rgba(212, 175, 55, 0.06)' : 'background.paper',
                       }}
                     >
-                      <CardActionArea onClick={() => toggleLayout(rt, layout.id)} sx={{ height: '100%' }}>
+                      <Box sx={{ position: 'relative' }}>
                         <CardMedia
                           component="img"
                           height="140"
                           image={layout.thumbnail}
                           alt={layout.title}
-                          sx={{ objectFit: 'cover', objectPosition: 'top' }}
+                          sx={{
+                            objectFit: 'cover',
+                            objectPosition: 'top',
+                            cursor: 'zoom-in',
+                          }}
+                          onClick={() => setPreviewLayout(layout)}
                         />
+                        <IconButton
+                          size="small"
+                          aria-label={`Enlarge ${layout.title} preview`}
+                          onClick={() => setPreviewLayout(layout)}
+                          sx={{
+                            position: 'absolute',
+                            top: 8,
+                            right: 8,
+                            bgcolor: 'rgba(255,255,255,0.9)',
+                            '&:hover': { bgcolor: 'rgba(255,255,255,1)' },
+                          }}
+                        >
+                          <ZoomInIcon fontSize="small" />
+                        </IconButton>
+                      </Box>
+                      <CardActionArea onClick={() => toggleLayout(rt, layout.id)} sx={{ flexGrow: 1 }}>
                         <CardContent>
                           <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
                             <Typography variant="subtitle1" fontWeight={700} sx={{ pr: 1 }}>
@@ -405,6 +435,49 @@ export const OnboardingRecordLayoutsPage: React.FC = () => {
             </Grid>
           </Box>
         ))}
+
+        <Dialog
+          open={!!previewLayout}
+          onClose={() => setPreviewLayout(null)}
+          maxWidth="md"
+          fullWidth
+        >
+          {previewLayout && (
+            <>
+              <DialogTitle sx={{ color: NAVY }}>{previewLayout.title}</DialogTitle>
+              <DialogContent dividers>
+                <Box
+                  component="img"
+                  src={previewLayout.thumbnail}
+                  alt={previewLayout.title}
+                  sx={{
+                    width: '100%',
+                    maxHeight: '70vh',
+                    objectFit: 'contain',
+                    bgcolor: 'grey.900',
+                    borderRadius: 1,
+                  }}
+                />
+                <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
+                  {previewLayout.description}
+                </Typography>
+                <Stack direction="row" spacing={1} sx={{ mt: 1.5 }} flexWrap="wrap" useFlexGap>
+                  {previewLayout.era_hint && (
+                    <Chip size="small" label={previewLayout.era_hint} variant="outlined" />
+                  )}
+                  <Chip
+                    size="small"
+                    label={previewLayout.extraction_mode.replace('_', ' ')}
+                    variant="outlined"
+                  />
+                </Stack>
+              </DialogContent>
+              <DialogActions>
+                <Button onClick={() => setPreviewLayout(null)}>Close</Button>
+              </DialogActions>
+            </>
+          )}
+        </Dialog>
 
         <Stack direction="row" spacing={2}>
           <Button variant="outlined" onClick={() => navigate('/onboarding/record-tables')} disabled={busy}>

@@ -39,6 +39,15 @@
       "thumbnail": "/onboarding/layout-thumbnails/baptism-parish-slip.jpg"
     },
     {
+      "id": "baptism-simple-hand-grid-1930s",
+      "record_type": "baptism",
+      "title": "Hand-drawn baptism register grid (1930s)",
+      "description": "Simple five-column hand-ruled page: child name, birth date, baptism date, parents, and sponsors in cursive rows.",
+      "extraction_mode": "tabular",
+      "era_hint": "1920s–1930s",
+      "thumbnail": "/onboarding/layout-thumbnails/baptism-simple-hand-grid-1930s.jpg"
+    },
+    {
       "id": "marriage-bilingual-ledger",
       "record_type": "marriage",
       "title": "Bilingual printed marriage ledger (book spread)",
@@ -96,10 +105,19 @@
       "id": "funeral-handdrawn-grid",
       "record_type": "funeral",
       "title": "Hand-drawn funeral register grid",
-      "description": "Early table with Died, Buried, Name, Cause, confession, and burial location in hand-drawn columns.",
+      "description": "Early six-column table: Died, Buried, Name, Cause of death, confession/communion, and officiant with burial location.",
       "extraction_mode": "tabular",
       "era_hint": "1910s–1920s",
       "thumbnail": "/onboarding/layout-thumbnails/funeral-handdrawn-grid.jpg"
+    },
+    {
+      "id": "funeral-two-column-narrative-1939",
+      "record_type": "funeral",
+      "title": "Two-column handwritten death list",
+      "description": "Unruled page with paired columns of narrative death entries: name, age, origin, died/buried dates, cause, and cemetery.",
+      "extraction_mode": "narrative_block",
+      "era_hint": "1930s–1940s",
+      "thumbnail": "/onboarding/layout-thumbnails/funeral-two-column-narrative-1939.jpg"
     },
     {
       "id": "funeral-year-list",
