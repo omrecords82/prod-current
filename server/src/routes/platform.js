@@ -18,9 +18,109 @@
 
 const express = require('express');
 const { requireServiceToken } = require('../middleware/serviceTokenAuth');
+const { requireRole } = require('../middleware/auth');
+const { getAppPool } = require('../config/db');
 const { queryPlatform } = require('../services/databaseService');
 
 const router = express.Router();
+
+function parseJson(val, fallback = null) {
+  if (val == null) return fallback;
+  if (typeof val === 'object') return val;
+  try { return JSON.parse(val); } catch { return fallback; }
+}
+
+// ── App workflow catalog (session auth — OMAI CP / OM admin) ───────────────
+router.get('/workflow-catalog', requireRole(['super_admin', 'admin']), async (req, res) => {
+  try {
+    const pool = getAppPool();
+    const [workflows] = await pool.query(
+      `SELECT w.workflow_key, w.workflow_name, w.primary_app, w.entry_type,
+              w.system_level_key, w.workflow_sequence, w.lifecycle_status,
+              w.completion_state, v.version AS active_version
+       FROM app_workflows w
+       LEFT JOIN app_workflow_versions v ON v.id = w.active_version_id
+       ORDER BY w.workflow_sequence, w.workflow_name`
+    );
+    res.json({ app_key: 'om', database: 'orthodoxmetrics_db', workflows });
+  } catch (err) {
+    console.error('[platform] workflow-catalog list failed:', err.message);
+    res.status(500).json({ error: 'workflow_catalog_failed' });
+  }
+});
+
+router.get('/workflow-catalog/:workflowKey', requireRole(['super_admin', 'admin']), async (req, res) => {
+  try {
+    const pool = getAppPool();
+    const { workflowKey } = req.params;
+    const [wfRows] = await pool.query(
+      `SELECT w.*, v.version, v.route_entrypoints, v.runtime_state_source
+       FROM app_workflows w
+       LEFT JOIN app_workflow_versions v ON v.id = w.active_version_id
+       WHERE w.workflow_key = ?`,
+      [workflowKey]
+    );
+    if (!wfRows.length) return res.status(404).json({ error: 'not_found' });
+    const wf = wfRows[0];
+    const [steps] = await pool.query(
+      `SELECT s.*, p.pipeline_name, p.step_definitions
+       FROM app_workflow_steps s
+       LEFT JOIN app_workflow_pipelines p ON p.pipeline_key = s.pipeline_key
+       WHERE s.workflow_version_id = (
+         SELECT active_version_id FROM app_workflows WHERE id = ?
+       )
+       ORDER BY s.step_sequence`,
+      [wf.id]
+    );
+    const stepIds = steps.map((s) => s.id);
+    let components = [];
+    if (stepIds.length) {
+      const [compRows] = await pool.query(
+        'SELECT * FROM app_workflow_step_components WHERE workflow_step_id IN (?) ORDER BY workflow_step_id, component_sequence',
+        [stepIds]
+      );
+      components = compRows;
+    }
+    const byStep = new Map();
+    for (const c of components) {
+      if (!byStep.has(c.workflow_step_id)) byStep.set(c.workflow_step_id, []);
+      byStep.get(c.workflow_step_id).push(c);
+    }
+    res.json({
+      workflow: {
+        ...wf,
+        route_entrypoints: parseJson(wf.route_entrypoints, []),
+        steps: steps.map((s) => ({
+          ...s,
+          runtime_status_values: parseJson(s.runtime_status_values, []),
+          pipeline_step_definitions: parseJson(s.step_definitions, []),
+          required_components: byStep.get(s.id) || [],
+        })),
+      },
+    });
+  } catch (err) {
+    console.error('[platform] workflow-catalog detail failed:', err.message);
+    res.status(500).json({ error: 'workflow_catalog_failed' });
+  }
+});
+
+router.get('/workflow-refs', requireRole(['super_admin', 'admin']), async (req, res) => {
+  try {
+    const pool = getAppPool();
+    await pool.query(
+      `INSERT INTO omstudio_workflow_refs (app_key, workflow_key, workflow_name, active_version, completion_state, entry_type)
+       SELECT w.primary_app, w.workflow_key, w.workflow_name, v.version, w.completion_state, w.entry_type
+       FROM app_workflows w LEFT JOIN app_workflow_versions v ON v.id = w.active_version_id
+       ON DUPLICATE KEY UPDATE workflow_name=VALUES(workflow_name), active_version=VALUES(active_version),
+         completion_state=VALUES(completion_state), entry_type=VALUES(entry_type), last_synced_at=CURRENT_TIMESTAMP`
+    );
+    const [refs] = await pool.query('SELECT * FROM omstudio_workflow_refs ORDER BY workflow_key');
+    res.json({ app_key: 'om', refs });
+  } catch (err) {
+    console.error('[platform] workflow-refs failed:', err.message);
+    res.status(500).json({ error: 'workflow_refs_failed' });
+  }
+});
 
 router.use(requireServiceToken);
 
