@@ -1,0 +1,134 @@
+{
+  "version": "1.0.0",
+  "language": "en",
+  "description": "Global English Orthodox parish record layout reference corpus. Images are anonymized; no church-identifying metadata.",
+  "sample_records_root": "docs/sample_records",
+  "layouts": [
+    {
+      "catalog_layout_id": "baptism-bilingual-ledger",
+      "record_type": "baptism",
+      "extraction_mode": "tabular",
+      "source_sample": "baptism/layout1/IMG_2024_10_18_11_04_55S.jpg",
+      "signature_phrases": ["BAPTISM", "BIRTH", "SPONSORS", "PARENTS", "RECEPTION", "CHURCH SLAVONIC", "КРЕЩЕНИЕ"],
+      "header_y_threshold": 0.12,
+      "column_bands": [
+        { "key": "number", "start": 0.0, "end": 0.06 },
+        { "key": "date", "start": 0.06, "end": 0.15 },
+        { "key": "child_name", "start": 0.15, "end": 0.35 },
+        { "key": "parents", "start": 0.35, "end": 0.55 },
+        { "key": "sponsors", "start": 0.55, "end": 0.75 },
+        { "key": "priest", "start": 0.75, "end": 0.90 },
+        { "key": "notes", "start": 0.90, "end": 1.0 }
+      ]
+    },
+    {
+      "catalog_layout_id": "baptism-handwritten-narrative",
+      "record_type": "baptism",
+      "extraction_mode": "narrative_block",
+      "source_sample": "baptism/layout2/IMG_2024_10_25_12_30_55S.jpg",
+      "signature_phrases": ["SON OF", "DAUGHTER OF", "BORN", "BAPTISM", "GODPARENTS", "SPONSORS"],
+      "header_y_threshold": 0.15
+    },
+    {
+      "catalog_layout_id": "baptism-handwritten-structured",
+      "record_type": "baptism",
+      "extraction_mode": "form",
+      "source_sample": "baptism/layout3/IMG_2025_03_05_10_06_18S.jpg",
+      "signature_phrases": ["NAME OF PARENTS", "ADDRESS", "DATE OF BIRTH", "NAME OF CHILD", "BAPTISM"],
+      "header_y_threshold": 0.15
+    },
+    {
+      "catalog_layout_id": "baptism-parish-slip",
+      "record_type": "baptism",
+      "extraction_mode": "multi_form",
+      "source_sample": "baptism/layout4/IMG_2025_03_05_10_22_06S.jpg",
+      "signature_phrases": ["PART 1", "BAPTISMS", "PARISH RECORD", "CERTIFICATE", "SPONSORS"],
+      "header_y_threshold": 0.10
+    },
+    {
+      "catalog_layout_id": "marriage-bilingual-ledger",
+      "record_type": "marriage",
+      "extraction_mode": "tabular",
+      "source_sample": "marriage/layout1/IMG_2024_10_22_11_27_20S.jpg",
+      "signature_phrases": ["MARRIAGE", "GROOM", "BRIDE", "WITNESSES", "MATRIMONY", "ВЕНЧАНИЕ"],
+      "header_y_threshold": 0.15,
+      "column_bands": [
+        { "key": "number", "start": 0.02, "end": 0.06 },
+        { "key": "date", "start": 0.06, "end": 0.125 },
+        { "key": "groom", "start": 0.125, "end": 0.29 },
+        { "key": "groom_parents", "start": 0.29, "end": 0.345 },
+        { "key": "bride", "start": 0.345, "end": 0.475 },
+        { "key": "bride_parents", "start": 0.475, "end": 0.55 },
+        { "key": "priest", "start": 0.55, "end": 0.645 },
+        { "key": "witnesses", "start": 0.645, "end": 0.825 },
+        { "key": "license", "start": 0.825, "end": 1.0 }
+      ]
+    },
+    {
+      "catalog_layout_id": "marriage-handwritten-narrative",
+      "record_type": "marriage",
+      "extraction_mode": "narrative_block",
+      "source_sample": "marriage/layout2/IMG_2024_10_25_12_34_52S.jpg",
+      "signature_phrases": ["HOLY MATRIMONY", "GROOM", "BRIDE", "MARRIED", "CIVIL CEREMONY"],
+      "header_y_threshold": 0.15
+    },
+    {
+      "catalog_layout_id": "marriage-parish-slip",
+      "record_type": "marriage",
+      "extraction_mode": "multi_form",
+      "source_sample": "marriage/layout3/IMG_2025_03_12_12_37_53S.jpg",
+      "signature_phrases": ["PART II", "MARRIAGES", "GROOM", "BRIDE", "WITNESSES"],
+      "header_y_threshold": 0.10
+    },
+    {
+      "catalog_layout_id": "marriage-handdrawn-grid",
+      "record_type": "marriage",
+      "extraction_mode": "tabular",
+      "source_sample": "marriage/layout4/IMG_2025_03_28_13_19_20S.jpg",
+      "signature_phrases": ["MARRIAGE", "GROOM", "BRIDE", "PARENTS"],
+      "header_y_threshold": 0.15
+    },
+    {
+      "catalog_layout_id": "funeral-bilingual-ledger",
+      "record_type": "funeral",
+      "extraction_mode": "tabular",
+      "source_sample": "funeral/layout1/IMG_2024_10_22_11_39_09S.jpg",
+      "signature_phrases": ["DEATH", "BURIAL", "DECEASED", "CEMETERY", "PRIEST", "ПОГРЕБЕНИЕ"],
+      "header_y_threshold": 0.26,
+      "column_bands": [
+        { "key": "number", "start": 0.0, "end": 0.06 },
+        { "key": "date", "start": 0.06, "end": 0.15 },
+        { "key": "deceased_name", "start": 0.15, "end": 0.35 },
+        { "key": "age", "start": 0.35, "end": 0.42 },
+        { "key": "cause", "start": 0.42, "end": 0.60 },
+        { "key": "burial_place", "start": 0.60, "end": 0.78 },
+        { "key": "priest", "start": 0.78, "end": 0.90 },
+        { "key": "notes", "start": 0.90, "end": 1.0 }
+      ]
+    },
+    {
+      "catalog_layout_id": "funeral-handwritten-narrative",
+      "record_type": "funeral",
+      "extraction_mode": "narrative_block",
+      "source_sample": "funeral/layout2/IMG_2024_10_24_04_47_33S.jpg",
+      "signature_phrases": ["DIED", "BURIED", "CEMETERY", "CAUSE", "AGE", "PRIEST"],
+      "header_y_threshold": 0.15
+    },
+    {
+      "catalog_layout_id": "funeral-handdrawn-grid",
+      "record_type": "funeral",
+      "extraction_mode": "tabular",
+      "source_sample": "funeral/layout4/IMG_2025_03_28_12_51_55S.jpg",
+      "signature_phrases": ["DIED", "BURIED", "NAME", "CAUSE", "CONFESSION"],
+      "header_y_threshold": 0.15
+    },
+    {
+      "catalog_layout_id": "funeral-year-list",
+      "record_type": "funeral",
+      "extraction_mode": "narrative_block",
+      "source_sample": "funeral/layout5/IMG_2025_03_28_12_52_18S.jpg",
+      "signature_phrases": ["19", "DIED", "BURIED", "YEAR"],
+      "header_y_threshold": 0.10
+    }
+  ]
+}

@@ -65,6 +65,9 @@ async function main() {
   await copyDir('src/services', 'services');
   await copyDir('src/utils', 'utils');
   await copyDir('src/config', 'config');
+  await copyDir('src/storage/ocr-reference-corpus', 'storage/ocr-reference-corpus', {
+    filter: () => true,
+  });
   await copyDir('src/models', 'models');
   await copyDir('src/dal', 'dal');
   await copyDir('src/integrations', 'integrations');

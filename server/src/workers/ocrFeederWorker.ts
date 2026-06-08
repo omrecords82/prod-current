@@ -1982,6 +1982,63 @@ async function processPage(tenantPool: Pool, page: PageRow, churchId: number): P
         ) as any[];
         templateId = tplJobRows[0]?.layout_template_id || null;
 
+        // Score global + church catalog templates from OCR text (English corpus)
+        if (!templateId && (ocrRawText || visionResultJson)) {
+          let jobLanguage = 'en';
+          try {
+            const [langRows] = await platformPool.query(
+              `SELECT language FROM ocr_jobs WHERE id = ?`, [page.job_id]
+            ) as any[];
+            if (langRows[0]?.language) jobLanguage = langRows[0].language;
+          } catch (_: any) { /* best effort */ }
+
+          const langCode = String(jobLanguage || 'en').toLowerCase();
+          const isEnglishJob = !langCode || langCode === 'en' || langCode === 'eng' || langCode === 'english';
+
+          if (isEnglishJob) {
+            try {
+              const poolParams: any[] = [recordType];
+              let churchClause = '';
+              if (jobChurchId) {
+                churchClause = ' AND (church_id IS NULL OR church_id = ?)';
+                poolParams.push(jobChurchId);
+              } else {
+                churchClause = ' AND church_id IS NULL';
+              }
+              const [poolRows] = await platformPool.query(
+                `SELECT id, extraction_mode, column_bands, header_y_threshold, record_regions, learned_params, status, church_id
+                 FROM ocr_extractors
+                 WHERE record_type = ?
+                   AND (status = 'approved' OR status = 'candidate' OR status IS NULL)
+                   AND JSON_UNQUOTE(JSON_EXTRACT(learned_params, '$.catalog_layout_id')) IS NOT NULL
+                   ${churchClause}`,
+                poolParams
+              ) as any[];
+
+              if (poolRows.length > 0) {
+                const { scoreTemplatesFromVision } = require('../services/layoutTemplateMatcher');
+                const scored = scoreTemplatesFromVision(poolRows, visionResultJson, ocrRawText, {
+                  churchId: jobChurchId,
+                  language: jobLanguage,
+                });
+                if (scored.best) {
+                  templateId = scored.best.id;
+                  extractorRow = scored.best.row;
+                  extractionMode = scored.best.row.extraction_mode || 'tabular';
+                  if (scored.best.row.column_bands) {
+                    templateBands = typeof scored.best.row.column_bands === 'string'
+                      ? JSON.parse(scored.best.row.column_bands) : scored.best.row.column_bands;
+                  }
+                  templateHeaderY = scored.best.row.header_y_threshold;
+                  console.log(`  [LayoutMatch] Page ${page.id}: template ${templateId} (score=${scored.best.score.toFixed(1)}, candidates=${scored.candidates.length})`);
+                }
+              }
+            } catch (matchErr: any) {
+              console.warn(`  [LayoutMatch] Page ${page.id}: corpus match failed (non-blocking): ${matchErr.message}`);
+            }
+          }
+        }
+
         // Fallback: church-specific default template, then global default
         if (!templateId) {
           const tplParams: any[] = [recordType];
@@ -2008,7 +2065,7 @@ async function processPage(tenantPool: Pool, page: PageRow, churchId: number): P
             }
             templateHeaderY = defaultRows[0].header_y_threshold;
           }
-        } else {
+        } else if (templateId && !extractorRow) {
           // Load explicit template
           const [tplRows] = await platformPool.query(
             `SELECT id, extraction_mode, column_bands, header_y_threshold, record_regions, learned_params, status

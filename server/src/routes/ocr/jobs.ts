@@ -4074,7 +4074,20 @@ function createRouters(upload: any) {
       let uploadLayoutTemplateId: number | null = null;
       if (recordType !== 'custom') {
         try {
+          const globalCorpus = require('../../services/globalLayoutCorpusService');
           const onboardingLayoutExtractor = require('../../services/onboardingLayoutExtractorService');
+
+          if (globalCorpus.isEnglishLanguage(language)) {
+            const globalEnsured = await globalCorpus.ensureGlobalEnglishLayouts(recordType);
+            console.log(`GLOBAL_LAYOUT_CORPUS ${JSON.stringify({
+              recordType,
+              language,
+              created: globalEnsured.created,
+              existing: globalEnsured.existing,
+              catalogLayoutIds: globalEnsured.catalogLayoutIds,
+            })}`);
+          }
+
           const ensured = await onboardingLayoutExtractor.ensureOnboardingLayoutCandidates(churchId, recordType);
           uploadLayoutTemplateId = await onboardingLayoutExtractor.resolveUploadLayoutTemplateId(churchId, recordType);
           console.log(`ONBOARDING_LAYOUT_WIRED ${JSON.stringify({
@@ -4086,7 +4099,7 @@ function createRouters(upload: any) {
             jobLayoutTemplateId: uploadLayoutTemplateId,
           })}`);
         } catch (onbErr: any) {
-          console.warn(`[OCR Upload] Onboarding layout wiring failed (non-blocking): ${onbErr.message}`);
+          console.warn(`[OCR Upload] Layout corpus wiring failed (non-blocking): ${onbErr.message}`);
         }
       }
 
@@ -4297,7 +4310,21 @@ function createRouters(upload: any) {
       let batchLayoutTemplateId: number | null = null;
       if (recordType !== 'custom') {
         try {
+          const globalCorpus = require('../../services/globalLayoutCorpusService');
           const onboardingLayoutExtractor = require('../../services/onboardingLayoutExtractorService');
+
+          if (globalCorpus.isEnglishLanguage(language)) {
+            const globalEnsured = await globalCorpus.ensureGlobalEnglishLayouts(recordType);
+            console.log(`GLOBAL_LAYOUT_CORPUS ${JSON.stringify({
+              recordType,
+              language,
+              source: 'batch_import',
+              created: globalEnsured.created,
+              existing: globalEnsured.existing,
+              catalogLayoutIds: globalEnsured.catalogLayoutIds,
+            })}`);
+          }
+
           const ensured = await onboardingLayoutExtractor.ensureOnboardingLayoutCandidates(churchId, recordType);
           batchLayoutTemplateId = await onboardingLayoutExtractor.resolveUploadLayoutTemplateId(churchId, recordType);
           console.log(`ONBOARDING_LAYOUT_WIRED ${JSON.stringify({
@@ -4310,7 +4337,7 @@ function createRouters(upload: any) {
             jobLayoutTemplateId: batchLayoutTemplateId,
           })}`);
         } catch (onbErr: any) {
-          console.warn(`[Batch Import] Onboarding layout wiring failed (non-blocking): ${onbErr.message}`);
+          console.warn(`[Batch Import] Layout corpus wiring failed (non-blocking): ${onbErr.message}`);
         }
       }
 

@@ -13,6 +13,7 @@
 !front-end/public/og/*.png
 !front-end/public/images/**/*.png
 !front-end/public/onboarding/layout-thumbnails/*.jpg
+!server/src/storage/ocr-reference-corpus/en/*.jpg
 
 node_modules/
 **/node_modules/
