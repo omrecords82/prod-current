@@ -227,7 +227,7 @@ const workflowApiGone = (req: any, res: any) => {
   console.warn(`[Retired] ${req.method} ${req.originalUrl} — legacy workflow API`);
   res.status(410).json({
     error: 'gone',
-    message: 'Legacy workflow APIs were retired. Use app-local workflow catalog (in progress).',
+    message: 'Legacy workflow APIs were retired. Use GET /api/platform/workflow-catalog.',
     retired_at: '2026-06-08',
   });
 };

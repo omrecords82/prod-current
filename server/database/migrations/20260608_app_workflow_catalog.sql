@@ -542,3 +542,61 @@ ON DUPLICATE KEY UPDATE
   last_synced_at = CURRENT_TIMESTAMP;
 
 SELECT 'app_workflow_catalog v1.1 seeded' AS message;
+
+-- ─── v1.2: component seeds for certificate, identity, ocr setup workflows ─────
+
+INSERT INTO app_workflow_step_components
+  (workflow_step_id, component_key, component_type, component_sequence, source_app, source_path, implementation_state)
+SELECT s.id, 'cert.generator.page', 'ui', 10, 'om', 'front-end/src/features/certificates/CertificateGeneratorPage.tsx', 'exists'
+FROM app_workflow_steps s
+JOIN app_workflow_versions v ON v.id = s.workflow_version_id
+JOIN app_workflows w ON w.id = v.workflow_id
+WHERE w.workflow_key = 'records.certificate.generate' AND s.step_key = 'select_record'
+ON DUPLICATE KEY UPDATE implementation_state = 'exists';
+
+INSERT INTO app_workflow_step_components
+  (workflow_step_id, component_key, component_type, component_sequence, source_app, source_path, implementation_state)
+SELECT s.id, 'cert.portal.page', 'ui', 10, 'om', 'front-end/src/features/portal/PortalCertificatesPage.tsx', 'exists'
+FROM app_workflow_steps s
+JOIN app_workflow_versions v ON v.id = s.workflow_version_id
+JOIN app_workflows w ON w.id = v.workflow_id
+WHERE w.workflow_key = 'records.certificate.generate' AND s.step_key = 'choose_template'
+ON DUPLICATE KEY UPDATE implementation_state = 'exists';
+
+INSERT INTO app_workflow_step_components
+  (workflow_step_id, component_key, component_type, component_sequence, source_app, source_path, api_method, api_path, implementation_state)
+SELECT s.id, 'users.pending.page', 'ui', 10, 'om', 'front-end/src/features/admin/control-panel/PendingMembersPage.tsx', 'GET', '/api/admin/users', 'exists'
+FROM app_workflow_steps s
+JOIN app_workflow_versions v ON v.id = s.workflow_version_id
+JOIN app_workflows w ON w.id = v.workflow_id
+WHERE w.workflow_key = 'identity.user.admin' AND s.step_key = 'list_users'
+ON DUPLICATE KEY UPDATE implementation_state = 'exists';
+
+INSERT INTO app_workflow_step_components
+  (workflow_step_id, component_key, component_type, component_sequence, source_app, source_path, api_method, api_path, implementation_state)
+SELECT s.id, 'users.church.api', 'api', 20, 'om', 'server/src/routes/admin/churches-compat.js', 'POST', '/api/admin/churches/:id/users', 'exists'
+FROM app_workflow_steps s
+JOIN app_workflow_versions v ON v.id = s.workflow_version_id
+JOIN app_workflows w ON w.id = v.workflow_id
+WHERE w.workflow_key = 'identity.user.admin' AND s.step_key = 'create_or_edit'
+ON DUPLICATE KEY UPDATE implementation_state = 'exists';
+
+INSERT INTO app_workflow_step_components
+  (workflow_step_id, component_key, component_type, component_sequence, source_app, source_path, implementation_state)
+SELECT s.id, 'ocr.setup.wizard', 'ui', 10, 'om', 'front-end/src/features/devel-tools/om-ocr/pages/OcrSetupWizardPage.tsx', 'exists'
+FROM app_workflow_steps s
+JOIN app_workflow_versions v ON v.id = s.workflow_version_id
+JOIN app_workflows w ON w.id = v.workflow_id
+WHERE w.workflow_key = 'ocr.setup.wizard' AND s.step_key = 'select_church'
+ON DUPLICATE KEY UPDATE implementation_state = 'exists';
+
+INSERT INTO app_workflow_step_components
+  (workflow_step_id, component_key, component_type, component_sequence, source_app, source_path, data_table, implementation_state)
+SELECT s.id, 'ocr.setup.state', 'data', 20, 'om', 'server/src/routes/ocr/settings.ts', 'ocr_setup_state', 'partial'
+FROM app_workflow_steps s
+JOIN app_workflow_versions v ON v.id = s.workflow_version_id
+JOIN app_workflows w ON w.id = v.workflow_id
+WHERE w.workflow_key = 'ocr.setup.wizard' AND s.step_key = 'feeder_settings'
+ON DUPLICATE KEY UPDATE implementation_state = 'partial';
+
+SELECT 'app_workflow_catalog v1.2 seeded' AS message;
