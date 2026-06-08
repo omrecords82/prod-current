@@ -26,6 +26,7 @@ import type { Pool, RowDataPacket } from 'mysql2/promise';
 import * as path from 'path';
 import sharp from 'sharp';
 import { promisify } from 'util';
+import { classifyOcrFailure, formatClassifiedError } from '../services/ocr/failureClassification';
 import { normalizeBackground } from '../ocr/preprocessing/bgNormalize';
 import { detectAndRemoveBorder } from '../ocr/preprocessing/borderDetection';
 import { gridPreserveDenoise } from '../ocr/preprocessing/denoise';
@@ -3230,9 +3231,13 @@ async function workerLoop(): Promise<void> {
           }, null, 'ocr-worker');
 
           try {
+            const classifiedErr = formatClassifiedError(
+              classifyOcrFailure(jobError.message || ''),
+              jobError.message || 'Unknown error'
+            );
             await platformPool.query(
               `UPDATE ocr_jobs SET status = 'error', error_regions = ? WHERE id = ?`,
-              [(jobError.message || 'Unknown error').substring(0, 500), job.id]
+              [classifiedErr.substring(0, 500), job.id]
             );
           } catch (updateErr: any) {
             logStructuredError(`[OCR Worker] Failed to mark job ${job.id} as error`, updateErr);
