@@ -17,6 +17,7 @@ import './index.css';
 // Do NOT import legacy CSS files (ag-grid.css, ag-theme-*.css) — they conflict with the
 // Theming API and cause error #239.
 
+import { initCpEmbedSessionBridge } from './shared/lib/embedSessionBridge';
 import { setupGlobalErrorHandlers } from './shared/lib/globalErrorHandler';
 import './shared/lib/debugLogger'; // Initialize debug logger
 import { registerAgGridModulesOnce } from './agGridModules';
@@ -28,6 +29,9 @@ registerAgGridModulesOnce();
 
 // Initialize global error handlers for OMAI
 setupGlobalErrorHandlers();
+
+// OMAI CP iframe: accept JWT handoff from parent after session-bridge
+initCpEmbedSessionBridge();
 
 // Initialize DEV-only error handlers for debugging React errors
 if (import.meta.env.DEV) {

@@ -163,6 +163,16 @@ class ApiClient {
           }
         }
 
+        if (config.data instanceof FormData && config.headers) {
+          if (typeof (config.headers as any).delete === 'function') {
+            (config.headers as any).delete('Content-Type');
+            (config.headers as any).delete('content-type');
+          } else {
+            delete config.headers['Content-Type'];
+            delete config.headers['content-type'];
+          }
+        }
+
         // fullUrl was already declared above, reuse it for logging
         console.log(`🌐 API Request: ${config.method?.toUpperCase()} ${fullUrl}`);
         console.log(`🔧 BaseURL: "${config.baseURL || 'none'}", URL: "${config.url}"`);
@@ -206,7 +216,10 @@ class ApiClient {
         }
 
         // Create enhanced error object with HTTP details preserved
-        const enhancedError = new Error(error.response?.data?.message || error.message || 'Request failed');
+        const body = error.response?.data;
+        const enhancedError = new Error(
+          body?.message || body?.error || error.message || 'Request failed',
+        );
         (enhancedError as any).status = error.response?.status;
         (enhancedError as any).code = error.code;
         (enhancedError as any).isNetworkError = !error.response;

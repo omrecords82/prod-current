@@ -381,8 +381,8 @@ const UploadRecordsPage: React.FC = () => {
         formData.append('churchId', effectiveChurchId.toString());
         formData.append('recordType', recordType);
         formData.append('language', ocrLanguage);
-        const response: any = await apiClient.post('/api/ocr/jobs/upload', formData);
-        const jobs = response.data?.jobs || response.jobs || [];
+        const response: any = await apiClient.post('/api/ocr/jobs/upload', formData, { timeout: 120000 });
+        const jobs = response?.jobs || response?.data?.jobs || [];
         const jobId = jobs.length > 0 ? String(jobs[0].id) : undefined;
         if (jobId) {
           setQueue((q) => q.map((f) => (f.id === item.id ? { ...f, status: 'uploading' as const, progress: 80, jobId } : f)));
@@ -392,7 +392,8 @@ const UploadRecordsPage: React.FC = () => {
           setQueue((q) => q.map((f) => (f.id === item.id ? { ...f, status: 'error', progress: 100, error: 'Upload OK but no job created' } : f)));
         }
       } catch (err: any) {
-        const serverMsg = err?.response?.data?.message || err?.response?.data?.error || err?.message || 'Upload failed';
+        const body = err?.originalError?.response?.data ?? err?.response?.data;
+        const serverMsg = body?.error || body?.message || err?.message || 'Upload failed';
         setQueue((q) => q.map((f) => (f.id === item.id ? { ...f, status: 'error', error: serverMsg } : f)));
       }
     }
@@ -641,7 +642,8 @@ const UploadRecordsPage: React.FC = () => {
                     {failedCount === 0
                       ? 'Images submitted. OCR and agent extraction run automatically — track progress in My Uploads, then confirm fields in Review.'
                       : failedCount === queue.length
-                        ? 'All uploads failed. Please check your files and try again.'
+                        ? (queue.find((f) => f.error)?.error
+                          || 'All uploads failed. Please check your files and try again.')
                         : `${completedCount} of ${queue.length} files uploaded. ${failedCount} failed.`}
                   </Alert>
                   <Stack direction="row" spacing={2}>

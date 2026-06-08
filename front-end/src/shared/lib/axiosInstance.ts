@@ -47,10 +47,16 @@ class ApiClient {
           config.headers.Authorization = `Bearer ${authToken}`;
         }
 
-        // When sending FormData, remove Content-Type so the browser
-        // sets multipart/form-data with the correct boundary automatically
-        if (config.data instanceof FormData) {
-          delete config.headers['Content-Type'];
+        // When sending FormData, strip Content-Type so the browser sets
+        // multipart/form-data with the correct boundary (see axios #463).
+        if (config.data instanceof FormData && config.headers) {
+          if (typeof (config.headers as any).delete === 'function') {
+            (config.headers as any).delete('Content-Type');
+            (config.headers as any).delete('content-type');
+          } else {
+            delete config.headers['Content-Type'];
+            delete config.headers['content-type'];
+          }
         }
 
         const fullUrl = config.baseURL ? `${config.baseURL}${config.url}` : config.url;
@@ -81,7 +87,10 @@ class ApiClient {
         }
 
         // Create enhanced error object with HTTP details preserved
-        const enhancedError = new Error(error.response?.data?.message || error.message || 'Request failed');
+        const body = error.response?.data;
+        const enhancedError = new Error(
+          body?.message || body?.error || error.message || 'Request failed',
+        );
         (enhancedError as any).status = error.response?.status;
         (enhancedError as any).code = error.code;
         (enhancedError as any).isNetworkError = !error.response;
