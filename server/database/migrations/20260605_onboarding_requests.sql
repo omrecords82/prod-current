@@ -80,3 +80,21 @@ CREATE TABLE IF NOT EXISTS church_record_table_configurations (
 ALTER TABLE users
   ADD COLUMN IF NOT EXISTS must_change_password TINYINT(1) NOT NULL DEFAULT 0 AFTER password_hash,
   ADD COLUMN IF NOT EXISTS onboarding_request_id VARCHAR(32) NULL AFTER church_id;
+
+-- Parish enroll users: explicit orthodoxmetrics.com realm grants (INT types match users.id).
+CREATE TABLE IF NOT EXISTS user_realm_access (
+  id          INT NOT NULL AUTO_INCREMENT,
+  user_id     INT NOT NULL,
+  realm_key   VARCHAR(32)  NOT NULL,
+  role        VARCHAR(32)  NULL,
+  enabled     TINYINT(1)   NOT NULL DEFAULT 1,
+  granted_by  INT NULL,
+  granted_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  revoked_at  DATETIME     NULL,
+  notes       TEXT         NULL,
+  PRIMARY KEY (id),
+  UNIQUE KEY uniq_user_realm (user_id, realm_key),
+  KEY idx_realm_key (realm_key),
+  KEY idx_user_id (user_id),
+  KEY idx_enabled (enabled)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
