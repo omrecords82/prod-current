@@ -84,7 +84,10 @@ router.get(['/', '/settings'], async (req: any, res: any) => {
             spellingCorrection: 'fix',
             extractAllText: 'yes',
             improveFormatting: 'yes',
+            recordLayoutMode: 'auto',
           };
+        } else if (!loadedSettings.documentProcessing.recordLayoutMode) {
+          loadedSettings.documentProcessing.recordLayoutMode = 'auto';
         }
         if (!loadedSettings.documentDeletion) {
           loadedSettings.documentDeletion = {
@@ -142,6 +145,7 @@ router.get(['/', '/settings'], async (req: any, res: any) => {
         spellingCorrection: 'fix',
         extractAllText: 'yes',
         improveFormatting: 'yes',
+        recordLayoutMode: 'auto',
       },
       documentDeletion: {
         deleteAfter: 7,

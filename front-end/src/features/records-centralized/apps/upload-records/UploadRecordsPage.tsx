@@ -329,6 +329,7 @@ const UploadRecordsPage: React.FC = () => {
   // Church OCR settings (language + record type for uploads)
   const [ocrLanguage, setOcrLanguage] = useState('en');
   const [recordType, setRecordType] = useState<UploadRecordType>('custom');
+  const [recordLayoutMode, setRecordLayoutMode] = useState('auto');
   const [settingsLoading, setSettingsLoading] = useState(false);
 
   // Derived upload stats
@@ -387,10 +388,12 @@ const UploadRecordsPage: React.FC = () => {
         if (savedType && RECORD_TYPES.includes(savedType)) {
           setRecordType(savedType);
         }
+        setRecordLayoutMode(data?.documentProcessing?.recordLayoutMode || 'auto');
       } catch {
         if (!cancelled) {
           setOcrLanguage('en');
           setRecordType('custom');
+          setRecordLayoutMode('auto');
         }
       } finally {
         if (!cancelled) setSettingsLoading(false);
@@ -494,6 +497,7 @@ const UploadRecordsPage: React.FC = () => {
         formData.append('churchId', effectiveChurchId.toString());
         formData.append('recordType', recordType);
         formData.append('language', ocrLanguage);
+        formData.append('recordLayoutMode', recordLayoutMode);
         const response: any = await apiClient.post('/api/ocr/jobs/upload', formData, { timeout: 120000 });
         const jobs = response?.jobs || response?.data?.jobs || [];
         const jobId = jobs.length > 0 ? String(jobs[0].id) : undefined;

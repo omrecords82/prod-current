@@ -39,13 +39,14 @@ import {
     useTheme
 } from '@mui/material';
 import {
+    IconCloudUpload,
     IconDeviceFloppy,
     IconLayout,
     IconPlayerPlay,
     IconPlus,
     IconTrash,
 } from '@tabler/icons-react';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import AnchorFieldEditor, { type AnchorFieldConfig } from '../components/AnchorFieldEditor';
 import ColumnBoundaryEditor, {
     type ColumnBand,
@@ -93,6 +94,7 @@ interface JobOption {
   id: number;
   filename: string;
   church_name: string;
+  church_id: number;
   record_type: string;
 }
 
@@ -209,7 +211,12 @@ const LayoutTemplateEditorPage: React.FC = () => {
   const setDirty = useCallback((v: boolean) => setAuxField('dirty', v), [setAuxField]);
   const { refJobId, refJobs, imageUrl, previewRows, previewHeaders, previewing, saving, dirty } = aux;
 
+  const [dropActive, setDropActive] = useState(false);
+  const [localImageUrl, setLocalImageUrl] = useState<string | null>(null);
+  const localImageUrlRef = useRef<string | null>(null);
+
   const isFormMode = extractionMode === 'form' || extractionMode === 'multi_form' || extractionMode === 'auto';
+  const activeImageUrl = localImageUrl || imageUrl;
 
   // ── Load templates ────────────────────────────────────────────────────────
 
@@ -218,6 +225,7 @@ const LayoutTemplateEditorPage: React.FC = () => {
     try {
       const p = new URLSearchParams();
       if (effectiveChurchId) p.set('church_id', String(effectiveChurchId));
+      if (recordType) p.set('record_type', recordType);
       const res: any = await apiClient.get(`/api/ocr/layout-templates?${p.toString()}`);
       const data = res?.data ?? res;
       setTemplates(data.templates || []);
@@ -226,26 +234,35 @@ const LayoutTemplateEditorPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [effectiveChurchId]);
+  }, [effectiveChurchId, recordType]);
 
   useEffect(() => { fetchTemplates(); }, [fetchTemplates]);
+
+  useEffect(() => {
+    if (selectedId && !templates.some((t) => t.id === selectedId)) {
+      setSelectedId(null);
+    }
+  }, [templates, selectedId, setSelectedId]);
 
   // ── Load reference jobs for job picker ─────────────────────────────────────
 
   const fetchRefJobs = useCallback(async () => {
     try {
-      const res: any = await apiClient.get(`/api/ocr/table-jobs?pageSize=100&record_type=${recordType}`);
+      const p = new URLSearchParams({ pageSize: '100', record_type: recordType });
+      if (effectiveChurchId) p.set('church_id', String(effectiveChurchId));
+      const res: any = await apiClient.get(`/api/ocr/table-jobs?${p.toString()}`);
       const data = res?.data ?? res;
       setRefJobs(
         (data.rows || []).map((j: any) => ({
           id: j.id,
           filename: j.filename,
           church_name: j.church_name,
+          church_id: j.church_id,
           record_type: j.record_type,
         })),
       );
     } catch { /* ignore */ }
-  }, [recordType]);
+  }, [recordType, effectiveChurchId]);
 
   useEffect(() => { fetchRefJobs(); }, [fetchRefJobs]);
 
@@ -255,14 +272,43 @@ const LayoutTemplateEditorPage: React.FC = () => {
     if (refJobId) {
       const job = refJobs.find((j) => j.id === refJobId);
       if (job) {
-        setImageUrl(`/api/church/46/ocr/jobs/${refJobId}/image`);
+        const churchId = job.church_id || effectiveChurchId;
+        setImageUrl(churchId ? `/api/church/${churchId}/ocr/jobs/${refJobId}/image` : null);
+        if (localImageUrlRef.current) {
+          URL.revokeObjectURL(localImageUrlRef.current);
+          localImageUrlRef.current = null;
+          setLocalImageUrl(null);
+        }
       } else {
         setImageUrl(null);
       }
-    } else {
+    } else if (!localImageUrlRef.current) {
       setImageUrl(null);
     }
-  }, [refJobId, refJobs]);
+  }, [refJobId, refJobs, effectiveChurchId]);
+
+  useEffect(() => () => {
+    if (localImageUrlRef.current) URL.revokeObjectURL(localImageUrlRef.current);
+  }, []);
+
+  const handleDroppedImage = useCallback((fileList: FileList | null) => {
+    const file = fileList?.[0];
+    if (!file || !file.type.startsWith('image/')) {
+      setToast({ msg: 'Drop a single image file (PNG, JPG, etc.)', severity: 'info' });
+      return;
+    }
+    if (localImageUrlRef.current) URL.revokeObjectURL(localImageUrlRef.current);
+    const url = URL.createObjectURL(file);
+    localImageUrlRef.current = url;
+    setLocalImageUrl(url);
+    setRefJobId(null);
+    setImageUrl(null);
+    setDirty(true);
+    if (extractionMode === 'tabular') {
+      setExtractionMode('multi_form');
+    }
+    setToast({ msg: 'Reference image loaded — draw record regions and save as template', severity: 'success' });
+  }, [extractionMode, setDirty, setExtractionMode, setImageUrl, setRefJobId]);
 
   // ── Select a template ──────────────────────────────────────────────────────
 
@@ -513,7 +559,7 @@ const LayoutTemplateEditorPage: React.FC = () => {
                 <TextField
                   select
                   size="small"
-                  label="Template"
+                  label={`Templates (${recordType})`}
                   value={selectedId ?? ''}
                   onChange={(e) => handleSelectTemplate(e.target.value ? Number(e.target.value) : null)}
                   sx={{ minWidth: 220 }}
@@ -521,7 +567,7 @@ const LayoutTemplateEditorPage: React.FC = () => {
                   <MenuItem value="">-- New Template --</MenuItem>
                   {templates.map((t) => (
                     <MenuItem key={t.id} value={t.id}>
-                      {t.name} {t.is_default ? '(default)' : ''} — {t.record_type}
+                      {t.name} {t.is_default ? '(default)' : ''}
                       {t.extraction_mode && t.extraction_mode !== 'tabular' ? ` [${t.extraction_mode}]` : ''}
                     </MenuItem>
                   ))}
@@ -538,7 +584,15 @@ const LayoutTemplateEditorPage: React.FC = () => {
                   size="small"
                   label="Record Type"
                   value={recordType}
-                  onChange={(e) => { setRecordType(e.target.value); setDirty(true); }}
+                  onChange={(e) => {
+                    const nextType = e.target.value;
+                    setRecordType(nextType);
+                    setDirty(true);
+                    if (selectedId) {
+                      const tpl = templates.find((t) => t.id === selectedId);
+                      if (tpl && tpl.record_type !== nextType) handleSelectTemplate(null);
+                    }
+                  }}
                   sx={{ minWidth: 140 }}
                 >
                   {RECORD_TYPES.map((rt) => (
@@ -585,21 +639,58 @@ const LayoutTemplateEditorPage: React.FC = () => {
         <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} sx={{ minHeight: 500, height: 'calc(100vh - 280px)' }}>
           {/* Left: Column Boundary Editor (always shown — useful for record regions in multi_form too) */}
           <Box sx={{ flex: 2, minHeight: 400 }}>
-            <Card sx={{ height: '100%' }}>
-              {imageUrl ? (
-                <ColumnBoundaryEditor
-                  imageUrl={imageUrl}
-                  columnBands={extractionMode === 'tabular' ? columnBands : []}
-                  headerY={extractionMode === 'tabular' ? headerY : 0}
-                  onBandsChange={handleBandsChange}
-                  onHeaderYChange={handleHeaderYChange}
-                  recordRegions={recordRegions}
-                  onRecordRegionsChange={handleRecordRegionsChange}
-                />
+            <Card
+              sx={{ height: '100%' }}
+              onDragEnter={(e) => { e.preventDefault(); setDropActive(true); }}
+              onDragLeave={(e) => { e.preventDefault(); setDropActive(false); }}
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={(e) => {
+                e.preventDefault();
+                setDropActive(false);
+                handleDroppedImage(e.dataTransfer.files);
+              }}
+            >
+              {activeImageUrl ? (
+                <Box sx={{ position: 'relative', height: '100%' }}>
+                  {localImageUrl && (
+                    <Chip
+                      size="small"
+                      label="Dropped reference image"
+                      color="info"
+                      sx={{ position: 'absolute', top: 8, left: 8, zIndex: 2 }}
+                    />
+                  )}
+                  <ColumnBoundaryEditor
+                    imageUrl={activeImageUrl}
+                    columnBands={extractionMode === 'tabular' ? columnBands : []}
+                    headerY={extractionMode === 'tabular' ? headerY : 0}
+                    onBandsChange={handleBandsChange}
+                    onHeaderYChange={handleHeaderYChange}
+                    recordRegions={recordRegions}
+                    onRecordRegionsChange={handleRecordRegionsChange}
+                  />
+                </Box>
               ) : (
-                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', p: 4 }}>
-                  <Typography color="text.secondary">
-                    Select a reference job to load an image for visual editing.
+                <Box
+                  sx={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    height: '100%',
+                    p: 4,
+                    border: dropActive ? '2px dashed' : '2px dashed transparent',
+                    borderColor: dropActive ? 'primary.main' : 'transparent',
+                    bgcolor: dropActive ? 'action.hover' : 'transparent',
+                    transition: 'all 0.15s',
+                  }}
+                >
+                  <IconCloudUpload size={40} style={{ opacity: 0.4, marginBottom: 12 }} />
+                  <Typography color="text.secondary" align="center">
+                    Drag and drop a reference image here, or select a reference job above.
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary" align="center" sx={{ mt: 1 }}>
+                    Use Multi-Form mode to draw record regions for composite photos (e.g. 2×2 cards).
                   </Typography>
                 </Box>
               )}

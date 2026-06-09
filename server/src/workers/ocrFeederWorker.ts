@@ -1338,6 +1338,52 @@ function offsetBoundingBox(bb: any, dx: number, dy: number): any {
   };
 }
 
+async function resolveUseRecordSnippets(
+  tenantPool: Pool,
+  churchId: number,
+  jobId: number,
+): Promise<boolean> {
+  let useRecordSnippets = true;
+  try {
+    const [settingsRows] = await tenantPool.query(
+      `SELECT settings_json FROM ocr_settings WHERE church_id = ? LIMIT 1`,
+      [churchId],
+    ) as any[];
+    if (settingsRows.length > 0 && settingsRows[0].settings_json) {
+      const json = typeof settingsRows[0].settings_json === 'string'
+        ? JSON.parse(settingsRows[0].settings_json)
+        : settingsRows[0].settings_json;
+      if (json.useRecordSnippets !== undefined) {
+        useRecordSnippets = Boolean(json.useRecordSnippets);
+      }
+    }
+  } catch (dbErr: any) {
+    console.warn(`[OCR] Failed to load ocr_settings for church ${churchId}: ${dbErr.message}`);
+  }
+
+  try {
+    const [jobRows] = await platformPool.query(
+      `SELECT layout_classification_json FROM ocr_jobs WHERE id = ? LIMIT 1`,
+      [jobId],
+    ) as any[];
+    if (jobRows.length > 0 && jobRows[0].layout_classification_json) {
+      const layout = typeof jobRows[0].layout_classification_json === 'string'
+        ? JSON.parse(jobRows[0].layout_classification_json)
+        : jobRows[0].layout_classification_json;
+      if (layout.useRecordSnippets === false) {
+        return false;
+      }
+      if (layout.recordLayoutMode === 'multi_record_split' || layout.recordLayoutMode === 'multi_form_page') {
+        return false;
+      }
+    }
+  } catch (jobErr: any) {
+    console.warn(`[OCR] Failed to load layout_classification_json for job ${jobId}: ${jobErr.message}`);
+  }
+
+  return useRecordSnippets;
+}
+
 // ── Step 3: Parse ───────────────────────────────────────────────────────────
 
 async function parsePage(
@@ -1411,24 +1457,7 @@ async function parsePage(
     };
   }
 
-  // Load useRecordSnippets setting for this church
-  let useRecordSnippets = true;
-  try {
-    const [settingsRows] = await tenantPool.query(
-      `SELECT settings_json FROM ocr_settings WHERE church_id = ? LIMIT 1`,
-      [churchId]
-    ) as any[];
-    if (settingsRows.length > 0 && settingsRows[0].settings_json) {
-      const json = typeof settingsRows[0].settings_json === 'string'
-        ? JSON.parse(settingsRows[0].settings_json)
-        : settingsRows[0].settings_json;
-      if (json.useRecordSnippets !== undefined) {
-        useRecordSnippets = Boolean(json.useRecordSnippets);
-      }
-    }
-  } catch (dbErr: any) {
-    console.warn(`[ParsePage] Failed to load ocr_settings for church ${churchId}: ${dbErr.message}`);
-  }
+  const useRecordSnippets = await resolveUseRecordSnippets(tenantPool, churchId, page.job_id);
 
   // Collapse candidates if useRecordSnippets is false
   if (!useRecordSnippets && recordCandidates && recordCandidates.candidates && recordCandidates.candidates.length > 0) {
@@ -1717,24 +1746,7 @@ async function processPage(tenantPool: Pool, page: PageRow, churchId: number): P
   // "record_crop" for all other paths (generic table, marriage ledger, form, etc.)
   let pipelineExtractionMode: 'structured_table' | 'record_crop' = 'record_crop';
 
-  // Load useRecordSnippets setting for this church
-  let useRecordSnippets = true;
-  try {
-    const [settingsRows] = await tenantPool.query(
-      `SELECT settings_json FROM ocr_settings WHERE church_id = ? LIMIT 1`,
-      [churchId]
-    ) as any[];
-    if (settingsRows.length > 0 && settingsRows[0].settings_json) {
-      const json = typeof settingsRows[0].settings_json === 'string'
-        ? JSON.parse(settingsRows[0].settings_json)
-        : settingsRows[0].settings_json;
-      if (json.useRecordSnippets !== undefined) {
-        useRecordSnippets = Boolean(json.useRecordSnippets);
-      }
-    }
-  } catch (dbErr: any) {
-    console.warn(`[ProcessPage] Failed to load ocr_settings for church ${churchId}: ${dbErr.message}`);
-  }
+  const useRecordSnippets = await resolveUseRecordSnippets(tenantPool, churchId, page.job_id);
 
   if (page.status === 'queued' || page.status === 'preprocessing') {
     if (!(await updatePageStatus(tenantPool, page.id, 'preprocessing', page.status))) return;

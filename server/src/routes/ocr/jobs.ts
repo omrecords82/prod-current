@@ -4103,6 +4103,26 @@ function createRouters(upload: any) {
         }
       }
 
+      const tenantPool = require('../../config/db').getTenantPool(churchId);
+      const {
+        resolveUploadRecordLayoutMode,
+        planMultiRecordUpload,
+        buildPerSplitLayoutClassification,
+        removeSourceIfSplit,
+      } = require('../../services/ocrMultiRecordUploadService');
+      const uploadRecordLayoutMode = await resolveUploadRecordLayoutMode(
+        tenantPool,
+        churchId,
+        req.body.recordLayoutMode,
+      );
+      try {
+        await platformPool.query('ALTER TABLE ocr_jobs ADD COLUMN IF NOT EXISTS layout_classification_json TEXT NULL');
+        await platformPool.query('ALTER TABLE ocr_jobs ADD COLUMN IF NOT EXISTS batch_id VARCHAR(64) NULL');
+      } catch (_: any) { /* columns may already exist */ }
+
+      const jobPriority = Math.min(9, Math.max(1, parseInt(req.body.priority) || 5));
+      const uploadedBy = req.session?.user?.id || req.user?.id || null;
+
       for (const file of files) {
         try {
           const timestamp = Date.now();
@@ -4110,7 +4130,6 @@ function createRouters(upload: any) {
           const baseName = path.basename(file.originalname, ext);
           const uniqueFilename = `${baseName}_${timestamp}${ext}`;
           const finalPath = path.join(uploadDir, uniqueFilename);
-          const dbPath = ocrPaths.getOcrDbPath(churchId, uniqueFilename);
 
           // Move file from temp to final location
           fs.renameSync(file.path, finalPath);
@@ -4120,90 +4139,148 @@ function createRouters(upload: any) {
             throw new Error(`File move failed: ${file.path} -> ${finalPath}`);
           }
 
-          // Compute sha256 hash + file stats for artifact tracking
-          const fileBuffer = fs.readFileSync(finalPath);
-          const sha256Hash = crypto.createHash('sha256').update(fileBuffer).digest('hex');
-          const fileStats = fs.statSync(finalPath);
+          const splitGridRows = parseInt(req.body.splitGridRows, 10);
+          const splitGridCols = parseInt(req.body.splitGridCols, 10);
+          const plan = await planMultiRecordUpload(
+            finalPath,
+            uploadDir,
+            file.originalname,
+            uploadRecordLayoutMode,
+            {
+              gridRows: Number.isFinite(splitGridRows) ? splitGridRows : undefined,
+              gridCols: Number.isFinite(splitGridCols) ? splitGridCols : undefined,
+            },
+          );
+          removeSourceIfSplit(finalPath, plan.split);
+
+          if (plan.split) {
+            console.log(`MULTI_RECORD_SPLIT ${JSON.stringify({
+              file: file.originalname,
+              regions: plan.regionCount,
+              jobs: plan.paths.length,
+              batchId: plan.batchId,
+              recordLayoutMode: uploadRecordLayoutMode,
+            })}`);
+          }
+
           const fileMimeType = file.mimetype || 'image/jpeg';
 
-          const uploadedBy = req.session?.user?.id || req.user?.id || null;
-          const insertParams = [
-            churchId,
-            uploadedBy,
-            uniqueFilename,
-            recordType,
-            language
-          ];
+          for (let splitIdx = 0; splitIdx < plan.paths.length; splitIdx += 1) {
+            const jobPath = plan.paths[splitIdx];
+            const storedFilename = plan.filenames[splitIdx];
+            const fileBuffer = fs.readFileSync(jobPath);
+            const sha256Hash = crypto.createHash('sha256').update(fileBuffer).digest('hex');
+            const fileStats = fs.statSync(jobPath);
 
-          // Priority: 1=urgent, 5=normal (default), 9=low
-          const jobPriority = Math.min(9, Math.max(1, parseInt(req.body.priority) || 5));
-          insertParams.splice(3, 0, jobPriority); // insert priority after filename
-          let insertSql = `INSERT INTO ocr_jobs (church_id, uploaded_by, filename, status, priority, review_status, record_type, language, created_at, source_pipeline`;
-          if (uploadLayoutTemplateId) {
-            insertSql += `, layout_template_id`;
-            insertParams.push(uploadLayoutTemplateId);
-          }
-          insertSql += `) VALUES (?, ?, ?, 'pending', ?, 'uploaded', ?, ?, NOW(), 'uploader'`;
-          if (uploadLayoutTemplateId) {
-            insertSql += `, ?`;
-          }
-          insertSql += `)`;
+            let layoutClassificationJson: string | null = null;
+            if (plan.split && plan.batchId) {
+              layoutClassificationJson = JSON.stringify(
+                buildPerSplitLayoutClassification(
+                  uploadRecordLayoutMode,
+                  splitIdx + 1,
+                  plan.paths.length,
+                  file.originalname,
+                  plan.batchId,
+                ),
+              );
+            } else if (plan.layoutClassification) {
+              layoutClassificationJson = JSON.stringify(plan.layoutClassification);
+            }
 
-          console.log(`OCR_INSERT_PRE ${JSON.stringify({ pool: 'platformPool', db: currentDb, file: file.originalname, storedFilename: uniqueFilename, paramCount: insertParams.length, layoutTemplateId: uploadLayoutTemplateId })}`);
+            const insertParams: any[] = [
+              churchId,
+              plan.batchId,
+              uploadedBy,
+              storedFilename,
+              jobPriority,
+              recordType,
+              language,
+            ];
+            let insertSql = `INSERT INTO ocr_jobs (church_id, batch_id, uploaded_by, filename, status, priority, review_status, record_type, language, created_at, source_pipeline`;
+            if (uploadLayoutTemplateId) {
+              insertSql += `, layout_template_id`;
+              insertParams.push(uploadLayoutTemplateId);
+            }
+            if (layoutClassificationJson) {
+              insertSql += `, layout_classification_json`;
+              insertParams.push(layoutClassificationJson);
+            }
+            insertSql += `) VALUES (?, ?, ?, ?, 'pending', ?, 'uploaded', ?, ?, NOW(), 'uploader'`;
+            if (uploadLayoutTemplateId) insertSql += `, ?`;
+            if (layoutClassificationJson) insertSql += `, ?`;
+            insertSql += `)`;
 
-          // Insert job into PLATFORM DB (global queue)
-          const [result] = await platformPool.query(insertSql, insertParams);
+            console.log(`OCR_INSERT_PRE ${JSON.stringify({
+              pool: 'platformPool',
+              db: currentDb,
+              file: file.originalname,
+              storedFilename,
+              split: plan.split,
+              splitIndex: splitIdx + 1,
+              layoutTemplateId: uploadLayoutTemplateId,
+            })}`);
 
-          const jobId = result.insertId;
-          const affectedRows = result.affectedRows;
+            const [result] = await platformPool.query(insertSql, insertParams);
+            const jobId = result.insertId;
+            const affectedRows = result.affectedRows;
 
-          console.log(`OCR_INSERT_POST ${JSON.stringify({ insertId: jobId, affectedRows, file: file.originalname })}`);
+            console.log(`OCR_INSERT_POST ${JSON.stringify({ insertId: jobId, affectedRows, file: file.originalname })}`);
 
-          if (!affectedRows || affectedRows === 0) {
-            throw new Error(`INSERT returned 0 affectedRows for ${file.originalname}`);
-          }
+            if (!affectedRows || affectedRows === 0) {
+              throw new Error(`INSERT returned 0 affectedRows for ${file.originalname}`);
+            }
 
-          // Create source_image artifact in tenant DB for re-run capability
-          try {
-            const tenantPool = require('../../config/db').getTenantPool(churchId);
-
-            // Ensure sha256/bytes/mime_type columns exist on ocr_feeder_artifacts
             try {
-              await tenantPool.query(`ALTER TABLE ocr_feeder_artifacts ADD COLUMN IF NOT EXISTS sha256 VARCHAR(64) NULL`);
-              await tenantPool.query(`ALTER TABLE ocr_feeder_artifacts ADD COLUMN IF NOT EXISTS bytes BIGINT NULL`);
-              await tenantPool.query(`ALTER TABLE ocr_feeder_artifacts ADD COLUMN IF NOT EXISTS mime_type VARCHAR(100) NULL`);
-            } catch (_: any) { /* columns may already exist */ }
+              try {
+                await tenantPool.query(`ALTER TABLE ocr_feeder_artifacts ADD COLUMN IF NOT EXISTS sha256 VARCHAR(64) NULL`);
+                await tenantPool.query(`ALTER TABLE ocr_feeder_artifacts ADD COLUMN IF NOT EXISTS bytes BIGINT NULL`);
+                await tenantPool.query(`ALTER TABLE ocr_feeder_artifacts ADD COLUMN IF NOT EXISTS mime_type VARCHAR(100) NULL`);
+              } catch (_: any) { /* columns may already exist */ }
 
-            // Create a feeder page row to anchor the artifact
-            const [pageResult] = await tenantPool.query(
-              `INSERT INTO ocr_feeder_pages (job_id, page_index, status, input_path, created_at, updated_at)
-               VALUES (?, 0, 'queued', ?, NOW(), NOW())`,
-              [jobId, finalPath]
-            );
-            const pageId = (pageResult as any).insertId;
+              const [pageResult] = await tenantPool.query(
+                `INSERT INTO ocr_feeder_pages (job_id, page_index, status, input_path, created_at, updated_at)
+                 VALUES (?, 0, 'queued', ?, NOW(), NOW())`,
+                [jobId, jobPath],
+              );
+              const pageId = (pageResult as any).insertId;
 
-            // Create source_image artifact with sha256, bytes, mime_type
-            await tenantPool.query(
-              `INSERT INTO ocr_feeder_artifacts (page_id, type, storage_path, meta_json, sha256, bytes, mime_type, created_at)
-               VALUES (?, 'source_image', ?, ?, ?, ?, ?, NOW())`,
-              [pageId, finalPath, JSON.stringify({ original_filename: file.originalname, upload_timestamp: timestamp }), sha256Hash, fileStats.size, fileMimeType]
-            );
+              await tenantPool.query(
+                `INSERT INTO ocr_feeder_artifacts (page_id, type, storage_path, meta_json, sha256, bytes, mime_type, created_at)
+                 VALUES (?, 'source_image', ?, ?, ?, ?, ?, NOW())`,
+                [
+                  pageId,
+                  jobPath,
+                  JSON.stringify({
+                    original_filename: file.originalname,
+                    upload_timestamp: timestamp,
+                    split_index: plan.split ? splitIdx + 1 : null,
+                    split_total: plan.split ? plan.paths.length : null,
+                    record_layout_mode: uploadRecordLayoutMode,
+                  }),
+                  sha256Hash,
+                  fileStats.size,
+                  fileMimeType,
+                ],
+              );
 
-            console.log(`OCR_ARTIFACT_CREATED ${JSON.stringify({ jobId, pageId, sha256: sha256Hash.substring(0, 8), bytes: fileStats.size, mime: fileMimeType })}`);
-          } catch (artifactErr: any) {
-            // Non-blocking — artifact creation failure doesn't prevent job processing
-            console.warn(`[OCR Upload] Artifact creation failed for job ${jobId}: ${artifactErr.message}`);
+              console.log(`OCR_ARTIFACT_CREATED ${JSON.stringify({ jobId, pageId, sha256: sha256Hash.substring(0, 8), bytes: fileStats.size, mime: fileMimeType })}`);
+            } catch (artifactErr: any) {
+              console.warn(`[OCR Upload] Artifact creation failed for job ${jobId}: ${artifactErr.message}`);
+            }
+
+            createdJobs.push({
+              id: jobId,
+              church_id: churchId,
+              filename: storedFilename,
+              status: 'pending',
+              record_type: recordType,
+              language: language,
+              batch_id: plan.batchId,
+              split_index: plan.split ? splitIdx + 1 : null,
+              split_total: plan.split ? plan.paths.length : null,
+              created_at: new Date().toISOString(),
+            });
           }
-
-          createdJobs.push({
-            id: jobId,
-            church_id: churchId,
-            filename: uniqueFilename,
-            status: 'pending',
-            record_type: recordType,
-            language: language,
-            created_at: new Date().toISOString()
-          });
         } catch (fileError: any) {
           // Surface full SQL error detail, never swallow
           lastSqlError = {

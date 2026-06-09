@@ -453,6 +453,7 @@ const OcrReviewPage: React.FC = () => {
   const [isUploadingFiles, setIsUploadingFiles] = useState(false);
   const [ocrLanguage, setOcrLanguage] = useState('en');
   const [uploadRecordType, setUploadRecordType] = useState('custom');
+  const [uploadRecordLayoutMode, setUploadRecordLayoutMode] = useState('auto');
   const [imagePanelWidth, setImagePanelWidth] = useState(560);
   const uploadFileInputRef = useRef<HTMLInputElement>(null);
   const uploadPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -844,10 +845,12 @@ const OcrReviewPage: React.FC = () => {
         setOcrLanguage(normalizeReviewOcrLanguage(data?.defaultLanguage || data?.language));
         const savedType = data?.documentProcessing?.defaultRecordType;
         if (savedType) setUploadRecordType(savedType);
+        setUploadRecordLayoutMode(data?.documentProcessing?.recordLayoutMode || 'auto');
       } catch {
         if (!cancelled) {
           setOcrLanguage('en');
           setUploadRecordType('custom');
+          setUploadRecordLayoutMode('auto');
         }
       }
     })();
@@ -897,6 +900,7 @@ const OcrReviewPage: React.FC = () => {
         formData.append('churchId', churchId.toString());
         formData.append('recordType', uploadRecordType);
         formData.append('language', ocrLanguage);
+        formData.append('recordLayoutMode', uploadRecordLayoutMode);
         const response: any = await apiClient.post('/api/ocr/jobs/upload', formData, { timeout: 120000 });
         const uploadedJobs = response?.jobs || response?.data?.jobs || [];
         const jobId = uploadedJobs.length > 0 ? String(uploadedJobs[0].id) : undefined;

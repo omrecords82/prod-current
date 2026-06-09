@@ -70,10 +70,13 @@ function TabPanel(props: TabPanelProps) {
   );
 }
 
+export type RecordLayoutMode = 'auto' | 'single' | 'ledger' | 'multi_record_split' | 'multi_form_page';
+
 interface DocumentProcessingSettings {
   spellingCorrection: 'exact' | 'fix';
   extractAllText: 'yes' | 'no';
   improveFormatting: 'yes' | 'no';
+  recordLayoutMode: RecordLayoutMode;
 }
 
 interface DocumentDeletionSettings {
@@ -105,6 +108,7 @@ export const OcrStudioSettingsPanel: React.FC = () => {
       spellingCorrection: 'fix',
       extractAllText: 'yes',
       improveFormatting: 'yes',
+      recordLayoutMode: 'auto',
     },
     documentDeletion: {
       deleteAfter: 7,
@@ -173,6 +177,7 @@ export const OcrStudioSettingsPanel: React.FC = () => {
             spellingCorrection: data.documentProcessing?.spellingCorrection || 'fix',
             extractAllText: data.documentProcessing?.extractAllText || 'yes',
             improveFormatting: data.documentProcessing?.improveFormatting || 'yes',
+            recordLayoutMode: data.documentProcessing?.recordLayoutMode || 'auto',
           },
           documentDeletion: {
             deleteAfter: data.documentDeletion?.deleteAfter || 7,
@@ -633,6 +638,36 @@ export const OcrStudioSettingsPanel: React.FC = () => {
                   <MenuItem value="no">No</MenuItem>
                 </Select>
               </FormControl>
+              <FormControl fullWidth sx={{ mt: 1.5 }}>
+                <InputLabel id="record-layout-mode-label">Record layout processing</InputLabel>
+                <Select
+                  labelId="record-layout-mode-label"
+                  value={settings.documentProcessing.recordLayoutMode}
+                  label="Record layout processing"
+                  onChange={(e) =>
+                    setSettings((prev) => ({
+                      ...prev,
+                      documentProcessing: {
+                        ...prev.documentProcessing,
+                        recordLayoutMode: e.target.value as RecordLayoutMode,
+                      },
+                      ...(e.target.value === 'multi_record_split' || e.target.value === 'multi_form_page'
+                        ? { useRecordSnippets: false }
+                        : {}),
+                    }))
+                  }
+                >
+                  <MenuItem value="auto">Auto-detect (split composite photos)</MenuItem>
+                  <MenuItem value="single">Single record per image</MenuItem>
+                  <MenuItem value="ledger">Ledger / tabular page</MenuItem>
+                  <MenuItem value="multi_record_split">Multiple separate records (split before OCR)</MenuItem>
+                  <MenuItem value="multi_form_page">Multiple forms on one page (regions)</MenuItem>
+                </Select>
+                <Typography variant="caption" color="text.secondary" sx={{ mt: 0.75, display: 'block' }}>
+                  Composite photos with separate cards are split into individual jobs before processing. Split and multi-form modes disable record snippets.
+                </Typography>
+              </FormControl>
+
               <FormControlLabel
                 control={
                   <Switch
@@ -644,13 +679,17 @@ export const OcrStudioSettingsPanel: React.FC = () => {
                       }))
                     }
                     size="small"
+                    disabled={
+                      settings.documentProcessing.recordLayoutMode === 'multi_record_split'
+                      || settings.documentProcessing.recordLayoutMode === 'multi_form_page'
+                    }
                   />
                 }
                 label={
                   <Box>
                     <Typography variant="body2">Use Record Snippets</Typography>
                     <Typography variant="caption" color="text.secondary">
-                      Split pages into individual record snippets. If disabled, the entire page is processed as one image record.
+                      Split ledger pages into row snippets. Disabled automatically for composite-record and multi-form layouts.
                     </Typography>
                   </Box>
                 }
