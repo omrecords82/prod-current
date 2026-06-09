@@ -79,7 +79,10 @@ import {
     IconSkull, IconTrash,
 } from '@tabler/icons-react';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import OcrChurchSelector from '../devel-tools/om-ocr/components/OcrChurchSelector';
 import OcrStudioNav from '../devel-tools/om-ocr/components/OcrStudioNav';
+import { useOcrChurchSelector } from '../devel-tools/om-ocr/hooks/useOcrChurchSelector';
+import { setOcrStudioChurchParam } from '../devel-tools/om-ocr/utils/ocrStudioChurch';
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -142,6 +145,7 @@ const isReprocessable = (s: string) => ['failed','error','queued','pending'].inc
 
 const OcrActivityMonitor: React.FC = () => {
   const theme = useTheme();
+  const { selectedChurchId, setSearchParams } = useOcrChurchSelector();
 
   const pageSize = 50;
 
@@ -282,6 +286,12 @@ const OcrActivityMonitor: React.FC = () => {
   }, [statusFilter, churchFilter, searchQ, staleOnly, page]);
 
   useEffect(() => { mountedRef.current = true; fetchJobs(); return () => { mountedRef.current = false; }; }, [fetchJobs]);
+
+  useEffect(() => {
+    if (!selectedChurchId || churches.length === 0) return;
+    const match = churches.find((c) => c.id === selectedChurchId);
+    if (match && churchFilter?.id !== match.id) setChurchFilter(match);
+  }, [selectedChurchId, churches, churchFilter, setChurchFilter]);
 
   useEffect(() => {
     if (pollRef.current) clearTimeout(pollRef.current);
@@ -462,6 +472,7 @@ const OcrActivityMonitor: React.FC = () => {
   return (
     <PageContainer title="OCR Operations Console" description="Super Admin OCR job monitoring and operations">
       <OcrStudioNav />
+      <OcrChurchSelector />
       <Box sx={{ p: { xs: 1, sm: 2 } }}>
 
         {/* ═══ SUMMARY BAR ════════════════════════════════════════════════════ */}
@@ -510,7 +521,11 @@ const OcrActivityMonitor: React.FC = () => {
                 options={churches}
                 getOptionLabel={(o) => `${o.name} (#${o.id})`}
                 value={churchFilter}
-                onChange={(_, v) => { setChurchFilter(v); setPage(1); }}
+                onChange={(_, v) => {
+                  setChurchFilter(v);
+                  setPage(1);
+                  if (v) setOcrStudioChurchParam(setSearchParams, v.id);
+                }}
                 renderInput={(params) => <TextField {...params} label="Church" placeholder="All churches" />}
                 sx={{ minWidth: 240 }}
                 isOptionEqualToValue={(o, v) => o.id === v.id}

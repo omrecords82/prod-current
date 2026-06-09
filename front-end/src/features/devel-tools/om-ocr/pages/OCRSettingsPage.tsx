@@ -6,7 +6,8 @@
 import { useAuth } from '@/context/AuthContext';
 import { CustomizerContext } from '@/context/CustomizerContext';
 import { apiClient } from '@/shared/lib/axiosInstance';
-import churchService from '@/shared/lib/churchService';
+import OcrChurchSelector from '@/features/devel-tools/om-ocr/components/OcrChurchSelector';
+import { useOcrChurchSelector } from '@/features/devel-tools/om-ocr/hooks/useOcrChurchSelector';
 import {
     Alert,
     Box,
@@ -48,8 +49,7 @@ import {
     IconTrash,
     IconEdit,
 } from '@tabler/icons-react';
-import React, { useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import React, { useCallback, useContext, useEffect, useState } from 'react';
 import OcrStudioNav from '../components/OcrStudioNav';
 
 interface TabPanelProps {
@@ -92,52 +92,10 @@ interface OCRSettingsData {
 
 const OCRSettingsPage: React.FC = () => {
   const { isLayout } = useContext(CustomizerContext);
-  const { user, isSuperAdmin } = useAuth();
-  const [searchParams, setSearchParams] = useSearchParams();
-  const churchParam = searchParams.get('church');
+  const { user } = useAuth();
+  const { selectedChurchId } = useOcrChurchSelector();
+  const effectiveChurchId = selectedChurchId ?? (user?.church_id ? Number(user.church_id) : null);
 
-  // Church selector state (super_admin only)
-  const [churches, setChurches] = useState<Array<{ id: number; name: string }>>([]);
-  const [selectedChurchId, setSelectedChurchId] = useState<number | null>(
-    churchParam ? Number(churchParam) : user?.church_id ? Number(user.church_id) : null
-  );
-
-  const effectiveChurchId = selectedChurchId || (user?.church_id ? Number(user.church_id) : null);
-
-  // Load churches list for super_admin
-  useEffect(() => {
-    if (!isSuperAdmin()) return;
-    (async () => {
-      try {
-        let list: any[] = await churchService.fetchChurches();
-        if (list.length === 0) {
-          const fallback: any = await apiClient.get('/api/churches');
-          const body = fallback?.data ?? fallback;
-          const inner = body?.data ?? body;
-          list = inner?.churches || (Array.isArray(inner) ? inner : []);
-        }
-        const sorted = (Array.isArray(list) ? list : []).sort((a: any, b: any) =>
-          (a.church_name || a.name || '').localeCompare(b.church_name || b.name || '')
-        );
-        setChurches(sorted);
-        // Auto-select first church if none is selected yet
-        if (!selectedChurchId && sorted.length > 0) {
-          const firstId = sorted[0].id;
-          setSelectedChurchId(firstId);
-          setSearchParams({ church: String(firstId) });
-        }
-      } catch (err) {
-        console.error('Failed to load churches:', err);
-      }
-    })();
-  }, [isSuperAdmin]);
-
-  const selectedChurchName = useMemo(() => {
-    if (!selectedChurchId) return null;
-    const found = churches.find(c => c.id === selectedChurchId);
-    return found?.church_name || found?.name || `Church #${selectedChurchId}`;
-  }, [selectedChurchId, churches]);
-  
   const [activeTab, setActiveTab] = useState(0);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -563,6 +521,7 @@ const OCRSettingsPage: React.FC = () => {
   return (
     <Box sx={{ p: 3, maxWidth: isLayout === 'full' ? '100%' : 1200, mx: 'auto' }}>
       <OcrStudioNav />
+      <OcrChurchSelector />
       {/* Header */}
       <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 3 }}>
         <Stack direction="row" spacing={1} alignItems="center">
@@ -570,30 +529,7 @@ const OCRSettingsPage: React.FC = () => {
           <Typography variant="h5" fontWeight={600}>
             Settings
           </Typography>
-          {selectedChurchName && (
-            <Chip label={selectedChurchName} size="small" color="primary" variant="outlined" />
-          )}
         </Stack>
-        {isSuperAdmin() && churches.length > 0 && (
-          <FormControl size="small" sx={{ minWidth: 260 }}>
-            <InputLabel>Church</InputLabel>
-            <Select
-              value={selectedChurchId || ''}
-              label="Church"
-              onChange={(e) => {
-                const newId = Number(e.target.value);
-                setSelectedChurchId(newId);
-                setSearchParams({ church: String(newId) });
-              }}
-            >
-              {churches.map((c: any) => (
-                <MenuItem key={c.id} value={c.id}>
-                  {c.church_name || c.name || `Church ${c.id}`}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-        )}
       </Stack>
 
       {/* Tabs */}

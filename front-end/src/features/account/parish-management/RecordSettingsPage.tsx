@@ -39,7 +39,9 @@ import { useAuth } from '@/context/AuthContext';
 import { useChurch } from '@/context/ChurchContext';
 import { apiClient } from '@/shared/lib/axiosInstance';
 import churchService from '@/shared/lib/churchService';
+import OcrChurchSelector from '@/features/devel-tools/om-ocr/components/OcrChurchSelector';
 import OcrStudioNav from '@/features/devel-tools/om-ocr/components/OcrStudioNav';
+import { useOcrChurchSelector } from '@/features/devel-tools/om-ocr/hooks/useOcrChurchSelector';
 import {
   type ChurchRecordFieldConfig,
   type ChurchRecordFieldRow,
@@ -74,10 +76,11 @@ const RecordSettingsPage: React.FC = () => {
   const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
   const isOcrStudio = location.pathname.includes('/devel/ocr-studio');
+  const { selectedChurchId: studioChurchId } = useOcrChurchSelector();
 
-  // Church selector for super_admin
+  // Church selector for super_admin (non-OCR-studio routes)
   const [churches, setChurches] = useState<Array<{ id: number; name: string }>>([]);
-  const churchParam = searchParams.get('church');
+  const churchParam = searchParams.get('church') || searchParams.get('church_id');
 
   useEffect(() => {
     if (!isSuperAdmin()) return;
@@ -106,7 +109,12 @@ const RecordSettingsPage: React.FC = () => {
     })();
   }, [isSuperAdmin]);
 
-  const churchId = activeChurchId;
+  useEffect(() => {
+    if (!isOcrStudio || !studioChurchId) return;
+    if (activeChurchId !== studioChurchId) setActiveChurchId(studioChurchId);
+  }, [isOcrStudio, studioChurchId, activeChurchId, setActiveChurchId]);
+
+  const churchId = isOcrStudio ? (studioChurchId ?? activeChurchId) : activeChurchId;
   const churchName = useMemo(() => {
     if (churchMetadata?.church_name) return churchMetadata.church_name;
     const found = churches.find(c => c.id === activeChurchId);
@@ -186,8 +194,9 @@ const RecordSettingsPage: React.FC = () => {
     return (
       <Box>
         {isOcrStudio && <OcrStudioNav />}
+        {isOcrStudio && <OcrChurchSelector />}
         <Alert severity="info" sx={{ mb: 2 }}>Select a church to configure record table headers.</Alert>
-        {isSuperAdmin() && churches.length > 0 && (
+        {!isOcrStudio && isSuperAdmin() && churches.length > 0 && (
           <FormControl size="small" sx={{ minWidth: 300 }}>
             <InputLabel>Church</InputLabel>
             <Select
@@ -214,6 +223,7 @@ const RecordSettingsPage: React.FC = () => {
   return (
     <Box>
       {isOcrStudio && <OcrStudioNav />}
+      {isOcrStudio && <OcrChurchSelector />}
 
       <Box sx={{ mb: 3 }}>
         <Stack direction="row" justifyContent="space-between" alignItems="flex-start">

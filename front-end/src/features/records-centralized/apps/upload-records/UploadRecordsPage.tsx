@@ -11,8 +11,10 @@
  */
 
 import { useAuth } from '@/context/AuthContext';
+import OcrChurchSelector from '@/features/devel-tools/om-ocr/components/OcrChurchSelector';
 import OcrSetupGate from '@/features/devel-tools/om-ocr/components/OcrSetupGate';
 import OcrStudioNav from '@/features/devel-tools/om-ocr/components/OcrStudioNav';
+import { useOcrChurchSelector } from '@/features/devel-tools/om-ocr/hooks/useOcrChurchSelector';
 
 import churchService, { type Church as ChurchRecord } from '@/shared/lib/churchService';
 import { apiClient } from '@/shared/lib/axiosInstance';
@@ -198,7 +200,9 @@ const ReviewStatusChip: React.FC<{ status: ReviewStatus; size?: 'small' | 'mediu
 const UploadRecordsPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const isOcrStudioUpload = location.pathname.includes('/devel/ocr-studio');
   const isPortalUpload = location.pathname.startsWith('/portal');
+  const { selectedChurchId: studioChurchId } = useOcrChurchSelector();
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
   const { user, isSuperAdmin } = useAuth();
@@ -211,10 +215,12 @@ const UploadRecordsPage: React.FC = () => {
   // Church selection (admin only)
   const [churches, setChurches] = useState<Church[]>([]);
   const [selectedChurchId, setSelectedChurchId] = useState<number | null>(null);
-  const effectiveChurchId = useMemo(
-    () => (isAdmin ? selectedChurchId : user?.church_id ? Number(user.church_id) : null),
-    [isAdmin, selectedChurchId, user?.church_id],
-  );
+  const effectiveChurchId = useMemo(() => {
+    if (isOcrStudioUpload) {
+      return studioChurchId ?? (user?.church_id ? Number(user.church_id) : null);
+    }
+    return isAdmin ? selectedChurchId : user?.church_id ? Number(user.church_id) : null;
+  }, [isOcrStudioUpload, studioChurchId, isAdmin, selectedChurchId, user?.church_id]);
 
   // Upload state
   const [queue, setQueue] = useState<QueuedFile[]>([]);
@@ -242,7 +248,7 @@ const UploadRecordsPage: React.FC = () => {
 
   // ─── Load churches for admin / manager church picker ──
   useEffect(() => {
-    if (!isAdmin) return;
+    if (!isAdmin || isOcrStudioUpload) return;
     let cancelled = false;
     (async () => {
       try {
@@ -268,7 +274,7 @@ const UploadRecordsPage: React.FC = () => {
       }
     })();
     return () => { cancelled = true; };
-  }, [isAdmin, user?.church_id]);
+  }, [isAdmin, isOcrStudioUpload, user?.church_id]);
 
   // ─── Load church OCR settings ──
   useEffect(() => {
@@ -445,7 +451,8 @@ const UploadRecordsPage: React.FC = () => {
   return (
     <OcrSetupGate churchId={effectiveChurchId}>
     <Box sx={{ py: 3, px: { xs: 1.5, md: 3 }, maxWidth: 1100, mx: 'auto' }}>
-      {location.pathname.includes('/devel/ocr-studio') && <OcrStudioNav />}
+      {isOcrStudioUpload && <OcrStudioNav />}
+      {isOcrStudioUpload && <OcrChurchSelector />}
       {/* Page header */}
       <Box sx={{ mb: 3 }}>
         <Typography variant="h5" fontWeight={700}>
@@ -456,8 +463,8 @@ const UploadRecordsPage: React.FC = () => {
         </Typography>
       </Box>
 
-      {/* Admin church selector */}
-      {isAdmin && (
+      {/* Admin church selector (portal / non-OCR-studio routes) */}
+      {!isOcrStudioUpload && isAdmin && (
         <Paper variant="outlined" sx={{ p: 2, mb: 2.5 }}>
           <FormControl fullWidth size="small">
             <InputLabel>Target Church</InputLabel>
@@ -533,7 +540,7 @@ const UploadRecordsPage: React.FC = () => {
                       size="small"
                       variant="text"
                       sx={{ p: 0, minWidth: 0, verticalAlign: 'baseline', textTransform: 'none' }}
-                      href={`/devel/ocr-studio/settings?church_id=${effectiveChurchId}`}
+                      href={`/devel/ocr-studio/settings?church=${effectiveChurchId}`}
                     >
                       OCR Settings
                     </Button>

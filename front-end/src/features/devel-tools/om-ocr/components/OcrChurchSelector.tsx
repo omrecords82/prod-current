@@ -19,6 +19,12 @@ import {
 } from '@mui/material';
 import React, { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import {
+  OCR_STUDIO_CHURCH_PARAM,
+  OCR_STUDIO_CHURCH_PARAM_LEGACY,
+  readOcrStudioChurchId,
+  setOcrStudioChurchParam,
+} from '../utils/ocrStudioChurch';
 
 interface ChurchOption {
   id: number;
@@ -32,8 +38,7 @@ const OcrChurchSelector: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [churches, setChurches] = useState<ChurchOption[]>([]);
 
-  const churchParam = searchParams.get('church');
-  const selectedChurchId = churchParam ? Number(churchParam) : null;
+  const selectedChurchId = readOcrStudioChurchId(searchParams);
 
   // Fetch church list on mount (admin/super_admin only)
   useEffect(() => {
@@ -50,17 +55,20 @@ const OcrChurchSelector: React.FC = () => {
         }
         if (cancelled) return;
         setChurches(list);
-        // Auto-select first church if none in URL
-        if (!searchParams.get('church') && list.length > 0) {
+        const urlChurch = readOcrStudioChurchId(searchParams);
+        // Normalize legacy church_id → church
+        if (
+          !searchParams.get(OCR_STUDIO_CHURCH_PARAM) &&
+          searchParams.get(OCR_STUDIO_CHURCH_PARAM_LEGACY) &&
+          urlChurch
+        ) {
+          setOcrStudioChurchParam(setSearchParams, urlChurch);
+        } else if (!urlChurch && list.length > 0) {
           const userChurchId = user?.church_id ? Number(user.church_id) : null;
           const defaultId = (userChurchId && list.some((c: any) => c.id === userChurchId))
             ? userChurchId
             : list[0].id;
-          setSearchParams((prev) => {
-            const next = new URLSearchParams(prev);
-            next.set('church', String(defaultId));
-            return next;
-          }, { replace: true });
+          setOcrStudioChurchParam(setSearchParams, defaultId);
         }
       } catch {
         if (!cancelled) setChurches([]);
@@ -80,12 +88,7 @@ const OcrChurchSelector: React.FC = () => {
           value={selectedChurchId ?? ''}
           label="Target Church"
           onChange={(e) => {
-            const newId = Number(e.target.value);
-            setSearchParams((prev) => {
-              const next = new URLSearchParams(prev);
-              next.set('church', String(newId));
-              return next;
-            }, { replace: true });
+            setOcrStudioChurchParam(setSearchParams, Number(e.target.value));
           }}
         >
           {churches.map((c) => (

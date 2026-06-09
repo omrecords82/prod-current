@@ -19,6 +19,7 @@ import { alpha, Box, Button, Stack, useTheme } from '@mui/material';
 import { useAuth } from '@/context/AuthContext';
 import React, { useCallback, useMemo } from 'react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
+import { ocrStudioPathWithChurch } from '../utils/ocrStudioChurch';
 
 interface NavItem {
   label: string;
@@ -53,12 +54,7 @@ const OcrStudioNav: React.FC = () => {
   // Navigate to sibling page, preserving the ?church= param
   const handleNavigate = useCallback(
     (targetPath: string) => {
-      const church = searchParams.get('church');
-      if (church) {
-        navigate(`${targetPath}?church=${church}`);
-      } else {
-        navigate(targetPath);
-      }
+      navigate(ocrStudioPathWithChurch(targetPath, searchParams));
     },
     [navigate, searchParams],
   );

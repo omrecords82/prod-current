@@ -8,15 +8,21 @@
 
 import { useAuth } from '@/context/AuthContext';
 import { useSearchParams } from 'react-router-dom';
+import {
+  readOcrStudioChurchId,
+  setOcrStudioChurchParam,
+} from '../utils/ocrStudioChurch';
 
 export function useOcrChurchSelector() {
   const { user } = useAuth();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
 
-  const churchParam = searchParams.get('church');
-  const selectedChurchId = churchParam
-    ? Number(churchParam)
-    : (user?.church_id ? Number(user.church_id) : null);
+  const userChurchId = user?.church_id ? Number(user.church_id) : null;
+  const selectedChurchId = readOcrStudioChurchId(searchParams, userChurchId);
 
-  return { selectedChurchId };
+  const setSelectedChurchId = (churchId: number) => {
+    setOcrStudioChurchParam(setSearchParams, churchId);
+  };
+
+  return { selectedChurchId, setSelectedChurchId, searchParams, setSearchParams };
 }

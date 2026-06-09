@@ -37,8 +37,9 @@ const OCRStudioPage: React.FC = () => {
       };
     }
     const churchQ = effectiveChurchId ? `/${effectiveChurchId}` : '';
+    const churchQuery = effectiveChurchId ? `?church=${effectiveChurchId}` : '';
     return {
-      upload: '/devel/ocr-studio/upload',
+      upload: `/devel/ocr-studio/upload${churchQuery}`,
       review: `/devel/ocr-studio/review${churchQ}`,
       records: '/portal/records-management',
     };

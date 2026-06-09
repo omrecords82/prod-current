@@ -546,7 +546,7 @@ const OcrSetupWizardPage: React.FC = () => {
             <Button
               variant="contained"
               size="large"
-              onClick={() => navigate(`/devel/ocr-studio/upload?church_id=${churchId}`)}
+              onClick={() => navigate(`/devel/ocr-studio/upload?church=${churchId}`)}
               sx={{ mt: 2 }}
               startIcon={<ArrowForward />}
             >

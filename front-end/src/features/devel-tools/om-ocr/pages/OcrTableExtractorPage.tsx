@@ -50,7 +50,10 @@ import {
     IconTable,
 } from '@tabler/icons-react';
 import React, { useCallback, useEffect, useState } from 'react';
+import OcrChurchSelector from '../components/OcrChurchSelector';
 import OcrStudioNav from '../components/OcrStudioNav';
+import { useOcrChurchSelector } from '../hooks/useOcrChurchSelector';
+import { setOcrStudioChurchParam } from '../utils/ocrStudioChurch';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -140,6 +143,7 @@ const fmtDate = (iso: string | null) => {
 
 const OcrTableExtractorPage: React.FC = () => {
   const theme = useTheme();
+  const { selectedChurchId, setSearchParams } = useOcrChurchSelector();
 
   // List state
   const [jobs, setJobs] = useState<TableJob[]>([]);
@@ -187,6 +191,12 @@ const OcrTableExtractorPage: React.FC = () => {
   }, [page, churchFilter, selectedLayout]);
 
   useEffect(() => { fetchJobs(); }, [fetchJobs]);
+
+  useEffect(() => {
+    if (!selectedChurchId || churches.length === 0) return;
+    const match = churches.find((c) => c.id === selectedChurchId);
+    if (match && churchFilter?.id !== match.id) setChurchFilter(match);
+  }, [selectedChurchId, churches, churchFilter]);
 
   // ── Run extraction ────────────────────────────────────────────────────────
 
@@ -314,6 +324,7 @@ const OcrTableExtractorPage: React.FC = () => {
   return (
     <PageContainer title="OCR Table Extractor" description="Layout-first table extraction from OCR jobs">
       <OcrStudioNav />
+      <OcrChurchSelector />
       <Box sx={{ p: { xs: 1, sm: 2 } }}>
 
         {/* Header */}
@@ -346,7 +357,11 @@ const OcrTableExtractorPage: React.FC = () => {
                 options={churches}
                 getOptionLabel={(o) => `${o.name} (#${o.id})`}
                 value={churchFilter}
-                onChange={(_, v) => { setChurchFilter(v); setPage(1); }}
+                onChange={(_, v) => {
+                  setChurchFilter(v);
+                  setPage(1);
+                  if (v) setOcrStudioChurchParam(setSearchParams, v.id);
+                }}
                 renderInput={(params) => <TextField {...params} label="Church" placeholder="All churches" />}
                 sx={{ minWidth: 260 }}
                 isOptionEqualToValue={(o, v) => o.id === v.id}
