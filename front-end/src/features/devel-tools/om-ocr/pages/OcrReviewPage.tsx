@@ -34,6 +34,7 @@ import {
   Alert,
   Box,
   Button,
+  Checkbox,
   Chip,
   CircularProgress,
   Collapse,
@@ -84,6 +85,7 @@ import {
   IconZoomIn,
   IconZoomOut,
   IconTrash,
+  IconPhoto,
   IconAlertCircle,
   IconAlertTriangle,
   IconInfoCircle,
@@ -303,6 +305,41 @@ function debounce<T extends (...args: any[]) => void>(func: T, delay: number): (
       func(...args);
     }, delay);
   };
+}
+
+function JobListThumb({ churchId, jobId }: { churchId: number; jobId: number }) {
+  const [failed, setFailed] = useState(false);
+  const thumbSx = {
+    width: 44,
+    height: 44,
+    flexShrink: 0,
+    borderRadius: 1,
+    bgcolor: 'action.hover',
+    border: '1px solid',
+    borderColor: 'divider',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  } as const;
+
+  if (failed) {
+    return (
+      <Box sx={{ ...thumbSx, color: 'text.disabled' }}>
+        <IconPhoto size={20} />
+      </Box>
+    );
+  }
+
+  return (
+    <Box
+      component="img"
+      src={`/api/church/${churchId}/ocr/jobs/${jobId}/image`}
+      alt=""
+      onError={() => setFailed(true)}
+      sx={{ ...thumbSx, objectFit: 'cover' }}
+    />
+  );
 }
 
 const OcrReviewPage: React.FC = () => {
@@ -1251,29 +1288,57 @@ const OcrReviewPage: React.FC = () => {
     }
   };
 
-  const [deleteConfirmJobId, setDeleteConfirmJobId] = useState<number | null>(null);
-  const [deletingJobId, setDeletingJobId] = useState<number | null>(null);
+  const [selectedAwaitingJobIds, setSelectedAwaitingJobIds] = useState<Set<number>>(new Set());
+  const [pendingDeleteJobIds, setPendingDeleteJobIds] = useState<number[] | null>(null);
+  const [deletingJobs, setDeletingJobs] = useState(false);
 
-  const handleDeleteJob = useCallback(async (jobId: number) => {
-    if (!churchId) return;
-    setDeletingJobId(jobId);
+  const toggleAwaitingJobSelection = useCallback((jobId: number) => {
+    setSelectedAwaitingJobIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(jobId)) next.delete(jobId);
+      else next.add(jobId);
+      return next;
+    });
+  }, []);
+
+  const handleDeleteJobs = useCallback(async (jobIds: number[]) => {
+    if (!churchId || jobIds.length === 0) return;
+    setDeletingJobs(true);
     try {
-      await apiClient.delete(`/api/church/${churchId}/ocr/jobs`, { data: { jobIds: [jobId] } });
-      
-      // Update local state
-      setJobs((prevJobs) => prevJobs.filter((j) => Number(j.id) !== jobId));
-      
-      // If currently active job is deleted, navigate back to the main review page
-      if (selectedJobId === jobId) {
+      await apiClient.delete(`/api/church/${churchId}/ocr/jobs`, { data: { jobIds } });
+      const idSet = new Set(jobIds);
+      setJobs((prevJobs) => prevJobs.filter((j) => !idSet.has(Number(j.id))));
+      setSelectedAwaitingJobIds((prev) => {
+        const next = new Set(prev);
+        jobIds.forEach((id) => next.delete(id));
+        return next;
+      });
+      if (selectedJobId && idSet.has(selectedJobId)) {
         navigate(reviewBase);
       }
     } catch (err: any) {
-      alert(`Failed to delete job: ${err?.response?.data?.error || err?.message || err}`);
+      alert(`Failed to delete job(s): ${err?.response?.data?.error || err?.message || err}`);
     } finally {
-      setDeletingJobId(null);
-      setDeleteConfirmJobId(null);
+      setDeletingJobs(false);
+      setPendingDeleteJobIds(null);
     }
   }, [churchId, selectedJobId, navigate, reviewBase]);
+
+  const awaitingJobs = useMemo(() => {
+    return jobs.filter((j) => j.review_status !== 'ready_to_seed' && j.review_status !== 'seeded');
+  }, [jobs]);
+
+  const completedJobs = useMemo(() => {
+    return jobs.filter((j) => j.review_status === 'ready_to_seed' || j.review_status === 'seeded');
+  }, [jobs]);
+
+  useEffect(() => {
+    const awaitingIds = new Set(awaitingJobs.map((j) => Number(j.id)));
+    setSelectedAwaitingJobIds((prev) => {
+      const next = new Set([...prev].filter((id) => awaitingIds.has(id)));
+      return next.size === prev.size ? prev : next;
+    });
+  }, [awaitingJobs]);
 
   if (!churchId) {
     return (
@@ -1286,13 +1351,9 @@ const OcrReviewPage: React.FC = () => {
 
   const statusCfg = STATUS_LABELS[reviewStatus] || { label: reviewStatus, color: 'default' as const };
 
-  const awaitingJobs = useMemo(() => {
-    return jobs.filter((j) => j.review_status !== 'ready_to_seed' && j.review_status !== 'seeded');
-  }, [jobs]);
-
-  const completedJobs = useMemo(() => {
-    return jobs.filter((j) => j.review_status === 'ready_to_seed' || j.review_status === 'seeded');
-  }, [jobs]);
+  const allAwaitingSelected = awaitingJobs.length > 0
+    && awaitingJobs.every((j) => selectedAwaitingJobIds.has(Number(j.id)));
+  const someAwaitingSelected = selectedAwaitingJobIds.size > 0 && !allAwaitingSelected;
 
   return (
     <Box sx={{ height: 'calc(100vh - 64px)', display: 'flex', flexDirection: 'column' }}>
@@ -1349,8 +1410,8 @@ const OcrReviewPage: React.FC = () => {
         <Box
           sx={{
             width: { xs: '100%', md: '33.333%' },
-            minWidth: { md: 280 },
-            maxWidth: { md: 400 },
+            minWidth: { md: 300 },
+            maxWidth: { md: 460 },
             maxHeight: { xs: '40vh', md: 'none' },
             flexShrink: 0,
             borderRight: { md: '1px solid' },
@@ -1361,21 +1422,54 @@ const OcrReviewPage: React.FC = () => {
         >
           <Box sx={{ p: 2 }}>
             <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1 }}>
-              <Typography variant="subtitle2" fontWeight={700}>Jobs awaiting review</Typography>
+              <Stack direction="row" alignItems="center" spacing={0.5} sx={{ minWidth: 0 }}>
+                <Checkbox
+                  size="small"
+                  checked={allAwaitingSelected}
+                  indeterminate={someAwaitingSelected}
+                  disabled={awaitingJobs.length === 0}
+                  onChange={(_, checked) => {
+                    if (checked) {
+                      setSelectedAwaitingJobIds(new Set(awaitingJobs.map((j) => Number(j.id))));
+                    } else {
+                      setSelectedAwaitingJobIds(new Set());
+                    }
+                  }}
+                  sx={{ p: 0.5 }}
+                />
+                <Typography variant="subtitle2" fontWeight={700} noWrap>
+                  Jobs awaiting review
+                  {selectedAwaitingJobIds.size > 0 ? ` (${selectedAwaitingJobIds.size})` : ''}
+                </Typography>
+              </Stack>
               <Tooltip title="Hide jobs list">
                 <IconButton size="small" onClick={() => setJobsCollapsed(true)}>
                   <IconLayoutSidebarLeftCollapse size={18} />
                 </IconButton>
               </Tooltip>
             </Stack>
+            {selectedAwaitingJobIds.size > 0 && (
+              <Button
+                size="small"
+                color="error"
+                variant="outlined"
+                startIcon={<IconTrash size={14} />}
+                sx={{ mb: 1, textTransform: 'none' }}
+                onClick={() => setPendingDeleteJobIds(Array.from(selectedAwaitingJobIds))}
+              >
+                Delete selected ({selectedAwaitingJobIds.size})
+              </Button>
+            )}
             {jobsLoading && <CircularProgress size={24} />}
             {!jobsLoading && awaitingJobs.length === 0 && (
               <Alert severity="info" sx={{ py: 0.5, px: 1, fontSize: '0.75rem' }}>No jobs awaiting review.</Alert>
             )}
             <List dense disablePadding sx={{ mb: 3 }}>
               {awaitingJobs.map((j) => {
+                const jobId = Number(j.id);
                 const cfg = STATUS_LABELS[j.review_status] || { label: j.review_status, color: 'default' as const };
-                const active = selectedJobId === Number(j.id);
+                const active = selectedJobId === jobId;
+                const checked = selectedAwaitingJobIds.has(jobId);
                 const countStr = typeof j.records_count === 'number' ? `${j.confirmed_count || 0}/${j.records_count} ` : '';
                 return (
                   <ListItem key={j.id} disablePadding sx={{ mb: 0.5 }}>
@@ -1391,6 +1485,14 @@ const OcrReviewPage: React.FC = () => {
                         pr: 1,
                       }}
                     >
+                      <Checkbox
+                        size="small"
+                        checked={checked}
+                        onClick={(e) => e.stopPropagation()}
+                        onChange={() => toggleAwaitingJobSelection(jobId)}
+                        sx={{ p: 0.25, flexShrink: 0 }}
+                      />
+                      {churchId && <JobListThumb churchId={churchId} jobId={jobId} />}
                       <ListItemText
                         primary={`${countStr}${j.filename || `Job #${j.id}`}`}
                         secondary={new Date(j.created_at).toLocaleString()}
@@ -1412,7 +1514,7 @@ const OcrReviewPage: React.FC = () => {
                           sx={{ flexShrink: 0 }}
                           onClick={(e) => {
                             e.stopPropagation();
-                            setDeleteConfirmJobId(Number(j.id));
+                            setPendingDeleteJobIds([jobId]);
                           }}
                         >
                           <IconTrash size={16} />
@@ -1468,7 +1570,7 @@ const OcrReviewPage: React.FC = () => {
                           sx={{ flexShrink: 0 }}
                           onClick={(e) => {
                             e.stopPropagation();
-                            setDeleteConfirmJobId(Number(j.id));
+                            setPendingDeleteJobIds([Number(j.id)]);
                           }}
                         >
                           <IconTrash size={16} />
@@ -2622,23 +2724,29 @@ const OcrReviewPage: React.FC = () => {
         </DialogActions>
       </Dialog>
 
-      <Dialog open={deleteConfirmJobId !== null} onClose={() => setDeleteConfirmJobId(null)}>
-        <DialogTitle>Delete Job Completely</DialogTitle>
+      <Dialog open={pendingDeleteJobIds !== null} onClose={() => setPendingDeleteJobIds(null)}>
+        <DialogTitle>
+          {pendingDeleteJobIds && pendingDeleteJobIds.length > 1
+            ? `Delete ${pendingDeleteJobIds.length} Jobs`
+            : 'Delete Job Completely'}
+        </DialogTitle>
         <DialogContent>
           <Typography>
-            Are you sure you want to delete Job #{deleteConfirmJobId} completely?
-            This will permanently remove the job metadata, all extracted records, draft records, and uploaded files from the server. This action cannot be undone.
+            {pendingDeleteJobIds && pendingDeleteJobIds.length > 1
+              ? `Are you sure you want to delete ${pendingDeleteJobIds.length} selected jobs completely?`
+              : `Are you sure you want to delete Job #${pendingDeleteJobIds?.[0]} completely?`}
+            {' '}This will permanently remove the job metadata, all extracted records, draft records, and uploaded files from the server. This action cannot be undone.
           </Typography>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setDeleteConfirmJobId(null)} disabled={deletingJobId !== null}>Cancel</Button>
+          <Button onClick={() => setPendingDeleteJobIds(null)} disabled={deletingJobs}>Cancel</Button>
           <Button
-            onClick={() => deleteConfirmJobId !== null && handleDeleteJob(deleteConfirmJobId)}
+            onClick={() => pendingDeleteJobIds && handleDeleteJobs(pendingDeleteJobIds)}
             color="error"
             variant="contained"
-            disabled={deletingJobId !== null}
+            disabled={deletingJobs}
           >
-            {deletingJobId !== null ? <CircularProgress size={24} color="inherit" /> : 'Delete Completely'}
+            {deletingJobs ? <CircularProgress size={24} color="inherit" /> : 'Delete Completely'}
           </Button>
         </DialogActions>
       </Dialog>
