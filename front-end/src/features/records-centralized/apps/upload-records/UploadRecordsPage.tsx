@@ -468,11 +468,6 @@ const UploadRecordsPage: React.FC = () => {
         <Typography variant="body2" color="text.secondary">
           Upload scanned church records and track their processing status.
         </Typography>
-        {isOcrStudioUpload && (
-          <Stack direction="row" spacing={1.5} alignItems="center" flexWrap="wrap" sx={{ mt: 1.5 }}>
-            <OcrChurchSelector variant="inline" />
-          </Stack>
-        )}
       </Box>
 
       {/* Admin church selector (portal / non-OCR-studio routes) */}
@@ -495,24 +490,54 @@ const UploadRecordsPage: React.FC = () => {
 
       {!effectiveChurchId && (
         <Alert severity="info" sx={{ mb: 2 }}>
-          {isAdmin ? 'Select a target church above to continue.' : 'No church is associated with your account. Contact your administrator.'}
+          {isAdmin ? 'Select a target church to continue.' : 'No church is associated with your account. Contact your administrator.'}
         </Alert>
+      )}
+
+      {isOcrStudioUpload && (
+        <Paper variant="outlined" sx={{ mb: 2.5, px: { xs: 1, sm: 2 } }}>
+          <Stack
+            direction="row"
+            alignItems="center"
+            justifyContent="space-between"
+            flexWrap="wrap"
+            gap={1}
+            sx={{ minHeight: 42 }}
+          >
+            <OcrChurchSelector variant="inline" />
+            {effectiveChurchId && (
+              <Tabs
+                value={activeTab}
+                onChange={(_, v) => setActiveTab(v)}
+                sx={{
+                  minHeight: 42,
+                  ml: 'auto',
+                  '& .MuiTab-root': { minHeight: 42, textTransform: 'none', fontWeight: 600, fontSize: '0.875rem' },
+                }}
+              >
+                <Tab label="Upload Images" />
+                <Tab label={`My Uploads${history.length > 0 ? ` (${history.length})` : ''}`} />
+              </Tabs>
+            )}
+          </Stack>
+        </Paper>
+      )}
+
+      {!isOcrStudioUpload && effectiveChurchId && (
+        <Paper variant="outlined" sx={{ mb: 2.5 }}>
+          <Tabs
+            value={activeTab}
+            onChange={(_, v) => setActiveTab(v)}
+            sx={{ minHeight: 42, '& .MuiTab-root': { minHeight: 42, textTransform: 'none', fontWeight: 600, fontSize: '0.875rem' } }}
+          >
+            <Tab label="Upload Images" />
+            <Tab label={`My Uploads${history.length > 0 ? ` (${history.length})` : ''}`} />
+          </Tabs>
+        </Paper>
       )}
 
       {effectiveChurchId && (
         <>
-          {/* Tabs */}
-          <Paper variant="outlined" sx={{ mb: 2.5 }}>
-            <Tabs
-              value={activeTab}
-              onChange={(_, v) => setActiveTab(v)}
-              sx={{ minHeight: 42, '& .MuiTab-root': { minHeight: 42, textTransform: 'none', fontWeight: 600, fontSize: '0.875rem' } }}
-            >
-              <Tab label="Upload Images" />
-              <Tab label={`My Uploads${history.length > 0 ? ` (${history.length})` : ''}`} />
-            </Tabs>
-          </Paper>
-
           {/* ════════════ TAB 0: UPLOAD ════════════ */}
           {activeTab === 0 && (
             <Box>
