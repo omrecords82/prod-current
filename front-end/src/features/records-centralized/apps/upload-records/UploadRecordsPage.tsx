@@ -24,8 +24,13 @@ import {
   alpha,
   Box,
   Button,
+  Checkbox,
   Chip,
   CircularProgress,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
   Divider,
   FormControl,
   IconButton,
@@ -38,6 +43,8 @@ import {
   Stack,
   Tab,
   Tabs,
+  ToggleButton,
+  ToggleButtonGroup,
   Tooltip,
   Typography,
   useTheme,
@@ -45,8 +52,11 @@ import {
 import {
   IconCloudUpload,
   IconFile,
+  IconLayoutGrid,
+  IconList,
   IconPhoto,
   IconRefresh,
+  IconTrash,
   IconUpload,
   IconX,
 } from '@tabler/icons-react';
@@ -194,6 +204,55 @@ const ReviewStatusChip: React.FC<{ status: ReviewStatus; size?: 'small' | 'mediu
   );
 };
 
+type HistoryViewMode = 'list' | 'grid';
+
+/** Thumbnail for an OCR job image */
+const UploadJobThumb: React.FC<{
+  churchId: number;
+  jobId: string | number;
+  size?: 'sm' | 'md' | 'fill';
+}> = ({ churchId, jobId, size = 'sm' }) => {
+  const [failed, setFailed] = useState(false);
+  const dimensionSx = size === 'fill'
+    ? { width: '100%', aspectRatio: '4 / 3' }
+    : size === 'md'
+      ? { width: 56, height: 56 }
+      : { width: 44, height: 44 };
+
+  const thumbSx = {
+    ...dimensionSx,
+    flexShrink: 0,
+    borderRadius: 1,
+    bgcolor: 'action.hover',
+    border: '1px solid',
+    borderColor: 'divider',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  } as const;
+
+  if (failed) {
+    return (
+      <Box sx={{ ...thumbSx, color: 'text.disabled' }}>
+        <IconPhoto size={size === 'fill' ? 32 : 20} />
+      </Box>
+    );
+  }
+
+  return (
+    <Box
+      component="img"
+      src={`/api/church/${churchId}/ocr/jobs/${jobId}/image`}
+      alt=""
+      onError={() => setFailed(true)}
+      sx={{ ...thumbSx, objectFit: 'cover' }}
+    />
+  );
+};
+
+const jobDisplayName = (job: OcrJob) => (job.original_filename || job.filename || '').split('/').pop() || `Job #${job.id}`;
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Main Component
 // ─────────────────────────────────────────────────────────────────────────────
@@ -234,6 +293,10 @@ const UploadRecordsPage: React.FC = () => {
   const [history, setHistory] = useState<OcrJob[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historyFilter, setHistoryFilter] = useState<string>('all');
+  const [historyViewMode, setHistoryViewMode] = useState<HistoryViewMode>('list');
+  const [selectedHistoryJobIds, setSelectedHistoryJobIds] = useState<Set<string>>(new Set());
+  const [pendingDeleteHistoryIds, setPendingDeleteHistoryIds] = useState<string[] | null>(null);
+  const [deletingHistoryJobs, setDeletingHistoryJobs] = useState(false);
 
   // Church OCR settings (language + record type for uploads)
   const [ocrLanguage, setOcrLanguage] = useState('en');
@@ -444,6 +507,60 @@ const UploadRecordsPage: React.FC = () => {
     for (const j of history) counts[j.review_status] = (counts[j.review_status] || 0) + 1;
     return counts;
   }, [history]);
+
+  const toggleHistoryJobSelection = useCallback((jobId: string) => {
+    setSelectedHistoryJobIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(jobId)) next.delete(jobId);
+      else next.add(jobId);
+      return next;
+    });
+  }, []);
+
+  const handleDeleteHistoryJobs = useCallback(async (jobIds: string[]) => {
+    if (!effectiveChurchId || jobIds.length === 0) return;
+    setDeletingHistoryJobs(true);
+    try {
+      await apiClient.delete(`/api/church/${effectiveChurchId}/ocr/jobs`, {
+        data: { jobIds: jobIds.map(Number) },
+      });
+      const idSet = new Set(jobIds);
+      setHistory((prev) => prev.filter((j) => !idSet.has(j.id)));
+      setSelectedHistoryJobIds((prev) => {
+        const next = new Set(prev);
+        jobIds.forEach((id) => next.delete(id));
+        return next;
+      });
+      toast.success(jobIds.length === 1 ? 'Upload deleted' : `Deleted ${jobIds.length} uploads`);
+    } catch (err: any) {
+      const msg = err?.response?.data?.error || err?.message || 'Failed to delete upload(s)';
+      toast.error(msg);
+    } finally {
+      setDeletingHistoryJobs(false);
+      setPendingDeleteHistoryIds(null);
+    }
+  }, [effectiveChurchId]);
+
+  useEffect(() => {
+    const visibleIds = new Set(filteredHistory.map((j) => j.id));
+    setSelectedHistoryJobIds((prev) => {
+      const next = new Set([...prev].filter((id) => visibleIds.has(id)));
+      return next.size === prev.size ? prev : next;
+    });
+  }, [filteredHistory]);
+
+  const allHistorySelected = filteredHistory.length > 0
+    && filteredHistory.every((j) => selectedHistoryJobIds.has(j.id));
+  const someHistorySelected = selectedHistoryJobIds.size > 0 && !allHistorySelected;
+
+  const openReviewForJob = useCallback((jobId: string) => {
+    if (!effectiveChurchId) return;
+    navigate(
+      isPortalUpload
+        ? `/portal/ocr/review/${effectiveChurchId}/${jobId}`
+        : `/devel/ocr-studio/review/${effectiveChurchId}/${jobId}`
+    );
+  }, [effectiveChurchId, isPortalUpload, navigate]);
 
   // ═══════════════════════════════════════════════════════════════════════════
   // RENDER
@@ -729,8 +846,8 @@ const UploadRecordsPage: React.FC = () => {
           {/* ════════════ TAB 1: MY UPLOADS ════════════ */}
           {activeTab === 1 && (
             <Box>
-              {/* Filter chips */}
-              <Box sx={{ display: 'flex', gap: 0.75, flexWrap: 'wrap', mb: 2, alignItems: 'center' }}>
+              {/* Filter chips + view controls */}
+              <Box sx={{ display: 'flex', gap: 0.75, flexWrap: 'wrap', mb: 1.5, alignItems: 'center' }}>
                 {(['all', ...Object.keys(REVIEW_STATUS_CONFIG)] as string[]).map((key) => {
                   const count = statusCounts[key] || 0;
                   if (key !== 'all' && count === 0) return null;
@@ -748,14 +865,70 @@ const UploadRecordsPage: React.FC = () => {
                   );
                 })}
                 <Box sx={{ flex: 1 }} />
+                <ToggleButtonGroup
+                  size="small"
+                  exclusive
+                  value={historyViewMode}
+                  onChange={(_, v: HistoryViewMode | null) => { if (v) setHistoryViewMode(v); }}
+                  sx={{ mr: 0.5 }}
+                >
+                  <ToggleButton value="list" aria-label="List view">
+                    <Tooltip title="List view"><IconList size={16} /></Tooltip>
+                  </ToggleButton>
+                  <ToggleButton value="grid" aria-label="Grid view">
+                    <Tooltip title="Grid view"><IconLayoutGrid size={16} /></Tooltip>
+                  </ToggleButton>
+                </ToggleButtonGroup>
                 <IconButton size="small" onClick={fetchHistory} title="Refresh">
                   <IconRefresh size={16} />
                 </IconButton>
               </Box>
 
+              {/* Selection toolbar */}
+              {!historyLoading && filteredHistory.length > 0 && (
+                <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1.5 }}>
+                  <Checkbox
+                    size="small"
+                    checked={allHistorySelected}
+                    indeterminate={someHistorySelected}
+                    onChange={(_, checked) => {
+                      if (checked) {
+                        setSelectedHistoryJobIds(new Set(filteredHistory.map((j) => j.id)));
+                      } else {
+                        setSelectedHistoryJobIds(new Set());
+                      }
+                    }}
+                    sx={{ p: 0.5 }}
+                  />
+                  <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8rem' }}>
+                    {selectedHistoryJobIds.size > 0
+                      ? `${selectedHistoryJobIds.size} selected`
+                      : 'Select all'}
+                  </Typography>
+                  {selectedHistoryJobIds.size > 0 && (
+                    <Button
+                      size="small"
+                      color="error"
+                      variant="outlined"
+                      startIcon={<IconTrash size={14} />}
+                      sx={{ textTransform: 'none', ml: 'auto' }}
+                      onClick={() => setPendingDeleteHistoryIds(Array.from(selectedHistoryJobIds))}
+                    >
+                      Delete selected ({selectedHistoryJobIds.size})
+                    </Button>
+                  )}
+                </Stack>
+              )}
+
               {historyLoading ? (
                 <Stack spacing={1.5}>
-                  {[1, 2, 3].map((i) => <Skeleton key={i} variant="rounded" height={72} />)}
+                  {[1, 2, 3].map((i) => (
+                    <Skeleton
+                      key={i}
+                      variant="rounded"
+                      height={historyViewMode === 'grid' ? 200 : 72}
+                    />
+                  ))}
                 </Stack>
               ) : filteredHistory.length === 0 ? (
                 <Paper variant="outlined" sx={{ p: 4, textAlign: 'center' }}>
@@ -764,10 +937,93 @@ const UploadRecordsPage: React.FC = () => {
                     {history.length === 0 ? 'No uploads yet. Upload your first record images above.' : 'No uploads match this filter.'}
                   </Typography>
                 </Paper>
+              ) : historyViewMode === 'grid' ? (
+                <Box
+                  sx={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
+                    gap: 2,
+                  }}
+                >
+                  {filteredHistory.map((job) => {
+                    const checked = selectedHistoryJobIds.has(job.id);
+                    const canReview = ['agent_extracted', 'ready_to_seed'].includes(job.review_status);
+                    return (
+                      <Paper
+                        key={job.id}
+                        variant="outlined"
+                        sx={{
+                          overflow: 'hidden',
+                          borderColor: checked ? 'primary.main' : 'divider',
+                          borderWidth: checked ? 2 : 1,
+                          transition: 'all 0.15s',
+                          '&:hover': { boxShadow: 2 },
+                        }}
+                      >
+                        <Box sx={{ position: 'relative' }}>
+                          <Checkbox
+                            size="small"
+                            checked={checked}
+                            onChange={() => toggleHistoryJobSelection(job.id)}
+                            sx={{
+                              position: 'absolute',
+                              top: 4,
+                              left: 4,
+                              zIndex: 1,
+                              bgcolor: alpha(theme.palette.background.paper, 0.85),
+                              borderRadius: 0.5,
+                              p: 0.25,
+                            }}
+                          />
+                          {effectiveChurchId && (
+                            <Box
+                              onClick={() => { if (canReview) openReviewForJob(job.id); }}
+                              sx={{
+                                cursor: canReview ? 'pointer' : 'default',
+                                borderBottom: '1px solid',
+                                borderColor: 'divider',
+                              }}
+                            >
+                              <UploadJobThumb churchId={effectiveChurchId} jobId={job.id} size="fill" />
+                            </Box>
+                          )}
+                        </Box>
+                        <Box sx={{ p: 1.25 }}>
+                          <Typography variant="caption" fontWeight={600} noWrap title={jobDisplayName(job)} sx={{ display: 'block', mb: 0.5 }}>
+                            {jobDisplayName(job)}
+                          </Typography>
+                          <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={0.5}>
+                            <ReviewStatusChip status={job.review_status as ReviewStatus} />
+                            <Typography variant="caption" color="text.secondary" noWrap>
+                              {fmtDate(job.created_at)}
+                            </Typography>
+                          </Stack>
+                          {canReview && effectiveChurchId && (
+                            <Button
+                              size="small"
+                              variant="text"
+                              fullWidth
+                              sx={{ mt: 0.75, textTransform: 'none', fontSize: '0.75rem' }}
+                              onClick={() => openReviewForJob(job.id)}
+                            >
+                              Review & Seed
+                            </Button>
+                          )}
+                          {job.review_notes && job.review_status === 'returned' && (
+                            <Typography variant="caption" color="warning.main" sx={{ display: 'block', mt: 0.5 }} noWrap title={job.review_notes}>
+                              {job.review_notes}
+                            </Typography>
+                          )}
+                        </Box>
+                      </Paper>
+                    );
+                  })}
+                </Box>
               ) : (
                 <Stack spacing={1}>
                   {filteredHistory.map((job) => {
                     const reviewCfg = REVIEW_STATUS_CONFIG[(job.review_status as ReviewStatus)] || REVIEW_STATUS_CONFIG.uploaded;
+                    const checked = selectedHistoryJobIds.has(job.id);
                     return (
                       <Paper
                         key={job.id}
@@ -775,17 +1031,25 @@ const UploadRecordsPage: React.FC = () => {
                         sx={{
                           p: 2,
                           borderLeft: `3px solid ${reviewCfg.color}`,
+                          boxShadow: checked ? `0 0 0 1px ${theme.palette.primary.main}` : undefined,
                           transition: 'all 0.15s',
                           '&:hover': { bgcolor: alpha(reviewCfg.color, isDark ? 0.04 : 0.02) },
                         }}
                       >
                         <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5 }}>
-                          {/* Left: dot + info */}
-                          <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: reviewCfg.color, mt: 0.8, flexShrink: 0 }} />
+                          <Checkbox
+                            size="small"
+                            checked={checked}
+                            onChange={() => toggleHistoryJobSelection(job.id)}
+                            sx={{ p: 0.25, mt: 0.25, flexShrink: 0 }}
+                          />
+                          {effectiveChurchId && (
+                            <UploadJobThumb churchId={effectiveChurchId} jobId={job.id} size="md" />
+                          )}
                           <Box sx={{ flex: 1, minWidth: 0 }}>
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.25 }}>
                               <Typography variant="body2" fontWeight={600} noWrap sx={{ flex: 1, fontSize: '0.875rem' }}>
-                                {(job.original_filename || job.filename || '').split('/').pop()}
+                                {jobDisplayName(job)}
                               </Typography>
                               <ReviewStatusChip status={job.review_status as ReviewStatus} />
                             </Box>
@@ -810,16 +1074,11 @@ const UploadRecordsPage: React.FC = () => {
                                 size="small"
                                 variant="outlined"
                                 sx={{ mt: 1, textTransform: 'none' }}
-                                onClick={() => navigate(
-                                  isPortalUpload
-                                    ? `/portal/ocr/review/${effectiveChurchId}/${job.id}`
-                                    : `/devel/ocr-studio/review/${effectiveChurchId}/${job.id}`
-                                )}
+                                onClick={() => openReviewForJob(job.id)}
                               >
                                 Review & Seed
                               </Button>
                             )}
-                            {/* Review notes (shown to user when returned) */}
                             {job.review_notes && (
                               <Alert severity={job.review_status === 'returned' ? 'warning' : 'info'} sx={{ mt: 1, py: 0, '& .MuiAlert-message': { fontSize: '0.8rem' } }}>
                                 {job.review_notes}
@@ -827,7 +1086,6 @@ const UploadRecordsPage: React.FC = () => {
                             )}
                           </Box>
 
-                          {/* Staff: status controls */}
                           {isStaff && (
                             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, flexShrink: 0 }}>
                               <FormControl size="small" sx={{ minWidth: 140 }}>
@@ -866,6 +1124,38 @@ const UploadRecordsPage: React.FC = () => {
         </>
       )}
     </Box>
+
+      <Dialog open={pendingDeleteHistoryIds !== null} onClose={() => !deletingHistoryJobs && setPendingDeleteHistoryIds(null)}>
+        <DialogTitle>
+          {pendingDeleteHistoryIds && pendingDeleteHistoryIds.length > 1
+            ? `Delete ${pendingDeleteHistoryIds.length} uploads`
+            : 'Delete upload'}
+        </DialogTitle>
+        <DialogContent>
+          <Typography variant="body2">
+            {pendingDeleteHistoryIds && pendingDeleteHistoryIds.length > 1
+              ? `Are you sure you want to delete ${pendingDeleteHistoryIds.length} selected uploads?`
+              : (() => {
+                  const job = history.find((j) => j.id === pendingDeleteHistoryIds?.[0]);
+                  const label = job ? jobDisplayName(job) : `Job #${pendingDeleteHistoryIds?.[0]}`;
+                  return `Are you sure you want to delete "${label}"?`;
+                })()}
+            {' '}This permanently removes the job, extracted records, and uploaded files. This cannot be undone.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setPendingDeleteHistoryIds(null)} disabled={deletingHistoryJobs}>Cancel</Button>
+          <Button
+            onClick={() => pendingDeleteHistoryIds && handleDeleteHistoryJobs(pendingDeleteHistoryIds)}
+            color="error"
+            variant="contained"
+            disabled={deletingHistoryJobs}
+            sx={{ textTransform: 'none' }}
+          >
+            {deletingHistoryJobs ? <CircularProgress size={22} color="inherit" /> : 'Delete'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </OcrSetupGate>
   );
 };
