@@ -54,6 +54,7 @@ import ColumnBoundaryEditor, {
 } from '../components/ColumnBoundaryEditor';
 import OcrChurchSelector from '../components/OcrChurchSelector';
 import OcrStudioNav from '../components/OcrStudioNav';
+import { cropImageContentBorders } from '../utils/cropImageContent';
 import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 
@@ -213,6 +214,7 @@ const LayoutTemplateEditorPage: React.FC = () => {
 
   const [dropActive, setDropActive] = useState(false);
   const [localImageUrl, setLocalImageUrl] = useState<string | null>(null);
+  const [imagePreparing, setImagePreparing] = useState(false);
   const localImageUrlRef = useRef<string | null>(null);
 
   const isFormMode = extractionMode === 'form' || extractionMode === 'multi_form' || extractionMode === 'auto';
@@ -291,23 +293,35 @@ const LayoutTemplateEditorPage: React.FC = () => {
     if (localImageUrlRef.current) URL.revokeObjectURL(localImageUrlRef.current);
   }, []);
 
-  const handleDroppedImage = useCallback((fileList: FileList | null) => {
+  const handleDroppedImage = useCallback(async (fileList: FileList | null) => {
     const file = fileList?.[0];
     if (!file || !file.type.startsWith('image/')) {
       setToast({ msg: 'Drop a single image file (PNG, JPG, etc.)', severity: 'info' });
       return;
     }
-    if (localImageUrlRef.current) URL.revokeObjectURL(localImageUrlRef.current);
-    const url = URL.createObjectURL(file);
-    localImageUrlRef.current = url;
-    setLocalImageUrl(url);
-    setRefJobId(null);
-    setImageUrl(null);
-    setDirty(true);
-    if (extractionMode === 'tabular') {
-      setExtractionMode('multi_form');
+    setImagePreparing(true);
+    try {
+      if (localImageUrlRef.current) URL.revokeObjectURL(localImageUrlRef.current);
+      const cropped = await cropImageContentBorders(file);
+      localImageUrlRef.current = cropped.url;
+      setLocalImageUrl(cropped.url);
+      setRefJobId(null);
+      setImageUrl(null);
+      setDirty(true);
+      if (extractionMode === 'tabular') {
+        setExtractionMode('multi_form');
+      }
+      setToast({
+        msg: cropped.cropped
+          ? 'Reference image loaded (black borders trimmed) — draw record regions'
+          : 'Reference image loaded — draw record regions and save as template',
+        severity: 'success',
+      });
+    } catch {
+      setToast({ msg: 'Failed to prepare reference image', severity: 'error' });
+    } finally {
+      setImagePreparing(false);
     }
-    setToast({ msg: 'Reference image loaded — draw record regions and save as template', severity: 'success' });
   }, [extractionMode, setDirty, setExtractionMode, setImageUrl, setRefJobId]);
 
   // ── Select a template ──────────────────────────────────────────────────────
@@ -636,11 +650,15 @@ const LayoutTemplateEditorPage: React.FC = () => {
         </Card>
 
         {/* Main editor area: image + fields config */}
-        <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} sx={{ minHeight: 500, height: 'calc(100vh - 280px)' }}>
-          {/* Left: Column Boundary Editor (always shown — useful for record regions in multi_form too) */}
-          <Box sx={{ flex: 2, minHeight: 400 }}>
+        <Stack
+          direction={{ xs: 'column', md: 'row' }}
+          spacing={2}
+          sx={{ minHeight: 500, height: 'calc(100vh - 280px)', overflow: 'hidden' }}
+        >
+          {/* Left: image canvas — constrained so it cannot overlap the config panel */}
+          <Box sx={{ flex: '1 1 0', minWidth: 0, minHeight: 0, overflow: 'hidden' }}>
             <Card
-              sx={{ height: '100%' }}
+              sx={{ height: '100%', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}
               onDragEnter={(e) => { e.preventDefault(); setDropActive(true); }}
               onDragLeave={(e) => { e.preventDefault(); setDropActive(false); }}
               onDragOver={(e) => e.preventDefault()}
@@ -650,16 +668,18 @@ const LayoutTemplateEditorPage: React.FC = () => {
                 handleDroppedImage(e.dataTransfer.files);
               }}
             >
-              {activeImageUrl ? (
-                <Box sx={{ position: 'relative', height: '100%' }}>
-                  {localImageUrl && (
-                    <Chip
-                      size="small"
-                      label="Dropped reference image"
-                      color="info"
-                      sx={{ position: 'absolute', top: 8, left: 8, zIndex: 2 }}
-                    />
-                  )}
+              {localImageUrl && activeImageUrl && (
+                <Box sx={{ px: 1, py: 0.5, borderBottom: '1px solid', borderColor: 'divider', flexShrink: 0 }}>
+                  <Chip size="small" label="Dropped reference image" color="info" variant="outlined" />
+                </Box>
+              )}
+              {imagePreparing ? (
+                <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
+                  <CircularProgress size={22} />
+                  <Typography variant="body2" color="text.secondary">Trimming borders…</Typography>
+                </Box>
+              ) : activeImageUrl ? (
+                <Box sx={{ flex: 1, minHeight: 0, minWidth: 0, overflow: 'hidden' }}>
                   <ColumnBoundaryEditor
                     imageUrl={activeImageUrl}
                     columnBands={extractionMode === 'tabular' ? columnBands : []}
@@ -673,11 +693,11 @@ const LayoutTemplateEditorPage: React.FC = () => {
               ) : (
                 <Box
                   sx={{
+                    flex: 1,
                     display: 'flex',
                     flexDirection: 'column',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    height: '100%',
                     p: 4,
                     border: dropActive ? '2px dashed' : '2px dashed transparent',
                     borderColor: dropActive ? 'primary.main' : 'transparent',
@@ -697,8 +717,22 @@ const LayoutTemplateEditorPage: React.FC = () => {
             </Card>
           </Box>
 
-          {/* Right: Fields config + preview */}
-          <Box sx={{ flex: 1, minWidth: 300, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+          {/* Right: Fields config + preview — fixed width so image panel cannot cover it */}
+          <Box
+            sx={{
+              flex: { xs: '1 1 auto', md: '0 0 380px' },
+              width: { md: 380 },
+              maxWidth: { md: 420 },
+              minWidth: { md: 320 },
+              minHeight: 0,
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden',
+              position: 'relative',
+              zIndex: 2,
+              bgcolor: 'background.paper',
+            }}
+          >
             {/* Fields panel — varies by mode */}
             <Card sx={{ mb: 2, flexShrink: 0, maxHeight: '50%', overflow: 'auto' }}>
               <CardContent>

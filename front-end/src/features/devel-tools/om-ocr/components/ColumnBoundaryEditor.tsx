@@ -106,8 +106,10 @@ const ColumnBoundaryEditor: React.FC<ColumnBoundaryEditorProps> = ({
 }) => {
   const theme = useTheme();
   const containerRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
   const imageRef = useRef<HTMLImageElement>(null);
   const [zoom, setZoom] = useState(100);
+  const [fitZoomApplied, setFitZoomApplied] = useState(false);
   const [imgSize, setImgSize] = useState({ width: 0, height: 0 });
   const [dragging, setDragging] = useState<{
     type: 'boundary' | 'headerY';
@@ -128,10 +130,29 @@ const ColumnBoundaryEditor: React.FC<ColumnBoundaryEditorProps> = ({
   const scaledWidth = imgSize.width * (zoom / 100);
   const scaledHeight = imgSize.height * (zoom / 100);
 
+  useEffect(() => {
+    setFitZoomApplied(false);
+    setImgSize({ width: 0, height: 0 });
+    setZoom(100);
+  }, [imageUrl]);
+
   const handleImageLoad = useCallback((e: React.SyntheticEvent<HTMLImageElement>) => {
     const img = e.currentTarget;
     setImgSize({ width: img.naturalWidth, height: img.naturalHeight });
   }, []);
+
+  useEffect(() => {
+    if (fitZoomApplied || imgSize.width <= 0 || !scrollRef.current) return;
+    const availableW = scrollRef.current.clientWidth - 8;
+    const availableH = scrollRef.current.clientHeight - 8;
+    if (availableW <= 0 || availableH <= 0) return;
+
+    const zoomW = (availableW / imgSize.width) * 100;
+    const zoomH = (availableH / imgSize.height) * 100;
+    const fitZoom = Math.floor(Math.min(zoomW, zoomH, 100));
+    setZoom(Math.max(25, Math.min(100, fitZoom)));
+    setFitZoomApplied(true);
+  }, [imgSize, fitZoomApplied]);
 
   // Emit bands when positions change (after drag end)
   const emitBands = useCallback(
@@ -268,7 +289,7 @@ const ColumnBoundaryEditor: React.FC<ColumnBoundaryEditorProps> = ({
   const displayBands = useMemo(() => boundariesToBands(positions), [positions]);
 
   return (
-    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+    <Box sx={{ height: '100%', minHeight: 0, minWidth: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       {/* Toolbar */}
       <Stack direction="row" spacing={1} sx={{ p: 1, borderBottom: '1px solid', borderColor: 'divider' }} alignItems="center">
         {onRecordRegionsChange && (
@@ -332,7 +353,11 @@ const ColumnBoundaryEditor: React.FC<ColumnBoundaryEditorProps> = ({
         <IconButton size="small" onClick={() => setZoom((z) => Math.min(300, z + 25))}>
           <IconZoomIn size={18} />
         </IconButton>
-        <IconButton size="small" onClick={() => setZoom(100)}>
+        <IconButton
+          size="small"
+          onClick={() => setFitZoomApplied(false)}
+          title="Fit to panel"
+        >
           <IconMaximize size={18} />
         </IconButton>
         <Typography variant="caption" sx={{ minWidth: 40 }}>
@@ -342,7 +367,8 @@ const ColumnBoundaryEditor: React.FC<ColumnBoundaryEditorProps> = ({
 
       {/* Image + overlays */}
       <Box
-        sx={{ flex: 1, overflow: 'auto', position: 'relative' }}
+        ref={scrollRef}
+        sx={{ flex: 1, minHeight: 0, minWidth: 0, overflow: 'auto', position: 'relative', width: '100%' }}
         onMouseDown={drawingMode === 'records' ? handleRegionMouseDown : undefined}
         onMouseMove={drawingMode === 'records' ? handleRegionMouseMove : handleMouseMove}
         onMouseUp={drawingMode === 'records' ? handleRegionMouseUp : handleMouseUp}
