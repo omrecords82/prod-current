@@ -499,9 +499,8 @@ const UploadRecordsPage: React.FC = () => {
           <Stack
             direction="row"
             alignItems="center"
-            justifyContent="space-between"
             flexWrap="wrap"
-            gap={1}
+            gap={2}
             sx={{ minHeight: 42 }}
           >
             <OcrChurchSelector variant="inline" />
@@ -511,7 +510,6 @@ const UploadRecordsPage: React.FC = () => {
                 onChange={(_, v) => setActiveTab(v)}
                 sx={{
                   minHeight: 42,
-                  ml: 'auto',
                   '& .MuiTab-root': { minHeight: 42, textTransform: 'none', fontWeight: 600, fontSize: '0.875rem' },
                 }}
               >
