@@ -39,6 +39,7 @@ import {
   type ClergyImportRow,
   parseClergyFile,
 } from '../utils/clergyImport';
+import { formatClergyDate } from '../utils/clergyDates';
 
 type ImportMode = 'file' | 'ocr' | 'paste';
 
@@ -98,7 +99,7 @@ export const ClergyImportDialog: React.FC<ClergyImportDialogProps> = ({
   const setPreviewRows = (parsed: ClergyImportRow[], source: string) => {
     setRows(parsed.map((r) => ({ ...r, selected: true })));
     setStatus(parsed.length
-      ? `Parsed ${parsed.length} clergy record${parsed.length === 1 ? '' : 's'} from ${source}. Review below before importing.`
+      ? `Parsed ${parsed.length} clergy record${parsed.length === 1 ? '' : 's'} from ${source}. Review names and dates before importing — OCR column layouts often misalign service dates.`
       : 'No clergy records detected. Check format or try pasted/OCR text.');
   };
 
@@ -431,8 +432,8 @@ export const ClergyImportDialog: React.FC<ClergyImportDialogProps> = ({
                       </TableCell>
                       <TableCell sx={{ fontWeight: 500 }}>{row.canonical_value}</TableCell>
                       <TableCell>{row.role || '—'}</TableCell>
-                      <TableCell>{row.active_from || '—'}</TableCell>
-                      <TableCell>{row.active_to || '—'}</TableCell>
+                      <TableCell>{formatClergyDate(row.active_from) || '—'}</TableCell>
+                      <TableCell>{formatClergyDate(row.active_to) || '—'}</TableCell>
                       <TableCell sx={{ maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {row.source_notes || (row.warnings?.length ? row.warnings.join('; ') : '—')}
                       </TableCell>

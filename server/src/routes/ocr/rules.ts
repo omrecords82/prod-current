@@ -10,6 +10,7 @@ import {
   normalizeClergyImportRow,
   type ClergyImportRow,
 } from '../../services/ocr/parseClergyListText';
+import { normalizeEntityDate, normalizeEntityRowDates } from '../../services/ocr/normalizeEntityDate';
 
 const { requireAuth } = require('../../middleware/requireAuth');
 
@@ -45,7 +46,8 @@ router.get('/rules/config/entities', async (req: any, res: any) => {
       `SELECT * FROM ocr_parish_configuration_entities WHERE church_id = ? AND is_active = 1`,
       [churchId]
     );
-    res.json({ ok: true, entities: rows });
+    const entities = (rows as any[]).map((row) => normalizeEntityRowDates(row));
+    res.json({ ok: true, entities });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
@@ -73,8 +75,8 @@ router.post('/rules/config/entities', async (req: any, res: any) => {
         canonical_value,
         display_label || null,
         role || null,
-        active_from || null,
-        active_to || null,
+        normalizeEntityDate(active_from),
+        normalizeEntityDate(active_to),
         typeof variants_json === 'object' ? JSON.stringify(variants_json) : (variants_json || null),
         source_notes || null,
         userEmail
@@ -112,6 +114,8 @@ router.patch('/rules/config/entities/:id', async (req: any, res: any) => {
         let val = updates[key];
         if (key === 'variants_json' && typeof val === 'object') {
           val = JSON.stringify(val);
+        } else if (key === 'active_from' || key === 'active_to') {
+          val = normalizeEntityDate(val);
         }
         params.push(val);
       }
@@ -231,8 +235,8 @@ router.post('/rules/config/entities/bulk', async (req: any, res: any) => {
             normalized.canonical_value,
             normalized.canonical_value,
             normalized.role,
-            normalized.active_from,
-            normalized.active_to,
+            normalizeEntityDate(normalized.active_from),
+            normalizeEntityDate(normalized.active_to),
             normalized.variants_json.length ? JSON.stringify(normalized.variants_json) : null,
             normalized.source_notes,
             userEmail,

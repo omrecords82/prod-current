@@ -48,6 +48,7 @@ import {
     IconFileUpload,
 } from '@tabler/icons-react';
 import { ClergyImportDialog } from '../components/ClergyImportDialog';
+import { clergyDateForApi, formatClergyDate } from '../utils/clergyDates';
 import React, { useCallback, useEffect, useState } from 'react';
 import { Navigate, useSearchParams } from 'react-router-dom';
 
@@ -459,8 +460,8 @@ export const OcrStudioSettingsPanel: React.FC = () => {
         entity_type: 'clergy',
         canonical_value: clergyForm.canonical_value,
         role: clergyForm.role,
-        active_from: clergyForm.active_from || null,
-        active_to: clergyForm.active_to || null,
+        active_from: clergyDateForApi(clergyForm.active_from),
+        active_to: clergyDateForApi(clergyForm.active_to),
         variants_json: parsedVariants,
         source_notes: clergyForm.source_notes || null
       };
@@ -999,7 +1000,7 @@ export const OcrStudioSettingsPanel: React.FC = () => {
                           <TableCell sx={{ fontWeight: 600 }}>{c.canonical_value}</TableCell>
                           <TableCell>{c.role}</TableCell>
                           <TableCell>
-                            {c.active_from || '—'} to {c.active_to || '—'}
+                            {formatClergyDate(c.active_from) || '—'} to {formatClergyDate(c.active_to) || '—'}
                           </TableCell>
                           <TableCell>
                             <Stack direction="row" spacing={0.5} flexWrap="wrap" sx={{ gap: 0.5 }}>
@@ -1019,8 +1020,8 @@ export const OcrStudioSettingsPanel: React.FC = () => {
                                   setClergyForm({
                                     canonical_value: c.canonical_value,
                                     role: c.role || 'Rector',
-                                    active_from: c.active_from || '',
-                                    active_to: c.active_to || '',
+                                    active_from: formatClergyDate(c.active_from),
+                                    active_to: formatClergyDate(c.active_to),
                                     variants_json: variantsArr.join(', '),
                                     source_notes: c.source_notes || ''
                                   });
@@ -1181,18 +1182,20 @@ export const OcrStudioSettingsPanel: React.FC = () => {
               <TextField
                 fullWidth
                 size="small"
+                type="date"
                 label="Active From"
-                placeholder="YYYY-MM-DD"
                 value={clergyForm.active_from}
                 onChange={(e) => setClergyForm(prev => ({ ...prev, active_from: e.target.value }))}
+                InputLabelProps={{ shrink: true }}
               />
               <TextField
                 fullWidth
                 size="small"
+                type="date"
                 label="Active To"
-                placeholder="YYYY-MM-DD or blank"
                 value={clergyForm.active_to}
                 onChange={(e) => setClergyForm(prev => ({ ...prev, active_to: e.target.value }))}
+                InputLabelProps={{ shrink: true }}
               />
             </Stack>
             <TextField
