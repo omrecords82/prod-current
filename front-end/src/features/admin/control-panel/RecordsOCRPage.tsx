@@ -32,7 +32,7 @@ const sections: CategorySection[] = [
       { title: 'Upload Documents', description: 'Upload and process documents through OCR pipeline', href: '/devel/ocr-studio/upload', icon: <UploadIcon /> },
       { title: 'Job History', description: 'View OCR processing jobs, status, and results', href: '/devel/ocr-studio/jobs', icon: <JobsIcon /> },
       { title: 'Table Extractor', description: 'Extract structured table data from OCR results', href: '/devel/ocr-studio/table-extractor', icon: <TableIcon /> },
-      { title: 'OCR Settings', description: 'Configure OCR processing parameters and extraction rules', href: '/devel/ocr-studio/settings', icon: <SettingsIcon /> },
+      { title: 'OCR Settings', description: 'Configure OCR processing parameters and extraction rules', href: '/devel/ocr-studio', icon: <SettingsIcon /> },
     ],
   },
 ];

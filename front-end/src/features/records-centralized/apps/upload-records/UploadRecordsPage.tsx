@@ -540,7 +540,7 @@ const UploadRecordsPage: React.FC = () => {
                       size="small"
                       variant="text"
                       sx={{ p: 0, minWidth: 0, verticalAlign: 'baseline', textTransform: 'none' }}
-                      href={`/devel/ocr-studio/settings?church=${effectiveChurchId}`}
+                      href={`/devel/ocr-studio?church=${effectiveChurchId}`}
                     >
                       OCR Settings
                     </Button>

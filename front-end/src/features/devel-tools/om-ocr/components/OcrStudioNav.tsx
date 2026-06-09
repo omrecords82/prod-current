@@ -10,7 +10,6 @@ import {
   Assessment as AssessmentIcon,
   History as HistoryIcon,
   Home as HomeIcon,
-  Settings as SettingsIcon,
   CloudUpload as UploadIcon,
   ViewColumn as ViewColumnIcon,
   TableRows as TableRowsIcon,
@@ -34,7 +33,6 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Upload',           path: '/devel/ocr-studio/upload',          icon: <UploadIcon fontSize="small" /> },
   { label: 'Job History',      path: '/devel/ocr-studio/jobs',            icon: <HistoryIcon fontSize="small" />, superAdminOnly: true },
   { label: 'Record Headers',   path: '/devel/ocr-studio/record-fields',   icon: <TableRowsIcon fontSize="small" /> },
-  { label: 'Settings',         path: '/devel/ocr-studio/settings',        icon: <SettingsIcon fontSize="small" /> },
   { label: 'Table Extractor',  path: '/devel/ocr-studio/table-extractor', icon: <AssessmentIcon fontSize="small" />, superAdminOnly: true },
   { label: 'Layout Templates', path: '/devel/ocr-studio/layout-templates', icon: <ViewColumnIcon fontSize="small" />, superAdminOnly: true },
 ];

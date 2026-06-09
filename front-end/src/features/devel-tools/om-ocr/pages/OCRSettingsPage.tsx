@@ -4,9 +4,7 @@
  */
 
 import { useAuth } from '@/context/AuthContext';
-import { CustomizerContext } from '@/context/CustomizerContext';
 import { apiClient } from '@/shared/lib/axiosInstance';
-import OcrChurchSelector from '@/features/devel-tools/om-ocr/components/OcrChurchSelector';
 import { useOcrChurchSelector } from '@/features/devel-tools/om-ocr/hooks/useOcrChurchSelector';
 import {
     Alert,
@@ -41,7 +39,6 @@ import {
 import {
     IconCode,
     IconFileDescription,
-    IconUser,
     IconSettings,
     IconUserCheck,
     IconMapPin,
@@ -49,8 +46,8 @@ import {
     IconTrash,
     IconEdit,
 } from '@tabler/icons-react';
-import React, { useCallback, useContext, useEffect, useState } from 'react';
-import OcrStudioNav from '../components/OcrStudioNav';
+import React, { useCallback, useEffect, useState } from 'react';
+import { Navigate, useSearchParams } from 'react-router-dom';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -90,8 +87,7 @@ interface OCRSettingsData {
   documentDeletion: DocumentDeletionSettings;
 }
 
-const OCRSettingsPage: React.FC = () => {
-  const { isLayout } = useContext(CustomizerContext);
+export const OcrStudioSettingsPanel: React.FC = () => {
   const { user } = useAuth();
   const { selectedChurchId } = useOcrChurchSelector();
   const effectiveChurchId = selectedChurchId ?? (user?.church_id ? Number(user.church_id) : null);
@@ -294,9 +290,9 @@ const OCRSettingsPage: React.FC = () => {
   }, [mapHint]);
 
   useEffect(() => {
-    if (activeTab === 3) {
+    if (activeTab === 2) {
       loadRules();
-    } else if (activeTab === 4 || activeTab === 5) {
+    } else if (activeTab === 3 || activeTab === 4) {
       loadEntities();
     }
   }, [activeTab, loadRules, loadEntities]);
@@ -519,19 +515,7 @@ const OCRSettingsPage: React.FC = () => {
   const locationList = entities.filter(e => e.entity_type === 'location');
 
   return (
-    <Box sx={{ p: 3, maxWidth: isLayout === 'full' ? '100%' : 1200, mx: 'auto' }}>
-      <OcrStudioNav />
-      <OcrChurchSelector />
-      {/* Header */}
-      <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 3 }}>
-        <Stack direction="row" spacing={1} alignItems="center">
-          <IconFileDescription size={24} />
-          <Typography variant="h5" fontWeight={600}>
-            Settings
-          </Typography>
-        </Stack>
-      </Stack>
-
+    <Box>
       {/* Tabs */}
       <Paper sx={{ mb: 3 }}>
         <Tabs
@@ -550,7 +534,6 @@ const OCRSettingsPage: React.FC = () => {
         >
           <Tab icon={<IconFileDescription size={20} />} iconPosition="start" label="Documents" />
           <Tab icon={<IconCode size={20} />} iconPosition="start" label="API" />
-          <Tab icon={<IconUser size={20} />} iconPosition="start" label="Profile" />
           <Tab icon={<IconSettings size={20} />} iconPosition="start" label="Rules Engine" />
           <Tab icon={<IconUserCheck size={20} />} iconPosition="start" label="Parish Clergy" />
           <Tab icon={<IconMapPin size={20} />} iconPosition="start" label="Locations" />
@@ -740,14 +723,8 @@ const OCRSettingsPage: React.FC = () => {
           <Typography variant="body2" color="text.secondary">API configuration and access tokens will be available here.</Typography>
         </TabPanel>
 
-        {/* Profile Tab */}
-        <TabPanel value={activeTab} index={2}>
-          <Typography variant="h6" gutterBottom>Profile Settings</Typography>
-          <Typography variant="body2" color="text.secondary">User profile settings will be available here.</Typography>
-        </TabPanel>
-
         {/* Rules Engine Tab */}
-        <TabPanel value={activeTab} index={3}>
+        <TabPanel value={activeTab} index={2}>
           <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
             <Box>
               <Typography variant="h6" fontWeight={600} gutterBottom>Parish Validation & Inference Rules</Typography>
@@ -908,7 +885,7 @@ const OCRSettingsPage: React.FC = () => {
         </TabPanel>
 
         {/* Parish Clergy Tab */}
-        <TabPanel value={activeTab} index={4}>
+        <TabPanel value={activeTab} index={3}>
           <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
             <Box>
               <Typography variant="h6" fontWeight={600}>Parish Clergy Tenures</Typography>
@@ -1015,7 +992,7 @@ const OCRSettingsPage: React.FC = () => {
         </TabPanel>
 
         {/* Locations Tab */}
-        <TabPanel value={activeTab} index={5}>
+        <TabPanel value={activeTab} index={4}>
           <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
             <Box>
               <Typography variant="h6" fontWeight={600}>Known Locations & Spelling Variants</Typography>
@@ -1222,6 +1199,13 @@ const OCRSettingsPage: React.FC = () => {
       </Dialog>
     </Box>
   );
+};
+
+/** Legacy route — redirects to Hub where settings now live. */
+const OCRSettingsPage: React.FC = () => {
+  const [searchParams] = useSearchParams();
+  const qs = searchParams.toString();
+  return <Navigate to={qs ? `/devel/ocr-studio?${qs}` : '/devel/ocr-studio'} replace />;
 };
 
 export default OCRSettingsPage;

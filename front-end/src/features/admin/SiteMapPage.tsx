@@ -223,7 +223,7 @@ const ADMIN_MAP: SiteNode[] = [
       { label: 'Record Headers', path: '/devel/ocr-studio/record-fields', icon: <TableIcon /> },
       { label: 'Table Extractor', path: '/devel/ocr-studio/table-extractor', icon: <TableIcon />, roles: ['super_admin'] },
       { label: 'Layout Templates', path: '/devel/ocr-studio/layout-templates', icon: <OcrIcon />, roles: ['super_admin'] },
-      { label: 'OCR Settings', path: '/devel/ocr-studio/settings', icon: <SettingsIcon /> },
+      { label: 'OCR Settings', path: '/devel/ocr-studio', icon: <SettingsIcon /> },
     ],
   },
   // Berry Components section removed — prototypes retired

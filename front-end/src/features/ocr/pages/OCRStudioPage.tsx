@@ -12,10 +12,11 @@ import {
   TableChart as GridIcon,
   AutoAwesome as AgentIcon,
 } from '@mui/icons-material';
-import { Box, Button, Card, CardContent, Grid, Typography } from '@mui/material';
+import { Box, Button, Card, CardContent, Divider, Grid, Typography } from '@mui/material';
 import React, { useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import OcrStudioNav from '@/features/devel-tools/om-ocr/components/OcrStudioNav';
+import { OcrStudioSettingsPanel } from '@/features/devel-tools/om-ocr/pages/OCRSettingsPage';
 
 
 
@@ -109,6 +110,16 @@ const OCRStudioPage: React.FC = () => {
           </Card>
         </Grid>
       </Grid>
+
+      <Divider sx={{ my: 4 }} />
+
+      <Typography variant="h5" fontWeight={700} sx={{ mb: 0.5 }}>
+        Parish OCR Settings
+      </Typography>
+      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+        Document processing, validation rules, clergy, and location mappings for the target church.
+      </Typography>
+      <OcrStudioSettingsPanel />
     </Box>
   );
 };
