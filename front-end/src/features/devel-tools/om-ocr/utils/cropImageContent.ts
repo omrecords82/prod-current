@@ -46,6 +46,20 @@ async function loadOrientedSource(
   }
 }
 
+export type FractionRect = { x: number; y: number; w: number; h: number };
+
+function loadImageFromUrl(url: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    if (!url.startsWith('blob:')) {
+      img.crossOrigin = 'anonymous';
+    }
+    img.onload = () => resolve(img);
+    img.onerror = () => reject(new Error('Failed to load image'));
+    img.src = url;
+  });
+}
+
 function drawToCanvas(source: CanvasImageSource, width: number, height: number): HTMLCanvasElement {
   const canvas = document.createElement('canvas');
   canvas.width = width;
@@ -187,5 +201,73 @@ export async function cropImageContentBorders(file: File): Promise<ContentCropRe
     url: URL.createObjectURL(blob),
     cropped: true,
     cropBox,
+  };
+}
+
+/** Detect content bounds as fractional rect (for crop UI initial selection). */
+export async function detectContentCropFraction(imageUrl: string): Promise<FractionRect> {
+  const img = await loadImageFromUrl(imageUrl);
+  const width = img.naturalWidth;
+  const height = img.naturalHeight;
+  const fullCanvas = drawToCanvas(img, width, height);
+
+  const scale = Math.min(1, ANALYSIS_MAX / Math.max(width, height));
+  const analysisW = Math.max(1, Math.round(width * scale));
+  const analysisH = Math.max(1, Math.round(height * scale));
+
+  const analysisCanvas = document.createElement('canvas');
+  analysisCanvas.width = analysisW;
+  analysisCanvas.height = analysisH;
+  const analysisCtx = analysisCanvas.getContext('2d');
+  if (!analysisCtx) return { x: 0, y: 0, w: 1, h: 1 };
+
+  analysisCtx.drawImage(fullCanvas, 0, 0, analysisW, analysisH);
+  const { data } = analysisCtx.getImageData(0, 0, analysisW, analysisH);
+  const bounds = findContentBounds(data, analysisW, analysisH);
+  if (!bounds) return { x: 0, y: 0, w: 1, h: 1 };
+
+  const cropBox = mapBoundsToFull(bounds, analysisW, analysisH, width, height);
+  return {
+    x: cropBox.x / width,
+    y: cropBox.y / height,
+    w: cropBox.width / width,
+    h: cropBox.height / height,
+  };
+}
+
+/** Apply a fractional crop to an image URL and return a new blob URL. */
+export async function applyImageCropFromUrl(
+  imageUrl: string,
+  frac: FractionRect,
+): Promise<{ blob: Blob; url: string; width: number; height: number }> {
+  const img = await loadImageFromUrl(imageUrl);
+  const width = img.naturalWidth;
+  const height = img.naturalHeight;
+  const fullCanvas = drawToCanvas(img, width, height);
+
+  const cropX = Math.round(frac.x * width);
+  const cropY = Math.round(frac.y * height);
+  const cropW = Math.max(1, Math.round(frac.w * width));
+  const cropH = Math.max(1, Math.round(frac.h * height));
+
+  const out = document.createElement('canvas');
+  out.width = cropW;
+  out.height = cropH;
+  const outCtx = out.getContext('2d');
+  if (!outCtx) throw new Error('Canvas unavailable');
+
+  outCtx.drawImage(fullCanvas, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH);
+  const blob = await new Promise<Blob>((resolve, reject) => {
+    out.toBlob(
+      (b) => (b ? resolve(b) : reject(new Error('Crop export failed'))),
+      'image/png',
+    );
+  });
+
+  return {
+    blob,
+    url: URL.createObjectURL(blob),
+    width: cropW,
+    height: cropH,
   };
 }

@@ -29,7 +29,10 @@ import {
   IconMaximize,
   IconColumns,
   IconSquarePlus,
+  IconCrop,
 } from '@tabler/icons-react';
+import ReferenceImageCropOverlay from './ReferenceImageCropOverlay';
+import { detectContentCropFraction, type FractionRect } from '../utils/cropImageContent';
 
 export interface ColumnBand {
   /** Fractional x start (0..1) */
@@ -62,6 +65,12 @@ interface ColumnBoundaryEditorProps {
   onRecordRegionsChange?: (regions: FractionalBBox[]) => void;
   /** When true, default to record-region drawing and hide column controls */
   regionMode?: boolean;
+  /** Interactive crop mode */
+  cropMode?: boolean;
+  cropApplying?: boolean;
+  onStartCrop?: () => void;
+  onCropApply?: (rect: FractionRect) => void;
+  onCropCancel?: () => void;
 }
 
 /** Convert boundary positions (sorted X fractions) to column bands */
@@ -106,6 +115,11 @@ const ColumnBoundaryEditor: React.FC<ColumnBoundaryEditorProps> = ({
   recordRegions = [],
   onRecordRegionsChange,
   regionMode = false,
+  cropMode = false,
+  cropApplying = false,
+  onStartCrop,
+  onCropApply,
+  onCropCancel,
 }) => {
   const theme = useTheme();
   const containerRef = useRef<HTMLDivElement>(null);
@@ -122,9 +136,24 @@ const ColumnBoundaryEditor: React.FC<ColumnBoundaryEditorProps> = ({
   const [regionDragStart, setRegionDragStart] = useState<{ x: number; y: number } | null>(null);
   const [regionDragEnd, setRegionDragEnd] = useState<{ x: number; y: number } | null>(null);
 
+  const [cropInitialRect, setCropInitialRect] = useState<FractionRect>({ x: 0, y: 0, w: 1, h: 1 });
+
   useEffect(() => {
     if (regionMode) setDrawingMode('records');
   }, [regionMode]);
+
+  useEffect(() => {
+    if (!cropMode || !imageUrl) return;
+    let cancelled = false;
+    detectContentCropFraction(imageUrl)
+      .then((frac) => {
+        if (!cancelled) setCropInitialRect(frac);
+      })
+      .catch(() => {
+        if (!cancelled) setCropInitialRect({ x: 0, y: 0, w: 1, h: 1 });
+      });
+    return () => { cancelled = true; };
+  }, [cropMode, imageUrl]);
 
   // Boundary positions (inner edges between columns)
   const [positions, setPositions] = useState<number[]>(() => bandsToPositions(columnBands));
@@ -364,6 +393,22 @@ const ColumnBoundaryEditor: React.FC<ColumnBoundaryEditorProps> = ({
           />
         )}
         <Box sx={{ flex: 1 }} />
+        {onStartCrop && !cropMode && (
+          <Tooltip title="Crop reference image">
+            <Button
+              size="small"
+              variant="outlined"
+              startIcon={<IconCrop size={16} />}
+              onClick={onStartCrop}
+              sx={{ textTransform: 'none' }}
+            >
+              Crop
+            </Button>
+          </Tooltip>
+        )}
+        {cropMode && (
+          <Chip size="small" label="Crop mode" color="primary" variant="filled" />
+        )}
         <IconButton size="small" onClick={() => setZoom((z) => Math.max(25, z - 25))}>
           <IconZoomOut size={18} />
         </IconButton>
@@ -406,10 +451,10 @@ const ColumnBoundaryEditor: React.FC<ColumnBoundaryEditorProps> = ({
           alignItems: 'flex-start',
           bgcolor: alpha(theme.palette.action.hover, 0.04),
         }}
-        onMouseDown={drawingMode === 'records' ? handleRegionMouseDown : undefined}
-        onMouseMove={drawingMode === 'records' ? handleRegionMouseMove : handleMouseMove}
-        onMouseUp={drawingMode === 'records' ? handleRegionMouseUp : handleMouseUp}
-        onMouseLeave={drawingMode === 'records' ? handleRegionMouseUp : handleMouseUp}
+        onMouseDown={!cropMode && drawingMode === 'records' ? handleRegionMouseDown : undefined}
+        onMouseMove={!cropMode && drawingMode === 'records' ? handleRegionMouseMove : handleMouseMove}
+        onMouseUp={!cropMode && drawingMode === 'records' ? handleRegionMouseUp : handleMouseUp}
+        onMouseLeave={!cropMode && drawingMode === 'records' ? handleRegionMouseUp : handleMouseUp}
       >
         <Box
           ref={containerRef}
@@ -436,7 +481,20 @@ const ColumnBoundaryEditor: React.FC<ColumnBoundaryEditorProps> = ({
             }}
           />
 
-          {imgSize.width > 0 && (
+          {cropMode && imgSize.width > 0 && onCropApply && onCropCancel && (
+            <ReferenceImageCropOverlay
+              displayWidth={scaledWidth}
+              displayHeight={scaledHeight}
+              naturalWidth={imgSize.width}
+              naturalHeight={imgSize.height}
+              initialRect={cropInitialRect}
+              applying={cropApplying}
+              onApply={onCropApply}
+              onCancel={onCropCancel}
+            />
+          )}
+
+          {!cropMode && imgSize.width > 0 && (
             <>
               {/* Column band color fills */}
               {displayBands.map((band, i) => (

@@ -54,7 +54,7 @@ import ColumnBoundaryEditor, {
 } from '../components/ColumnBoundaryEditor';
 import OcrChurchSelector from '../components/OcrChurchSelector';
 import OcrStudioNav from '../components/OcrStudioNav';
-import { cropImageContentBorders } from '../utils/cropImageContent';
+import { applyImageCropFromUrl, cropImageContentBorders } from '../utils/cropImageContent';
 import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 
@@ -215,6 +215,8 @@ const LayoutTemplateEditorPage: React.FC = () => {
   const [dropActive, setDropActive] = useState(false);
   const [localImageUrl, setLocalImageUrl] = useState<string | null>(null);
   const [imagePreparing, setImagePreparing] = useState(false);
+  const [cropActive, setCropActive] = useState(false);
+  const [cropApplying, setCropApplying] = useState(false);
   const localImageUrlRef = useRef<string | null>(null);
 
   const isFormMode = extractionMode === 'form' || extractionMode === 'multi_form' || extractionMode === 'auto';
@@ -323,6 +325,29 @@ const LayoutTemplateEditorPage: React.FC = () => {
       setImagePreparing(false);
     }
   }, [extractionMode, setDirty, setExtractionMode, setImageUrl, setRefJobId]);
+
+  const handleCropApply = useCallback(async (frac: { x: number; y: number; w: number; h: number }) => {
+    if (!activeImageUrl) return;
+    setCropApplying(true);
+    try {
+      const result = await applyImageCropFromUrl(activeImageUrl, frac);
+      if (localImageUrlRef.current) URL.revokeObjectURL(localImageUrlRef.current);
+      localImageUrlRef.current = result.url;
+      setLocalImageUrl(result.url);
+      setImageUrl(null);
+      setRefJobId(null);
+      setCropActive(false);
+      setDirty(true);
+      setToast({
+        msg: `Image cropped to ${result.width} × ${result.height}px`,
+        severity: 'success',
+      });
+    } catch {
+      setToast({ msg: 'Failed to apply crop', severity: 'error' });
+    } finally {
+      setCropApplying(false);
+    }
+  }, [activeImageUrl, setDirty, setImageUrl, setRefJobId]);
 
   // ── Select a template ──────────────────────────────────────────────────────
 
@@ -689,6 +714,11 @@ const LayoutTemplateEditorPage: React.FC = () => {
                     recordRegions={recordRegions}
                     onRecordRegionsChange={handleRecordRegionsChange}
                     regionMode={extractionMode === 'multi_form' || extractionMode === 'form' || extractionMode === 'auto'}
+                    cropMode={cropActive}
+                    cropApplying={cropApplying}
+                    onStartCrop={() => setCropActive(true)}
+                    onCropApply={handleCropApply}
+                    onCropCancel={() => setCropActive(false)}
                   />
                 </Box>
               ) : (
