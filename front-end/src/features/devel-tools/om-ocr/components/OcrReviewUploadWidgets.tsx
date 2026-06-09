@@ -50,11 +50,23 @@ export type PipelineFocusJob = {
   review_status: string;
 };
 
-export function isJobInFlight(job: { status: string; review_status: string }): boolean {
+/** True while the worker is still running OCR (before review_status advances past uploaded). */
+export function shouldShowJobProgress(job: { status: string; review_status: string }): boolean {
+  if (job.status === 'failed' || job.status === 'error') return false;
+  return job.review_status === 'uploaded';
+}
+
+/** True while we should keep polling the jobs list for pipeline updates. */
+export function needsJobPolling(job: { status: string; review_status: string }): boolean {
   if (job.status === 'failed' || job.status === 'error') return false;
   if (['agent_extracted', 'ready_to_seed', 'seeded', 'returned'].includes(job.review_status)) return false;
   if (['processing', 'pending', 'queued'].includes(job.status)) return true;
   return job.review_status === 'uploaded' || job.review_status === 'ocr_complete';
+}
+
+/** @deprecated Use shouldShowJobProgress or needsJobPolling */
+export function isJobInFlight(job: { status: string; review_status: string }): boolean {
+  return needsJobPolling(job);
 }
 
 export function getJobPipelineState(job: PipelineFocusJob): PipelineState {

@@ -19,7 +19,8 @@ import FusionOverlay from '@/features/devel-tools/om-ocr/components/FusionOverla
 import {
   getJobPipelineState,
   getUploadQueueItemState,
-  isJobInFlight,
+  needsJobPolling,
+  shouldShowJobProgress,
   OcrReviewDropZone,
   OcrReviewInlineProgress,
   type ReviewUploadQueueItem,
@@ -441,6 +442,7 @@ const OcrReviewPage: React.FC = () => {
   const [imagePanelWidth, setImagePanelWidth] = useState(560);
   const uploadFileInputRef = useRef<HTMLInputElement>(null);
   const uploadPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const prevSelectedReviewStatusRef = useRef<string | null>(null);
   const contentRowRef = useRef<HTMLDivElement>(null);
   const imageRef = useRef<HTMLImageElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -906,7 +908,7 @@ const OcrReviewPage: React.FC = () => {
   }, [churchId, isUploadingFiles, pendingUploadCount, startReviewUpload]);
 
   const inFlightJobs = useMemo(
-    () => jobs.filter((j) => isJobInFlight(j)),
+    () => jobs.filter((j) => needsJobPolling(j)),
     [jobs],
   );
 
@@ -1061,6 +1063,21 @@ const OcrReviewPage: React.FC = () => {
   useEffect(() => {
     if (churchId && selectedJobId) loadExtract(selectedJobId);
   }, [churchId, selectedJobId, loadExtract]);
+
+  const selectedJobReviewStatus = selectedJob?.review_status;
+  useEffect(() => {
+    prevSelectedReviewStatusRef.current = null;
+  }, [selectedJobId]);
+
+  useEffect(() => {
+    if (!churchId || !selectedJobId || !selectedJobReviewStatus) return;
+    const prev = prevSelectedReviewStatusRef.current;
+    if (prev === selectedJobReviewStatus) return;
+    prevSelectedReviewStatusRef.current = selectedJobReviewStatus;
+    if (prev !== null && ['ocr_complete', 'agent_extracted', 'ready_to_seed'].includes(selectedJobReviewStatus)) {
+      loadExtract(selectedJobId);
+    }
+  }, [churchId, selectedJobId, selectedJobReviewStatus, loadExtract]);
 
   // Poll when Agent 2 is still running in the background (after Re-run Agent 1).
   useEffect(() => {
@@ -1774,7 +1791,7 @@ const OcrReviewPage: React.FC = () => {
                 const cfg = STATUS_LABELS[j.review_status] || { label: j.review_status, color: 'default' as const };
                 const active = selectedJobId === jobId;
                 const checked = selectedAwaitingJobIds.has(jobId);
-                const processing = isJobInFlight(j);
+                const processing = shouldShowJobProgress(j);
                 const countStr = typeof j.records_count === 'number' ? `${j.confirmed_count || 0}/${j.records_count} ` : '';
                 return (
                   <ListItem key={j.id} disablePadding sx={{ mb: 0.75 }}>
@@ -2636,6 +2653,36 @@ const OcrReviewPage: React.FC = () => {
                 position: 'relative',
               }}
             >
+              <Box sx={{ px: 2, py: 1, borderBottom: '1px solid', borderColor: 'divider', bgcolor: 'background.paper' }}>
+                <Stack direction="row" alignItems="center" justifyContent="flex-end" spacing={0.5}>
+                  <Tooltip title="Zoom out">
+                    <IconButton size="small" onClick={() => zoomTo(imageZoom - 25)}>
+                      <IconZoomOut size={16} />
+                    </IconButton>
+                  </Tooltip>
+                  <Slider
+                    value={imageZoom}
+                    onChange={(_, v) => zoomTo(v as number)}
+                    min={25}
+                    max={500}
+                    step={5}
+                    sx={{ width: 110 }}
+                    size="small"
+                  />
+                  <Tooltip title="Zoom in">
+                    <IconButton size="small" onClick={() => zoomTo(imageZoom + 25)}>
+                      <IconZoomIn size={16} />
+                    </IconButton>
+                  </Tooltip>
+                  <Tooltip title="Fit to panel">
+                    <IconButton size="small" onClick={() => { zoomAnchorRef.current = null; setImageZoom(100); }}>
+                      <IconMaximize size={16} />
+                    </IconButton>
+                  </Tooltip>
+                  <Typography variant="caption" sx={{ minWidth: 36, textAlign: 'right' }}>{imageZoom}%</Typography>
+                </Stack>
+              </Box>
+
               <Box sx={{ px: 2, py: 1.25, borderBottom: '1px solid', borderColor: 'divider', bgcolor: 'background.paper' }}>
                 <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={1}>
                   <Box sx={{ minWidth: 0 }}>
@@ -2843,48 +2890,6 @@ const OcrReviewPage: React.FC = () => {
               )}
 
               <Box
-                sx={{
-                  position: 'absolute',
-                  top: 8,
-                  right: 8,
-                  zIndex: 7,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 0.5,
-                  bgcolor: 'background.paper',
-                  borderRadius: 1,
-                  boxShadow: 2,
-                  p: 0.75,
-                }}
-              >
-                <Tooltip title="Zoom out">
-                  <IconButton size="small" onClick={() => zoomTo(imageZoom - 25)}>
-                    <IconZoomOut size={16} />
-                  </IconButton>
-                </Tooltip>
-                <Slider
-                  value={imageZoom}
-                  onChange={(_, v) => zoomTo(v as number)}
-                  min={25}
-                  max={500}
-                  step={5}
-                  sx={{ width: 90 }}
-                  size="small"
-                />
-                <Tooltip title="Zoom in">
-                  <IconButton size="small" onClick={() => zoomTo(imageZoom + 25)}>
-                    <IconZoomIn size={16} />
-                  </IconButton>
-                </Tooltip>
-                <Tooltip title="Fit to panel">
-                  <IconButton size="small" onClick={() => { zoomAnchorRef.current = null; setImageZoom(100); }}>
-                    <IconMaximize size={16} />
-                  </IconButton>
-                </Tooltip>
-                <Typography variant="caption" sx={{ minWidth: 36, textAlign: 'right' }}>{imageZoom}%</Typography>
-              </Box>
-
-              <Box
                 ref={scrollRef}
                 onMouseMove={onContainerMouseMove}
                 onMouseUp={onContainerMouseUp}
@@ -2893,7 +2898,6 @@ const OcrReviewPage: React.FC = () => {
                   flex: 1,
                   overflow: 'auto',
                   p: 1.5,
-                  pt: 6,
                   cursor: 'grab',
                   '&:active': { cursor: 'grabbing' },
                 }}
