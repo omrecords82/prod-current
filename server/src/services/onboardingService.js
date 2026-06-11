@@ -971,43 +971,28 @@ async function linkCrm(onboardingRequestId, crmRecordId, req) {
 }
 
 function getProgressSteps(request, events) {
-  const stepKeys = [
-    'submitted', 'reviewing', 'payment', 'provisioning',
-    'admin_created', 'first_login', 'table_configuration', 'layout_configuration', 'active',
-  ];
-  let currentIdx;
-  if (request.status === 'active') {
-    currentIdx = 8;
-  } else if (request.status === 'record_tables_review') {
-    if (!request.table_configuration_completed) currentIdx = 6;
-    else if (!request.layout_configuration_completed) currentIdx = 7;
-    else currentIdx = 8;
-  } else {
-    const statusToStep = {
-      submitted: 0,
-      reviewing: 1,
-      payment_pending: 2,
-      payment_received: 2,
-      provisioning: 3,
-      admin_account_created: 4,
-      awaiting_first_login: 5,
-      rejected: -1,
-      cancelled: -1,
-    };
-    currentIdx = statusToStep[request.status] ?? 0;
-  }
-  const eventTimes = {};
-  for (const ev of events) {
-    if (ev.event_type === 'status_changed' && ev.new_status) {
-      eventTimes[ev.new_status] = ev.created_at;
+  try {
+    const workflowGoals = require('./workflowGoalsService');
+    const legacy = workflowGoals.getEnrollmentLegacyProgress(request);
+    if (legacy?.length) {
+      const eventTimes = {};
+      for (const ev of events || []) {
+        if (ev.event_type === 'status_changed' && ev.new_status) {
+          eventTimes[ev.new_status] = ev.created_at;
+        }
+      }
+      return legacy.map((step) => ({
+        key: step.key,
+        label: step.label,
+        completed: step.done,
+        current: step.current,
+        timestamp: eventTimes[step.key] || null,
+      }));
     }
+  } catch {
+    // fall through to minimal fallback
   }
-  return stepKeys.map((key, idx) => ({
-    key,
-    completed: idx <= currentIdx && request.status !== 'rejected' && request.status !== 'cancelled',
-    current: idx === currentIdx,
-    timestamp: eventTimes[key] || null,
-  }));
+  return [];
 }
 
 const PROVISIONING_CHECKLIST_STEPS = [

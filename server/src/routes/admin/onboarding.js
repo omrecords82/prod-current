@@ -71,7 +71,7 @@ router.get('/:onboarding_request_id', async (req, res) => {
       ? workflowGoals.workflowStepsToLegacyProgress(workflow)
       : onboarding.getProgressSteps(request, events).map((s) => ({
         key: s.key,
-        label: s.key.replace(/_/g, ' '),
+        label: s.label || s.key.replace(/_/g, ' '),
         done: s.completed,
         current: s.current,
       }));

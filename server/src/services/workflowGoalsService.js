@@ -564,6 +564,114 @@ async function getRuntimeStatsForCatalog(pool, workflowKey) {
   return { source: null, note: 'No live runtime counters for this workflow yet' };
 }
 
+const ENROLLMENT_CATALOG_STEPS = [
+  { step_key: 'submit_enrollment', step_name: 'Submit Enrollment', step_sequence: 10, step_kind: 'human' },
+  { step_key: 'staff_review', step_name: 'Staff Review', step_sequence: 20, step_kind: 'approval' },
+  { step_key: 'payment', step_name: 'Payment', step_sequence: 30, step_kind: 'human' },
+  { step_key: 'provision_tenant', step_name: 'Provision Tenant', step_sequence: 40, step_kind: 'pipeline_trigger' },
+  { step_key: 'create_admin_account', step_name: 'Create Admin Account', step_sequence: 50, step_kind: 'system' },
+  { step_key: 'await_first_login', step_name: 'Await First Login', step_sequence: 60, step_kind: 'human' },
+  { step_key: 'configure_record_tables', step_name: 'Configure Record Tables', step_sequence: 70, step_kind: 'human' },
+  { step_key: 'activate_parish', step_name: 'Activate Parish', step_sequence: 80, step_kind: 'system' },
+  { step_key: 'audit_complete', step_name: 'Audit Complete', step_sequence: 90, step_kind: 'audit' },
+];
+
+/** Sync catalog-aligned progress (no DB) — used by onboardingService fallback. */
+function getEnrollmentLegacyProgress(request) {
+  const currentStepKey = resolveEnrollmentCurrentStep(request);
+  if (!currentStepKey) return [];
+  const ctx = buildWorkflowContext(
+    { workflow_key: 'church.enrollment', steps: ENROLLMENT_CATALOG_STEPS },
+    currentStepKey,
+    'admin',
+  );
+  return workflowStepsToLegacyProgress(ctx);
+}
+
+const OCR_REVIEW_OPEN_STATUSES = new Set([
+  'uploaded', 'ocr_complete', 'agent_extracted', 'human_confirmed', 'in_review', 'ready_to_seed',
+]);
+
+function deriveWorkflowKpi(workflowKey, stats) {
+  if (workflowKey === 'church.enrollment') {
+    const open = (stats.by_status || [])
+      .filter((r) => !['active', 'rejected', 'cancelled'].includes(r.status))
+      .reduce((acc, r) => acc + Number(r.count || 0), 0);
+    return { label: 'Open enrollments', value: open, status: open > 0 ? 'attention' : 'healthy' };
+  }
+  if (workflowKey === 'ocr.batch.review') {
+    const open = (stats.by_review_status || [])
+      .filter((r) => OCR_REVIEW_OPEN_STATUSES.has(r.review_status))
+      .reduce((acc, r) => acc + Number(r.count || 0), 0);
+    return { label: 'Jobs needing review', value: open, status: open > 0 ? 'attention' : 'healthy' };
+  }
+  if (workflowKey === 'ocr.setup.wizard') {
+    const needsSetup = Number(stats.setup_not_started || 0) + Number(stats.setup_in_progress || 0);
+    return {
+      label: 'Churches need setup',
+      value: needsSetup,
+      status: needsSetup > 0 ? 'attention' : 'healthy',
+    };
+  }
+  if (workflowKey === 'records.certificate.generate') {
+    const total = Number(stats.total_generated || 0);
+    return { label: 'Certificates generated', value: total, status: 'healthy' };
+  }
+  if (workflowKey === 'identity.user.admin') {
+    const pending = Number(stats.pending_users || 0);
+    return {
+      label: 'Pending user activations',
+      value: pending,
+      status: pending > 0 ? 'attention' : 'healthy',
+    };
+  }
+  return { label: 'Runtime', value: '—', status: 'unknown' };
+}
+
+/** Aggregated workflow KPIs for executive overview + catalog summary panel. */
+async function getWorkflowRuntimeSummary(pool) {
+  const list = await catalog.fetchWorkflowList();
+  const workflows = [];
+
+  for (const wf of list) {
+    const stats = await getRuntimeStatsForCatalog(pool, wf.workflow_key);
+    const kpi = deriveWorkflowKpi(wf.workflow_key, stats);
+    workflows.push({
+      workflow_key: wf.workflow_key,
+      workflow_name: wf.workflow_name,
+      completion_state: wf.completion_state,
+      lifecycle_status: wf.lifecycle_status,
+      primary_app: wf.primary_app,
+      kpi_label: kpi.label,
+      kpi_value: kpi.value,
+      kpi_status: kpi.status,
+      stats,
+    });
+  }
+
+  const attentionCount = workflows.filter((w) => w.kpi_status === 'attention').length;
+  const enrollment = workflows.find((w) => w.workflow_key === 'church.enrollment');
+  const ocrReview = workflows.find((w) => w.workflow_key === 'ocr.batch.review');
+  const ocrSetup = workflows.find((w) => w.workflow_key === 'ocr.setup.wizard');
+  const identity = workflows.find((w) => w.workflow_key === 'identity.user.admin');
+  const certificates = workflows.find((w) => w.workflow_key === 'records.certificate.generate');
+
+  return {
+    generated_at: new Date().toISOString(),
+    workflows_total: workflows.length,
+    runtime_resolvers: RUNTIME_RESOLVERS.length,
+    needs_attention: attentionCount,
+    totals: {
+      open_enrollments: typeof enrollment?.kpi_value === 'number' ? enrollment.kpi_value : null,
+      ocr_jobs_pending_review: typeof ocrReview?.kpi_value === 'number' ? ocrReview.kpi_value : null,
+      churches_ocr_setup_incomplete: typeof ocrSetup?.kpi_value === 'number' ? ocrSetup.kpi_value : null,
+      pending_user_activations: typeof identity?.kpi_value === 'number' ? identity.kpi_value : null,
+      certificates_generated: typeof certificates?.kpi_value === 'number' ? certificates.kpi_value : null,
+    },
+    workflows,
+  };
+}
+
 module.exports = {
   ENROLLMENT_STATUS_TO_STEP,
   STEP_ACTION_ROUTES,
@@ -579,4 +687,8 @@ module.exports = {
   resolveOcrSetupGoal,
   resolveCertificateGoal,
   resolveIdentityAdminGoal,
+  getEnrollmentLegacyProgress,
+  getWorkflowRuntimeSummary,
+  deriveWorkflowKpi,
+  ENROLLMENT_CATALOG_STEPS,
 };
