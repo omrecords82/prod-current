@@ -337,9 +337,11 @@ router.post('/:churchId/:userId/lock', requireAuth, requirePlatformAdmin, async 
         // Validate user assignment to church
         await validateUserChurchAssignment(userId, churchId);
 
-        // Lock user account in orthodoxmetrics_db.users
+        // Lock user account — resolvers use is_locked via church_users membership
         await promisePool.query(
-            'UPDATE orthodoxmetrics_db.users SET is_active = 0, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+            `UPDATE orthodoxmetrics_db.users
+             SET is_active = 0, is_locked = 1, updated_at = CURRENT_TIMESTAMP
+             WHERE id = ?`,
             [userId]
         );
 
