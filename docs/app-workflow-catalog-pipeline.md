@@ -317,7 +317,9 @@ git fetch origin main && git checkout --detach origin/main
 
 ## 12. Open questions (need product / operator input)
 
-**Do not treat any of these as decided.** Listed so nothing is lost.
+**Canonical list:** [workflow-catalog-open-questions.md](./workflow-catalog-open-questions.md) — updated 2026-06-12 with resolved vs open items and answer templates.
+
+**Do not treat any of the below as decided** unless marked resolved in the open-questions doc.
 
 ### Workflow catalog & scope
 
