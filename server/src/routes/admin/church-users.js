@@ -5,8 +5,29 @@ const bcrypt = require('bcrypt');
 const { promisePool } = require('../../config/db');
 const { requireAuth, requireRole } = require('../../middleware/auth');
 
-// Middleware for admin access
-const requireAdmin = requireRole(['admin', 'super_admin']);
+const PLATFORM_ADMIN_ROLES = ['admin', 'super_admin'];
+const PARISH_STAFF_ROLES = ['church_admin', 'priest', 'manager'];
+const requirePlatformAdmin = requireRole(PLATFORM_ADMIN_ROLES);
+const requirePlatformOrParishStaff = requireRole([...PLATFORM_ADMIN_ROLES, ...PARISH_STAFF_ROLES]);
+
+function getSessionUser(req) {
+  return req.session?.user || req.user || null;
+}
+
+/** Platform admins: any church. Parish staff: own church_id only. */
+function assertChurchScope(req, churchId) {
+  const user = getSessionUser(req);
+  if (!user) {
+    const err = new Error('Authentication required');
+    err.status = 401;
+    throw err;
+  }
+  if (PLATFORM_ADMIN_ROLES.includes(user.role)) return;
+  if (PARISH_STAFF_ROLES.includes(user.role) && Number(user.church_id) === churchId) return;
+  const err = new Error('Not authorized for this church');
+  err.status = 403;
+  throw err;
+}
 
 /**
  * Standardized API response helper
@@ -55,15 +76,14 @@ async function validateUserChurchAssignment(userId, churchId) {
 }
 
 // GET /api/admin/church-users/:churchId - Get users for a specific church
-router.get('/:churchId', requireAuth, requireAdmin, async (req, res) => {
+router.get('/:churchId', requireAuth, requirePlatformOrParishStaff, async (req, res) => {
     try {
         const churchId = parseInt(req.params.churchId);
         console.log('👥 Getting users for church ID:', churchId);
 
-        // Validate church exists
+        assertChurchScope(req, churchId);
         await validateChurchAccess(churchId);
 
-        // Get users assigned to this church via junction table
         const [users] = await promisePool.query(`
             SELECT
                 u.id,
@@ -72,6 +92,8 @@ router.get('/:churchId', requireAuth, requireAdmin, async (req, res) => {
                 u.last_name,
                 u.role as system_role,
                 u.is_active,
+                u.is_locked,
+                u.lockout_reason,
                 u.last_login,
                 u.created_at,
                 u.updated_at,
@@ -91,14 +113,13 @@ router.get('/:churchId', requireAuth, requireAdmin, async (req, res) => {
 
     } catch (error) {
         console.error('❌ Error getting church users:', error);
-        res.status(error.message.includes('not found') ? 404 : 500).json(
-            apiResponse(false, null, error.message)
-        );
+        const status = error.status || (error.message.includes('not found') ? 404 : 500);
+        res.status(status).json(apiResponse(false, null, error.message));
     }
 });
 
 // POST /api/admin/church-users/:churchId - Add new user to church
-router.post('/:churchId', requireAuth, requireAdmin, async (req, res) => {
+router.post('/:churchId', requireAuth, requirePlatformAdmin, async (req, res) => {
     try {
         const churchId = parseInt(req.params.churchId);
         const { email, first_name, last_name, role, is_active = true, phone, landing_page, password } = req.body;
@@ -161,7 +182,7 @@ router.post('/:churchId', requireAuth, requireAdmin, async (req, res) => {
 });
 
 // PUT /api/admin/church-users/:churchId/:userId - Update church user
-router.put('/:churchId/:userId', requireAuth, requireAdmin, async (req, res) => {
+router.put('/:churchId/:userId', requireAuth, requirePlatformAdmin, async (req, res) => {
     try {
         const churchId = parseInt(req.params.churchId);
         const userId = parseInt(req.params.userId);
@@ -266,7 +287,7 @@ router.put('/:churchId/:userId', requireAuth, requireAdmin, async (req, res) => 
 });
 
 // POST /api/admin/church-users/:churchId/:userId/reset-password - Reset user password
-router.post('/:churchId/:userId/reset-password', requireAuth, requireAdmin, async (req, res) => {
+router.post('/:churchId/:userId/reset-password', requireAuth, requirePlatformAdmin, async (req, res) => {
     try {
         const churchId = parseInt(req.params.churchId);
         const userId = parseInt(req.params.userId);
@@ -303,7 +324,7 @@ router.post('/:churchId/:userId/reset-password', requireAuth, requireAdmin, asyn
 });
 
 // POST /api/admin/church-users/:churchId/:userId/lock - Lock user account
-router.post('/:churchId/:userId/lock', requireAuth, requireAdmin, async (req, res) => {
+router.post('/:churchId/:userId/lock', requireAuth, requirePlatformAdmin, async (req, res) => {
     try {
         const churchId = parseInt(req.params.churchId);
         const userId = parseInt(req.params.userId);
@@ -335,22 +356,21 @@ router.post('/:churchId/:userId/lock', requireAuth, requireAdmin, async (req, re
 });
 
 // POST /api/admin/church-users/:churchId/:userId/unlock - Unlock user account
-router.post('/:churchId/:userId/unlock', requireAuth, requireAdmin, async (req, res) => {
+router.post('/:churchId/:userId/unlock', requireAuth, requirePlatformOrParishStaff, async (req, res) => {
     try {
         const churchId = parseInt(req.params.churchId);
         const userId = parseInt(req.params.userId);
 
         console.log('🔓 Unlocking user ID:', userId, 'in church ID:', churchId);
 
-        // Validate church exists
+        assertChurchScope(req, churchId);
         await validateChurchAccess(churchId);
-
-        // Validate user assignment to church
         await validateUserChurchAssignment(userId, churchId);
 
-        // Unlock user account in orthodoxmetrics_db.users
         await promisePool.query(
-            'UPDATE orthodoxmetrics_db.users SET is_active = 1, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+            `UPDATE orthodoxmetrics_db.users
+             SET is_active = 1, is_locked = 0, lockout_reason = NULL, updated_at = CURRENT_TIMESTAMP
+             WHERE id = ?`,
             [userId]
         );
 
@@ -360,14 +380,13 @@ router.post('/:churchId/:userId/unlock', requireAuth, requireAdmin, async (req, 
 
     } catch (error) {
         console.error('❌ Error unlocking user:', error);
-        res.status(error.message.includes('not found') ? 404 : 500).json(
-            apiResponse(false, null, error.message)
-        );
+        const status = error.status || (error.message.includes('not found') ? 404 : 500);
+        res.status(status).json(apiResponse(false, null, error.message));
     }
 });
 
 // GET /api/admin/church-users/:churchId/email-intake-authorized - List authorized email senders
-router.get('/:churchId/email-intake-authorized', requireAuth, requireAdmin, async (req, res) => {
+router.get('/:churchId/email-intake-authorized', requireAuth, requirePlatformAdmin, async (req, res) => {
     try {
         const churchId = parseInt(req.params.churchId);
         await validateChurchAccess(churchId);
@@ -391,7 +410,7 @@ router.get('/:churchId/email-intake-authorized', requireAuth, requireAdmin, asyn
 });
 
 // PUT /api/admin/church-users/:churchId/:userId/email-intake - Toggle email intake authorization
-router.put('/:churchId/:userId/email-intake', requireAuth, requireAdmin, async (req, res) => {
+router.put('/:churchId/:userId/email-intake', requireAuth, requirePlatformAdmin, async (req, res) => {
     try {
         const churchId = parseInt(req.params.churchId);
         const userId = parseInt(req.params.userId);

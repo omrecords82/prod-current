@@ -55,10 +55,10 @@ const STEP_ACTION_ROUTES = {
     print_or_download: { route: '/portal/certificates/generate', label: 'Download certificate', audience: 'parish' },
   },
   'identity.user.admin': {
-    list_users: { route: '/admin/users', label: 'Manage users', audience: 'admin' },
-    create_or_edit: { route: '/admin/users', label: 'Add parish staff', audience: 'parish' },
-    assign_roles: { route: '/admin/users', label: 'Assign roles', audience: 'parish' },
-    notify_user: { route: '/admin/control-panel/pending-members', label: 'Activate pending users', audience: 'parish' },
+    list_users: { route: '/account/parish-management/users', label: 'Manage parish users', audience: 'parish' },
+    create_or_edit: { route: '/account/parish-management/users', label: 'Add parish staff', audience: 'parish' },
+    assign_roles: { route: '/account/parish-management/users', label: 'Assign roles', audience: 'parish' },
+    notify_user: { route: '/account/parish-management/users', label: 'Activate pending users', audience: 'parish' },
   },
 };
 
@@ -628,6 +628,42 @@ function deriveWorkflowKpi(workflowKey, stats) {
   return { label: 'Runtime', value: '—', status: 'unknown' };
 }
 
+/** Workshop → OMStudio governance pipeline counters. */
+async function getGovernancePipelineSummary(pool) {
+  let pendingSubmitted = null;
+  let deployedTotal = null;
+  let deploymentAuditEvents = null;
+  let approvalAuditEvents = null;
+  try {
+    const [sub] = await pool.query(
+      "SELECT COUNT(*) AS cnt FROM workshop_deployment_requests WHERE status = 'submitted'"
+    );
+    pendingSubmitted = Number(sub[0]?.cnt || 0);
+    const [dep] = await pool.query(
+      "SELECT COUNT(*) AS cnt FROM workshop_deployment_requests WHERE status = 'deployed'"
+    );
+    deployedTotal = Number(dep[0]?.cnt || 0);
+    const [deployAudit] = await pool.query(
+      "SELECT COUNT(*) AS cnt FROM omstudio_deployment_audit_log WHERE event_type = 'deployment'"
+    );
+    deploymentAuditEvents = Number(deployAudit[0]?.cnt || 0);
+    const [approveAudit] = await pool.query(
+      "SELECT COUNT(*) AS cnt FROM omstudio_deployment_audit_log WHERE event_type = 'approval'"
+    );
+    approvalAuditEvents = Number(approveAudit[0]?.cnt || 0);
+  } catch {
+    return { source_pending: true };
+  }
+  return {
+    generated_at: new Date().toISOString(),
+    pending_submitted: pendingSubmitted,
+    deployed_total: deployedTotal,
+    deployment_audit_events: deploymentAuditEvents,
+    approval_audit_events: approvalAuditEvents,
+    promotion_loop_proven: deploymentAuditEvents > 0 && approvalAuditEvents > 0,
+  };
+}
+
 /** Aggregated workflow KPIs for executive overview + catalog summary panel. */
 async function getWorkflowRuntimeSummary(pool) {
   const list = await catalog.fetchWorkflowList();
@@ -656,11 +692,14 @@ async function getWorkflowRuntimeSummary(pool) {
   const identity = workflows.find((w) => w.workflow_key === 'identity.user.admin');
   const certificates = workflows.find((w) => w.workflow_key === 'records.certificate.generate');
 
+  const governance = await getGovernancePipelineSummary(pool);
+
   return {
     generated_at: new Date().toISOString(),
     workflows_total: workflows.length,
     runtime_resolvers: RUNTIME_RESOLVERS.length,
     needs_attention: attentionCount,
+    governance,
     totals: {
       open_enrollments: typeof enrollment?.kpi_value === 'number' ? enrollment.kpi_value : null,
       ocr_jobs_pending_review: typeof ocrReview?.kpi_value === 'number' ? ocrReview.kpi_value : null,
@@ -689,6 +728,7 @@ module.exports = {
   resolveIdentityAdminGoal,
   getEnrollmentLegacyProgress,
   getWorkflowRuntimeSummary,
+  getGovernancePipelineSummary,
   deriveWorkflowKpi,
   ENROLLMENT_CATALOG_STEPS,
 };

@@ -122,6 +122,7 @@ const ThemeStudioPage = Loadable(lazy(() => import('../features/account/parish-m
 const UIThemePage = Loadable(lazy(() => import('../features/account/parish-management/UIThemePage')));
 const SearchConfigurationPage = Loadable(lazy(() => import('../features/account/parish-management/SearchConfigurationPage')));
 const SystemBehaviorPage = Loadable(lazy(() => import('../features/account/parish-management/SystemBehaviorPage')));
+const ParishUsersPage = Loadable(lazy(() => import('../features/account/parish-management/ParishUsersPage')));
 
 /* ****Help & Documentation***** */
 const UserGuide = Loadable(lazy(() => import('../features/help/UserGuide')));
@@ -814,6 +815,7 @@ const Router = [
         ),
         children: [
           { index: true, element: <ParishDashboard /> },
+          { path: 'users', element: <ParishUsersPage /> },
           { path: 'database-mapping', element: <DatabaseMappingPage /> },
           { path: 'database-mapping/:step', element: <DatabaseMappingPage /> },
           { path: 'record-settings', element: <PMRecordSettingsPage /> },

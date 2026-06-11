@@ -25,6 +25,7 @@ import PaletteOutlinedIcon from '@mui/icons-material/PaletteOutlined';
 import TuneOutlinedIcon from '@mui/icons-material/TuneOutlined';
 import SearchOutlinedIcon from '@mui/icons-material/SearchOutlined';
 import SettingsOutlinedIcon from '@mui/icons-material/SettingsOutlined';
+import PeopleOutlinedIcon from '@mui/icons-material/PeopleOutlined';
 import { useLanguage } from '@/context/LanguageContext';
 
 interface NavItem {
@@ -49,7 +50,8 @@ const NAV_GROUPS: NavGroup[] = [
   {
     sectionKey: 'parish.overview',
     items: [
-      { labelKey: 'parish.parish_dashboard', path: `${BASE}`, icon: <DashboardOutlinedIcon fontSize="small" />, hidden: true },
+      { labelKey: 'parish.parish_dashboard', path: `${BASE}`, icon: <DashboardOutlinedIcon fontSize="small" /> },
+      { labelKey: 'parish.parish_users', path: `${BASE}/users`, icon: <PeopleOutlinedIcon fontSize="small" /> },
     ],
   },
   {
