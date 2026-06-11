@@ -7,8 +7,13 @@ const SiteFooter = () => {
   const copyrightText = t('footer.copyright').replace('{year}', String(new Date().getFullYear()));
 
   return (
-    <footer className="om-public-footer">
-      <div className="max-w-7xl mx-auto px-6 py-8">
+    <footer className="om-public-footer relative overflow-hidden">
+      <div
+        className="pointer-events-none absolute inset-0 bg-center bg-no-repeat bg-cover opacity-[0.06] dark:opacity-[0.08]"
+        style={{ backgroundImage: "url('/images/footer/om-brand-watermark.png')" }}
+        aria-hidden
+      />
+      <div className="relative z-10 max-w-7xl mx-auto px-6 py-8">
         <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-5 gap-x-6 gap-y-8">
           {/* Brand */}
           <div className="col-span-2 lg:col-span-1">

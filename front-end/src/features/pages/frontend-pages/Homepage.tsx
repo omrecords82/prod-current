@@ -26,7 +26,7 @@ const HIGHLIGHT_AUTO_MS = 8000;
 
 /** Fixed viewport — tallest slide (features grid) sets height; inner slides scroll if needed. */
 const HIGHLIGHT_VIEWPORT_CLASS =
-  'relative h-[min(78vh,920px)] sm:h-[min(72vh,840px)] md:h-[620px] lg:h-[580px] overflow-hidden';
+  'relative min-h-[520px] md:min-h-[560px] lg:min-h-[540px] overflow-hidden';
 
 function usePrefersReducedMotion(): boolean {
   const [reduced, setReduced] = useState(() => {
@@ -131,7 +131,7 @@ function HomepageHighlightCarousel() {
   };
 
   const slideLayerClass = (active: boolean) =>
-    `absolute inset-0 overflow-y-auto overscroll-contain px-2 md:px-8 transition-opacity duration-500 ease-in-out ${
+    `absolute inset-0 overflow-hidden px-2 md:px-8 transition-opacity duration-500 ease-in-out ${
       active ? 'opacity-100 z-10 pointer-events-auto' : 'opacity-0 z-0 pointer-events-none'
     }`;
 
@@ -193,8 +193,8 @@ function HomepageHighlightCarousel() {
               onClick={() => goTo(i)}
               className={`h-2 rounded-full transition-all ${
                 slide === i
-                  ? 'w-8 bg-[#2d1b4e] dark:bg-[#d4af37]'
-                  : 'w-2 bg-[rgba(45,27,78,0.2)] dark:bg-white/25 hover:bg-[rgba(45,27,78,0.35)]'
+                  ? 'w-8 bg-[var(--om-gold)]'
+                  : 'w-2 bg-[var(--om-border)] hover:opacity-80'
               }`}
             />
           ))}
@@ -209,20 +209,20 @@ function SimpleProcessPanel() {
 
   return (
     <>
-      <div className="text-center mb-16">
-        <div className="inline-flex items-center gap-2 bg-white dark:bg-gray-700 px-4 py-2 rounded-full mb-4 shadow-sm">
-          <EditableText contentKey="steps.badge" as="span" className="font-om-body text-[14px] text-[#2d1b4e] dark:text-white">
+      <div className="text-center mb-10 md:mb-12">
+        <div className="inline-flex items-center gap-2 om-badge-primary mb-4">
+          <EditableText contentKey="steps.badge" as="span" className="font-om-body om-text-small text-[var(--om-text-primary)]">
             {t('home.steps_badge')}
           </EditableText>
         </div>
-        <RichEditableText contentKey="steps.title" as="h2" className="font-om-display text-4xl md:text-5xl text-[#2d1b4e] dark:text-white mb-4">
+        <RichEditableText contentKey="steps.title" as="h2" className="font-om-display om-text-h2 text-[var(--om-text-primary)] mb-2">
           {t('home.steps_title')}
         </RichEditableText>
       </div>
 
-      <div className="grid md:grid-cols-3 gap-12">
-        <StepItem number={1} titleKey="steps.step1.title" descKey="steps.step1.desc" title={t('home.steps_step1_title')} description={t('home.steps_step1_desc')} variant="purple" />
-        <StepItem number={2} titleKey="steps.step2.title" descKey="steps.step2.desc" title={t('home.steps_step2_title')} description={t('home.steps_step2_desc')} variant="purple" />
+      <div className="grid md:grid-cols-3 gap-6 md:gap-8">
+        <StepItem number={1} titleKey="steps.step1.title" descKey="steps.step1.desc" title={t('home.steps_step1_title')} description={t('home.steps_step1_desc')} variant="gold" />
+        <StepItem number={2} titleKey="steps.step2.title" descKey="steps.step2.desc" title={t('home.steps_step2_title')} description={t('home.steps_step2_desc')} variant="surface" />
         <StepItem number={3} titleKey="steps.step3.title" descKey="steps.step3.desc" title={t('home.steps_step3_title')} description={t('home.steps_step3_desc')} variant="gold" />
       </div>
     </>
@@ -231,55 +231,90 @@ function SimpleProcessPanel() {
 
 function FeaturesPanel() {
   const { t } = useLanguage();
+  const [altSet, setAltSet] = useState(false);
+  const [pinned, setPinned] = useState(false);
+
+  const visibleIndices = altSet ? [3, 4, 5] : [0, 1, 2];
+
+  const showAlt = () => {
+    if (!pinned) setAltSet(true);
+  };
+  const hideAlt = () => {
+    if (!pinned) setAltSet(false);
+  };
+  const togglePin = () => {
+    setPinned((p) => {
+      const next = !p;
+      if (!next) setAltSet(false);
+      else setAltSet(true);
+      return next;
+    });
+  };
 
   return (
     <>
-      <div className="text-center mb-16">
-        <div className="inline-flex items-center gap-2 bg-[rgba(45,27,78,0.05)] dark:bg-gray-800 px-4 py-2 rounded-full mb-4">
-          <EditableText contentKey="features.badge" as="span" className="font-om-body text-[14px] text-[#2d1b4e] dark:text-white">
+      <div className="text-center mb-10 md:mb-12">
+        <div className="inline-flex items-center gap-2 om-badge-primary mb-4">
+          <EditableText contentKey="features.badge" as="span" className="font-om-body om-text-small text-[var(--om-text-primary)]">
             {t('home.features_badge')}
           </EditableText>
         </div>
-        <RichEditableText contentKey="features.title" as="h2" className="font-om-display text-4xl md:text-5xl text-[#2d1b4e] dark:text-white mb-4">
+        <RichEditableText contentKey="features.title" as="h2" className="font-om-display om-text-h2 text-[var(--om-text-primary)] mb-2">
           {t('home.features_title')}
         </RichEditableText>
+        <p className="font-om-body om-text-small text-[var(--om-text-secondary)] mt-2">
+          Hover or tap a card to explore more capabilities
+        </p>
       </div>
 
-      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-        {KEY_FEATURES.map((f, i) => (
-          <div key={i} className="bg-white dark:bg-gray-800 border border-[#f3f4f6] dark:border-gray-700 rounded-xl p-6 hover:shadow-md transition-shadow">
-            <div className="w-14 h-14 bg-[#2d1b4e] dark:bg-[#d4af37] rounded-lg flex items-center justify-center mb-4">
-              <f.icon className="text-[#d4af37] dark:text-[#2d1b4e]" size={28} />
-            </div>
-            <EditableText contentKey={`features.card${i + 1}.title`} as="h3" className="font-om-body font-medium text-xl text-[#2d1b4e] dark:text-white mb-2">
-              {t(`home.features_feat${i + 1}_title`)}
-            </EditableText>
-            <RichEditableText contentKey={`features.card${i + 1}.desc`} as="p" className="font-om-body text-[15px] text-[#4a5565] dark:text-gray-400 leading-relaxed">
-              {t(`home.features_feat${i + 1}_desc`)}
-            </RichEditableText>
-          </div>
-        ))}
+      <div
+        className="grid md:grid-cols-3 gap-6"
+        onMouseEnter={showAlt}
+        onMouseLeave={hideAlt}
+      >
+        {visibleIndices.map((i) => {
+          const f = KEY_FEATURES[i];
+          return (
+            <button
+              key={i}
+              type="button"
+              onClick={togglePin}
+              className="om-ds-card text-left cursor-pointer transition-transform hover:-translate-y-0.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--om-gold)]"
+            >
+              <div className="w-12 h-12 rounded-lg border border-[var(--om-border)] bg-[var(--om-input-bg)] flex items-center justify-center mb-4 text-[var(--om-gold)]">
+                <f.icon size={24} aria-hidden />
+              </div>
+              <EditableText contentKey={`features.card${i + 1}.title`} as="h3" className="font-om-display om-text-h4 mb-2 text-[var(--om-text-primary)]">
+                {t(`home.features_feat${i + 1}_title`)}
+              </EditableText>
+              <RichEditableText contentKey={`features.card${i + 1}.desc`} as="p" className="font-om-body om-text-small text-[var(--om-text-secondary)] leading-relaxed">
+                {t(`home.features_feat${i + 1}_desc`)}
+              </RichEditableText>
+            </button>
+          );
+        })}
       </div>
     </>
   );
 }
 
-function StepItem({ number, titleKey, descKey, title, description, variant }: { number: number; titleKey: string; descKey: string; title: string; description: string; variant: 'purple' | 'gold' }) {
+function StepItem({ number, titleKey, descKey, title, description, variant }: { number: number; titleKey: string; descKey: string; title: string; description: string; variant: 'gold' | 'surface' }) {
+  const badgeClass =
+    variant === 'gold'
+      ? 'bg-[var(--om-gold)] text-[var(--om-text-primary)] border-[var(--om-gold)]'
+      : 'bg-[var(--om-surface-elevated)] text-[var(--om-gold)] border-[var(--om-border)]';
+
   return (
-    <div className="relative">
+    <div className="om-ds-card !p-6">
       <div className="flex items-start gap-4">
-        <div className={`flex-shrink-0 w-12 h-12 ${
-          variant === 'gold'
-            ? 'bg-[#d4af37] text-[#2d1b4e]'
-            : 'bg-[#2d1b4e] dark:bg-[#d4af37] text-[#d4af37] dark:text-[#2d1b4e]'
-        } rounded-full flex items-center justify-center font-om-display text-xl`}>
+        <div className={`flex-shrink-0 w-12 h-12 rounded-full border flex items-center justify-center font-om-display text-xl ${badgeClass}`}>
           {number}
         </div>
         <div>
-          <EditableText contentKey={titleKey} as="h3" className="font-om-body font-medium text-xl text-[#2d1b4e] dark:text-white mb-2">
+          <EditableText contentKey={titleKey} as="h3" className="font-om-display om-text-h4 text-[var(--om-text-primary)] mb-2">
             {title}
           </EditableText>
-          <RichEditableText contentKey={descKey} as="p" className="font-om-body text-[16px] text-[#4a5565] dark:text-gray-400 leading-relaxed">
+          <RichEditableText contentKey={descKey} as="p" className="font-om-body om-text-body text-[var(--om-text-secondary)] leading-relaxed">
             {description}
           </RichEditableText>
         </div>

@@ -32,38 +32,51 @@ export function RecordTypeCards({ activeType, onSelect, onHover }: RecordTypeCar
       {recordCards.map((card) => {
         const isActive = activeType === card.type;
         const isCustom = card.type === 'custom';
+
         return (
           <motion.button
             key={card.type}
+            type="button"
             onClick={() => onSelect(card.type)}
             onMouseEnter={() => onHover(card.type)}
-            whileHover={isCustom ? { y: -4 } : undefined}
+            whileHover={{ y: -2 }}
             className={`
-              relative group rounded-2xl p-4 md:p-5 text-left transition-all duration-300 cursor-pointer border
+              relative rounded-2xl p-4 md:p-5 text-left transition-all duration-200 cursor-pointer
+              border bg-[var(--om-surface-elevated)] shadow-[var(--om-shadow-card)]
               ${isActive
-                ? isCustom
-                  ? 'bg-gradient-to-br from-purple-600/40 to-purple-800/30 border-purple-400/60 shadow-lg shadow-purple-500/30'
-                  : 'bg-purple-600/30 border-purple-400/50 shadow-lg shadow-purple-500/20'
-                : isCustom
-                  ? 'bg-gradient-to-br from-white/5 to-purple-900/20 border-purple-500/20 hover:border-purple-400/40 hover:shadow-lg hover:shadow-purple-500/15'
-                  : 'bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20'}
+                ? 'border-[var(--om-gold)] ring-2 ring-[var(--om-gold)]/25 shadow-[var(--om-shadow-card-hover)]'
+                : 'border-[var(--om-border)] hover:border-[var(--om-gold)]/45 hover:shadow-[var(--om-shadow-card-hover)]'}
+              ${isCustom && !isActive ? 'border-dashed' : ''}
             `}
           >
             {card.badge && (
-              <span className="absolute top-2.5 right-2.5 md:top-3 md:right-3 text-[9px] md:text-[10px] tracking-wider uppercase px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-400/30 font-om-body">
+              <span className="absolute top-2.5 right-2.5 md:top-3 md:right-3 text-[9px] md:text-[10px] tracking-wider uppercase px-2 py-0.5 rounded-full bg-[var(--om-surface)] text-[var(--om-gold)] border border-[var(--om-border)] font-om-body font-semibold">
                 {card.badge}
               </span>
             )}
-            <CardIcon type={card.type} className={`w-5 h-5 mb-3 ${isActive ? 'text-purple-300' : 'text-purple-400/60'}`} />
-            <div className={`text-sm mb-1 font-om-body ${isActive ? 'text-white' : 'text-white/80'}`}>{card.label}</div>
-            <div className="text-xs text-purple-300/60 font-om-body">{card.year} &middot; {card.count} records</div>
+
+            <div
+              className={`w-10 h-10 rounded-lg flex items-center justify-center mb-3 border ${
+                isActive
+                  ? 'bg-[var(--om-gold)] border-[var(--om-gold)] text-[var(--om-text-primary)]'
+                  : 'bg-[var(--om-input-bg)] border-[var(--om-border)] text-[var(--om-gold)]'
+              }`}
+            >
+              <CardIcon type={card.type} className="w-5 h-5" />
+            </div>
+
+            <div className={`text-sm mb-1 font-om-body font-semibold ${isActive ? 'text-[var(--om-text-primary)]' : 'text-[var(--om-text-primary)]'}`}>
+              {card.label}
+            </div>
+            <div className="text-xs text-[var(--om-text-secondary)] font-om-body">
+              {card.year} &middot; {card.count} records
+            </div>
+
             {isActive && (
-              <motion.div layoutId="activeIndicator" className="absolute bottom-0 left-4 right-4 h-0.5 bg-purple-400 rounded-full" />
-            )}
-            {isCustom && (
-              <div className="absolute inset-0 rounded-2xl pointer-events-none overflow-hidden">
-                <div className={`absolute inset-0 bg-gradient-to-br from-purple-500/5 to-transparent transition-opacity duration-300 ${isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`} />
-              </div>
+              <motion.div
+                layoutId="activeIndicator"
+                className="absolute bottom-0 left-4 right-4 h-0.5 bg-[var(--om-gold)] rounded-full"
+              />
             )}
           </motion.button>
         );

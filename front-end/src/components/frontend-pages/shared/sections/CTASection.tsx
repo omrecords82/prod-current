@@ -290,16 +290,16 @@ export function ParishRecordsAssessment() {
   }, [question, selectedValue, transitioning, goNext]);
 
   return (
-    <section className="py-16 md:py-20 om-hero-gradient text-white" aria-labelledby={`${formId}-heading`}>
+    <section className="py-16 md:py-20 om-section-base" aria-labelledby={`${formId}-heading`}>
       <div className="max-w-3xl mx-auto px-4 sm:px-6">
         <div className="text-center mb-8 md:mb-10">
           <h2
             id={`${formId}-heading`}
-            className="font-om-display text-3xl sm:text-4xl md:text-5xl text-white mb-4 leading-tight"
+            className="font-om-display text-3xl sm:text-4xl md:text-5xl text-[var(--om-text-primary)] mb-4 leading-tight"
           >
             {PARISH_ASSESSMENT_CONFIG.intro.title}
           </h2>
-          <p className="font-om-body text-base sm:text-lg text-[rgba(255,255,255,0.88)] max-w-2xl mx-auto leading-relaxed">
+          <p className="font-om-body text-base sm:text-lg text-[var(--om-text-secondary)] max-w-2xl mx-auto leading-relaxed">
             {PARISH_ASSESSMENT_CONFIG.intro.subtitle}
           </p>
         </div>

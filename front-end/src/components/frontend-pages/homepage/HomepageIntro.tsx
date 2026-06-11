@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { BookOpen, Search, Shield } from 'lucide-react';
 import EditableText from '@/components/frontend-pages/shared/EditableText';
 import { useLanguage } from '@/context/LanguageContext';
@@ -8,58 +9,82 @@ export function WhatWeDoPanel() {
 
   return (
     <>
-      <div className="text-center mb-16">
-        <div className="inline-flex items-center gap-2 bg-[rgba(45,27,78,0.05)] dark:bg-gray-800 px-4 py-2 rounded-full mb-4">
-          <EditableText contentKey="intro.badge" as="span" className="font-om-body text-[14px] text-[#2d1b4e] dark:text-white">
+      <div className="text-center mb-10 md:mb-12">
+        <div className="inline-flex items-center gap-2 om-badge-primary mb-4">
+          <EditableText contentKey="intro.badge" as="span" className="font-om-body om-text-small text-[var(--om-text-primary)]">
             {t('home.intro_badge')}
           </EditableText>
         </div>
-        <EditableText contentKey="intro.title" as="h2" className="font-om-display text-4xl md:text-5xl text-[#2d1b4e] dark:text-white mb-4">
+        <EditableText contentKey="intro.title" as="h2" className="font-om-display om-text-h2 text-[var(--om-text-primary)] mb-3">
           {t('home.intro_title')}
         </EditableText>
-        <EditableText contentKey="intro.subtitle" as="p" className="font-om-body text-xl text-[#4a5565] dark:text-gray-400 max-w-2xl mx-auto" multiline>
+        <EditableText contentKey="intro.subtitle" as="p" className="font-om-body om-text-body-lg text-[var(--om-text-secondary)] max-w-2xl mx-auto" multiline>
           {t('home.intro_subtitle')}
         </EditableText>
       </div>
 
-      <div className="grid md:grid-cols-3 gap-8">
-        <div className="om-card rounded-2xl p-8 shadow-sm hover:shadow-md transition-shadow">
-          <div className="w-16 h-16 bg-gradient-to-br from-[#2d1b4e] to-[#4a2f74] dark:from-[#d4af37] dark:to-[#c29d2f] rounded-xl flex items-center justify-center mb-6">
-            <BookOpen className="text-[#d4af37] dark:text-[#2d1b4e]" size={32} />
-          </div>
-          <EditableText contentKey="intro.card1.title" as="h3" className="font-om-body font-medium text-2xl text-[#2d1b4e] dark:text-white mb-3">
-            {t('home.intro_card1_title')}
-          </EditableText>
-          <EditableText contentKey="intro.card1.desc" as="p" className="font-om-body text-[16px] text-[#4a5565] dark:text-gray-400 leading-relaxed" multiline>
-            {t('home.intro_card1_desc')}
-          </EditableText>
-        </div>
-
-        <div className="om-card rounded-2xl p-8 shadow-sm hover:shadow-md transition-shadow">
-          <div className="w-16 h-16 bg-[#d4af37] rounded-xl flex items-center justify-center mb-6">
-            <Search className="text-[#2d1b4e]" size={32} />
-          </div>
-          <EditableText contentKey="intro.card2.title" as="h3" className="font-om-body font-medium text-2xl text-[#2d1b4e] dark:text-white mb-3">
-            {t('home.intro_card2_title')}
-          </EditableText>
-          <EditableText contentKey="intro.card2.desc" as="p" className="font-om-body text-[16px] text-[#4a5565] dark:text-gray-400 leading-relaxed" multiline>
-            {t('home.intro_card2_desc')}
-          </EditableText>
-        </div>
-
-        <div className="om-card rounded-2xl p-8 shadow-sm hover:shadow-md transition-shadow">
-          <div className="w-16 h-16 bg-gradient-to-br from-[#2d1b4e] to-[#4a2f74] dark:from-[#d4af37] dark:to-[#c29d2f] rounded-xl flex items-center justify-center mb-6">
-            <Shield className="text-[#d4af37] dark:text-[#2d1b4e]" size={32} />
-          </div>
-          <EditableText contentKey="intro.card3.title" as="h3" className="font-om-body font-medium text-2xl text-[#2d1b4e] dark:text-white mb-3">
-            {t('home.intro_card3_title')}
-          </EditableText>
-          <EditableText contentKey="intro.card3.desc" as="p" className="font-om-body text-[16px] text-[#4a5565] dark:text-gray-400 leading-relaxed" multiline>
-            {t('home.intro_card3_desc')}
-          </EditableText>
-        </div>
+      <div className="grid md:grid-cols-3 gap-6 md:gap-8">
+        <IntroCard
+          icon={<BookOpen size={28} aria-hidden />}
+          titleKey="intro.card1.title"
+          descKey="intro.card1.desc"
+          title={t('home.intro_card1_title')}
+          description={t('home.intro_card1_desc')}
+          accent="gold"
+        />
+        <IntroCard
+          icon={<Search size={28} aria-hidden />}
+          titleKey="intro.card2.title"
+          descKey="intro.card2.desc"
+          title={t('home.intro_card2_title')}
+          description={t('home.intro_card2_desc')}
+          accent="surface"
+        />
+        <IntroCard
+          icon={<Shield size={28} aria-hidden />}
+          titleKey="intro.card3.title"
+          descKey="intro.card3.desc"
+          title={t('home.intro_card3_title')}
+          description={t('home.intro_card3_desc')}
+          accent="gold"
+        />
       </div>
     </>
+  );
+}
+
+function IntroCard({
+  icon,
+  titleKey,
+  descKey,
+  title,
+  description,
+  accent,
+}: {
+  icon: ReactNode;
+  titleKey: string;
+  descKey: string;
+  title: string;
+  description: string;
+  accent: 'gold' | 'surface';
+}) {
+  const iconWrap =
+    accent === 'gold'
+      ? 'bg-[var(--om-gold)] text-[var(--om-text-primary)] border-[var(--om-gold)]'
+      : 'bg-[var(--om-input-bg)] text-[var(--om-gold)] border-[var(--om-border)]';
+
+  return (
+    <div className="om-ds-card !p-8">
+      <div className={`w-14 h-14 rounded-xl border flex items-center justify-center mb-6 ${iconWrap}`}>
+        {icon}
+      </div>
+      <EditableText contentKey={titleKey} as="h3" className="font-om-display om-text-h4 text-[var(--om-text-primary)] mb-3">
+        {title}
+      </EditableText>
+      <EditableText contentKey={descKey} as="p" className="font-om-body om-text-body text-[var(--om-text-secondary)] leading-relaxed" multiline>
+        {description}
+      </EditableText>
+    </div>
   );
 }
 
