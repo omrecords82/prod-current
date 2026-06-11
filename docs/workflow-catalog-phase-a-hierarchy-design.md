@@ -4,7 +4,7 @@
 
 | Field | Value |
 |-------|-------|
-| **Status** | Design package for review — **no code implemented** |
+| **Status** | **Implemented** 2026-06-13 — migration `20260613_workflow_hierarchy_phase_a.sql` |
 | **Date** | 2026-06-12 |
 | **Prerequisite** | [Architecture gap analysis](./workflow-catalog-architecture-gap-analysis.md) directionally approved |
 | **Inputs** | [Pipeline](./app-workflow-catalog-pipeline.md) · [Open questions](./workflow-catalog-open-questions.md) · [Gap analysis](./workflow-catalog-architecture-gap-analysis.md) |

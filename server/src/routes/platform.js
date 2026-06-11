@@ -178,17 +178,21 @@ function shapeMetadataComponent(component, versionMap) {
 
 async function buildWorkflowMetadata(pool) {
   const versionMap = await loadActiveComponentVersions(pool);
+  const catalog = require('../services/workflowCatalogService');
   const [levels] = await pool.query(
-    `SELECT level_key, level_name, system_level, workflow_group_sequence, parent_level_key
+    `SELECT level_key, level_name, system_level, workflow_group_sequence, parent_level_key,
+            tree_depth, hierarchy_path, is_active
      FROM app_workflow_system_levels
      ORDER BY workflow_group_sequence, level_key`
   );
   const [workflowRows] = await pool.query(
     `SELECT w.workflow_key, w.workflow_name, w.description, w.primary_app, w.entry_type,
-            w.system_level_key, w.workflow_sequence, w.lifecycle_status, w.completion_state,
-            v.version AS active_version
+            w.system_level_key, w.app_family_key, w.workflow_sequence, w.lifecycle_status,
+            w.completion_state, v.version AS active_version,
+            fam.level_name AS app_family_name
      FROM app_workflows w
      LEFT JOIN app_workflow_versions v ON v.id = w.active_version_id
+     LEFT JOIN app_workflow_system_levels fam ON fam.level_key = w.app_family_key
      ORDER BY w.workflow_sequence, w.workflow_name`
   );
 
@@ -241,6 +245,8 @@ async function buildWorkflowMetadata(pool) {
       primary_app: wf.primary_app,
       entry_type: wf.entry_type,
       system_level_key: wf.system_level_key,
+      app_family_key: wf.app_family_key,
+      app_family_name: wf.app_family_name,
       workflow_sequence: wf.workflow_sequence,
       lifecycle_status: wf.lifecycle_status,
       completion_state: wf.completion_state,
@@ -249,12 +255,21 @@ async function buildWorkflowMetadata(pool) {
     });
   }
 
+  const workflow_hierarchy = catalog.buildWorkflowHierarchy(levels, workflows);
+
   return {
     app_key: 'om',
     server_key: OM_SERVER_KEY,
     database: 'orthodoxmetrics_db',
+    schema_version: catalog.HIERARCHY_SCHEMA_VERSION,
     generated_at: new Date().toISOString(),
     workflow_system_levels: levels,
+    workflow_hierarchy,
+    workflow_families: workflow_hierarchy.families.map((f) => ({
+      level_key: f.level_key,
+      level_name: f.level_name,
+      workflows_filed: f.workflows_filed,
+    })),
     workflows,
   };
 }

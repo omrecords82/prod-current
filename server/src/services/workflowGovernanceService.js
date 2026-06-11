@@ -175,10 +175,8 @@ async function recordRollback(pool, { deploymentId, rollbackOfDeploymentId, acto
 async function getWorkflowAuthorityManifest(pool) {
   const registry = require('./workflowRegistry');
   const workflowGoals = require('./workflowGoalsService');
-  const [workflows] = await pool.query(
-    `SELECT workflow_key, workflow_name, completion_state, lifecycle_status, primary_app
-     FROM app_workflows ORDER BY workflow_sequence`
-  );
+  const catalog = require('./workflowCatalogService');
+  const bundle = await catalog.fetchCatalogBundle(pool);
   const [historyCount] = await pool.query('SELECT COUNT(*) AS cnt FROM workflow_deployment_history');
   const [queueCount] = await pool.query(
     "SELECT COUNT(*) AS cnt FROM workflow_deployment_queue WHERE status = 'queued'"
@@ -187,20 +185,38 @@ async function getWorkflowAuthorityManifest(pool) {
   return {
     authority: 'omstudio',
     role: 'workflow_governance_consumer',
+    schema_version: catalog.HIERARCHY_SCHEMA_VERSION,
     generated_at: new Date().toISOString(),
     documentation: [
       { doc_key: 'pipeline', path: 'docs/app-workflow-catalog-pipeline.md', title: 'App Workflow Catalog Pipeline' },
       { doc_key: 'review_decisions', path: 'docs/workflow-catalog-review-implementation.md', title: 'Catalog Review Implementation' },
+      { doc_key: 'phase_a_hierarchy', path: 'docs/workflow-catalog-phase-a-hierarchy-design.md', title: 'Phase A Hierarchy Design' },
+      { doc_key: 'gap_analysis', path: 'docs/workflow-catalog-architecture-gap-analysis.md', title: 'Architecture Gap Analysis' },
     ],
     filed_workflows: registry.FILED_WORKFLOW_KEYS,
     filing_checklist: registry.FILING_CHECKLIST,
     runtime_resolvers: workflowGoals.RUNTIME_RESOLVERS.map((r) => r.workflow_key),
     feature_flags: workflowGoals.getWorkflowFeatureFlags(),
-    catalog_workflows: workflows,
+    workflow_hierarchy: bundle.workflow_hierarchy,
+    workflow_families: bundle.workflow_hierarchy.families.map((f) => ({
+      level_key: f.level_key,
+      level_name: f.level_name,
+      workflows_filed: f.workflows_filed,
+      groups_total: f.groups.length,
+    })),
+    catalog_workflows: bundle.workflows.map((w) => ({
+      workflow_key: w.workflow_key,
+      workflow_name: w.workflow_name,
+      completion_state: w.completion_state,
+      lifecycle_status: w.lifecycle_status,
+      primary_app: w.primary_app,
+      app_family_key: w.app_family_key,
+    })),
     governance: {
       deployment_history_total: Number(historyCount[0]?.cnt || 0),
       deployment_queue_pending: Number(queueCount[0]?.cnt || 0),
       validation_gates: DEFAULT_VALIDATION_GATES,
+      hierarchy_policy_key: 'catalog.hierarchy.v1',
     },
   };
 }
