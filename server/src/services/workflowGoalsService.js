@@ -8,13 +8,34 @@
  * 4. Goals appear automatically on GET /api/workflow-goals and admin enrollment detail.
  */
 const catalog = require('./workflowCatalogService');
+const runtimeCache = require('./workflowRuntimeCacheService');
+
+/** Feature gates — mirrors index.ts features.ocr / features.certificates */
+const WORKFLOW_FEATURE_GATES = {
+  'ocr.setup.wizard': 'ocr',
+  'ocr.batch.review': 'ocr',
+  'records.certificate.generate': 'certificates',
+};
+
+function getWorkflowFeatureFlags() {
+  return {
+    ocr: process.env.FEATURE_OCR !== 'false',
+    certificates: process.env.FEATURE_CERTIFICATES !== 'false',
+  };
+}
+
+function isWorkflowFeatureEnabled(workflowKey) {
+  const gate = WORKFLOW_FEATURE_GATES[workflowKey];
+  if (!gate) return true;
+  return getWorkflowFeatureFlags()[gate] !== false;
+}
 
 /** onboarding_requests.status → catalog step_key */
 const ENROLLMENT_STATUS_TO_STEP = {
   submitted: 'submit_enrollment',
   reviewing: 'staff_review',
-  payment_pending: 'payment',
-  payment_received: 'payment',
+  payment_pending: 'payment_pending',
+  payment_received: 'payment_received',
   provisioning: 'provision_tenant',
   admin_account_created: 'create_admin_account',
   awaiting_first_login: 'await_first_login',
@@ -29,6 +50,8 @@ const STEP_ACTION_ROUTES = {
   'church.enrollment': {
     submit_enrollment: { route: '/enroll', label: 'View enrollment', audience: 'admin' },
     staff_review: { route: '/admin/onboarding', label: 'Review enrollment', audience: 'admin' },
+    payment_pending: { route: '/admin/onboarding', label: 'Manage payment', audience: 'admin' },
+    payment_received: { route: '/admin/onboarding', label: 'Confirm payment', audience: 'admin' },
     payment: { route: '/admin/onboarding', label: 'Manage payment', audience: 'admin' },
     provision_tenant: { route: '/admin/onboarding', label: 'Provisioning status', audience: 'admin' },
     create_admin_account: { route: '/admin/onboarding', label: 'Admin account', audience: 'admin' },
@@ -38,15 +61,29 @@ const STEP_ACTION_ROUTES = {
     audit_complete: { route: '/account/parish-management', label: 'Parish dashboard', audience: 'parish' },
   },
   'ocr.batch.review': {
-    upload_batch: { route: '/devel/ocr-studio/upload', label: 'Upload records', audience: 'parish' },
+    upload_batch: { route: '/portal/upload', label: 'Upload records', audience: 'parish' },
+    queue_processing: { route: '/portal/ocr', label: 'View OCR queue', audience: 'parish' },
+    agent_extract: { route: '/portal/ocr', label: 'Review extraction', audience: 'parish' },
     human_review: { route: '/portal/ocr', label: 'Review OCR batch', audience: 'parish' },
     confirm_seed: { route: '/portal/ocr', label: 'Confirm and seed', audience: 'parish' },
+    write_records: { route: '/portal/ocr', label: 'View seeded records', audience: 'parish' },
+    upload_batch_devel: { route: '/devel/ocr-studio/upload', label: 'Upload records (staff)', audience: 'admin' },
   },
   'ocr.setup.wizard': {
-    select_church: { route: '/devel/ocr-setup-wizard', label: 'Start OCR setup', audience: 'parish' },
-    record_types: { route: '/devel/ocr-setup-wizard', label: 'Configure record types', audience: 'parish' },
-    layout_template: { route: '/devel/ocr-setup-wizard', label: 'Set layout template', audience: 'parish' },
-    feeder_settings: { route: '/devel/ocr-setup-wizard', label: 'Finish feeder settings', audience: 'parish' },
+    select_church: { route: '/portal/ocr/setup', label: 'Start OCR setup', audience: 'parish' },
+    record_types: { route: '/portal/ocr/setup', label: 'Configure record types', audience: 'parish' },
+    layout_template: { route: '/portal/ocr/setup', label: 'Set layout template', audience: 'parish' },
+    feeder_settings: { route: '/portal/ocr/setup', label: 'Finish feeder settings', audience: 'parish' },
+    select_church_devel: { route: '/devel/ocr-setup-wizard', label: 'OCR setup (staff)', audience: 'admin' },
+  },
+  'church.ops.setup': {
+    verify_provision: { route: '/account/parish-management', label: 'Parish hub', audience: 'parish' },
+    database_mapping: { route: '/account/parish-management/database-mapping', label: 'Configure mapping', audience: 'parish' },
+    record_settings: { route: '/account/parish-management/record-settings', label: 'Record settings', audience: 'parish' },
+    parish_staff: { route: '/account/parish-management/users', label: 'Add parish staff', audience: 'parish' },
+    branding_optional: { route: '/account/parish-management/landing-page-branding', label: 'Branding', audience: 'parish' },
+    finalize_setup: { route: '/account/parish-management', label: 'Complete setup', audience: 'parish' },
+    audit_complete: { route: '/account/parish-management', label: 'Parish dashboard', audience: 'parish' },
   },
   'records.certificate.generate': {
     select_record: { route: '/portal/certificates/generate', label: 'Generate certificate', audience: 'parish' },
@@ -231,7 +268,7 @@ async function resolveOcrSetupGoal(pool, churchId) {
   if (!workflow) return null;
 
   const ctx = buildWorkflowContext(workflow, stepKey, 'parish');
-  const setupRoute = `/devel/ocr-setup-wizard?church_id=${churchId}`;
+  const setupRoute = `/portal/ocr/setup?church_id=${churchId}`;
   if (ctx.current_step) {
     ctx.current_step = {
       ...ctx.current_step,
@@ -265,24 +302,33 @@ async function resolveCertificateGoal(pool, churchId) {
   return { record_count: recordCount, workflow: ctx };
 }
 
-async function resolveIdentityAdminGoal(pool, churchId) {
-  const [lockedRows] = await pool.query(
-    'SELECT COUNT(*) AS cnt FROM users WHERE church_id = ? AND is_locked = 1',
+async function countChurchUsersByLockState(pool, churchId) {
+  const [rows] = await pool.query(
+    `SELECT
+       SUM(CASE WHEN u.is_locked = 1 THEN 1 ELSE 0 END) AS pending_users,
+       SUM(CASE WHEN u.is_locked = 0 OR u.is_locked IS NULL THEN 1 ELSE 0 END) AS active_users
+     FROM church_users cu
+     JOIN users u ON u.id = cu.user_id
+     WHERE cu.church_id = ?`,
     [churchId]
   );
-  const pendingCount = Number(lockedRows[0]?.cnt || 0);
+  return {
+    pending_users: Number(rows[0]?.pending_users || 0),
+    active_users: Number(rows[0]?.active_users || 0),
+  };
+}
+
+async function resolveIdentityAdminGoal(pool, churchId) {
+  const { pending_users: pendingCount, active_users: activeCount } =
+    await countChurchUsersByLockState(pool, churchId);
 
   let stepKey = 'create_or_edit';
   let summary = 'Add parish staff accounts';
   if (pendingCount > 0) {
     stepKey = 'notify_user';
     summary = `${pendingCount} user${pendingCount === 1 ? '' : 's'} awaiting activation`;
-  } else {
-    const [activeRows] = await pool.query(
-      'SELECT COUNT(*) AS cnt FROM users WHERE church_id = ? AND (is_locked = 0 OR is_locked IS NULL)',
-      [churchId]
-    );
-    if (Number(activeRows[0]?.cnt || 0) >= 2) return null;
+  } else if (activeCount >= 2) {
+    return null;
   }
 
   const workflow = await catalog.fetchWorkflowDetail('identity.user.admin');
@@ -335,6 +381,49 @@ async function resolveOcrReviewGoals(pool, churchId) {
   });
 }
 
+async function resolveChurchOpsSetupGoal(pool, churchId) {
+  const [chRows] = await pool.query(
+    `SELECT setup_complete, database_name, is_active, client_status, onboarding_phase,
+            has_baptism_records, has_marriage_records, has_funeral_records
+     FROM churches WHERE id = ? LIMIT 1`,
+    [churchId]
+  );
+  if (!chRows.length) return null;
+  const ch = chRows[0];
+  if (ch.setup_complete === 1 || !ch.is_active) return null;
+  if (['directory', 'pre_onboarded', 'decommissioned'].includes(ch.client_status)) return null;
+
+  const [openEnroll] = await pool.query(
+    `SELECT id FROM onboarding_requests
+     WHERE church_id = ? AND status NOT IN ('active', 'rejected', 'cancelled')
+     LIMIT 1`,
+    [churchId]
+  );
+  if (openEnroll.length) return null;
+
+  let stepKey = 'verify_provision';
+  if (!ch.database_name) {
+    stepKey = 'verify_provision';
+  } else if (!ch.has_baptism_records && !ch.has_marriage_records && !ch.has_funeral_records) {
+    stepKey = 'database_mapping';
+  } else if (Number(ch.onboarding_phase || 0) < 4) {
+    stepKey = 'record_settings';
+  } else {
+    const { active_users: activeStaff } = await countChurchUsersByLockState(pool, churchId);
+    stepKey = activeStaff < 2 ? 'parish_staff' : 'finalize_setup';
+  }
+
+  const workflow = await catalog.fetchWorkflowDetail('church.ops.setup');
+  if (!workflow) return null;
+
+  const ctx = buildWorkflowContext(workflow, stepKey, 'parish');
+  return {
+    step_key: stepKey,
+    workflow: ctx,
+    summary: ctx.current_step?.step_name || 'Complete parish operations setup',
+  };
+}
+
 /**
  * Runtime resolvers — register new workflows here.
  * Each resolver: async (pool, churchId) => GoalItem | GoalItem[] | null
@@ -355,6 +444,24 @@ const RUNTIME_RESOLVERS = [
         action_label: item.context.current_step?.action_label || 'Continue setup',
         workflow: item.context,
         meta: { request_id: item.request_id, request_status: item.request_status },
+      };
+    },
+  },
+  {
+    workflow_key: 'church.ops.setup',
+    priority: 12,
+    resolve: async (pool, churchId) => {
+      const item = await resolveChurchOpsSetupGoal(pool, churchId);
+      if (!item) return null;
+      return {
+        workflow_key: 'church.ops.setup',
+        priority: 12,
+        title: item.workflow.workflow_name,
+        summary: item.summary,
+        action_route: item.workflow.current_step?.action_route,
+        action_label: item.workflow.current_step?.action_label || 'Continue setup',
+        workflow: item.workflow,
+        meta: { step_key: item.step_key },
       };
     },
   },
@@ -437,6 +544,7 @@ async function getGoalsForChurch(churchId, { audience = 'parish' } = {}) {
   const goals = [];
 
   for (const resolver of RUNTIME_RESOLVERS.sort((a, b) => a.priority - b.priority)) {
+    if (!isWorkflowFeatureEnabled(resolver.workflow_key)) continue;
     const result = await resolver.resolve(pool, churchId);
     if (!result) continue;
     const list = Array.isArray(result) ? result : [result];
@@ -478,40 +586,23 @@ async function getRuntimeStatsForCatalog(pool, workflowKey) {
     return { source: 'ocr_jobs', by_status: byStatus, by_review_status: byReview };
   }
   if (workflowKey === 'ocr.setup.wizard') {
-    const [churches] = await pool.query(
-      `SELECT c.id, c.database_name
-       FROM churches c
-       WHERE c.database_name IS NOT NULL AND c.is_active = 1
-       ORDER BY c.id`
+    return runtimeCache.getOcrSetupStats(pool);
+  }
+  if (workflowKey === 'church.ops.setup') {
+    const [incomplete] = await pool.query(
+      `SELECT COUNT(*) AS count FROM churches
+       WHERE is_active = 1 AND setup_complete = 0
+         AND client_status NOT IN ('directory', 'pre_onboarded', 'decommissioned')`
     );
-    let complete = 0;
-    let incomplete = 0;
-    let notStarted = 0;
-    for (const ch of churches) {
-      try {
-        const { getChurchDbConnection } = require('../utils/dbSwitcher');
-        const churchDb = await getChurchDbConnection(ch.database_name);
-        const [rows] = await churchDb.query(
-          'SELECT is_complete, percent_complete FROM ocr_setup_state WHERE church_id = ?',
-          [ch.id]
-        );
-        if (!rows.length) {
-          notStarted += 1;
-        } else if (rows[0].is_complete) {
-          complete += 1;
-        } else {
-          incomplete += 1;
-        }
-      } catch {
-        notStarted += 1;
-      }
-    }
+    const [byPhase] = await pool.query(
+      `SELECT onboarding_phase, COUNT(*) AS count FROM churches
+       WHERE is_active = 1 AND setup_complete = 0 AND onboarding_phase IS NOT NULL
+       GROUP BY onboarding_phase ORDER BY onboarding_phase`
+    );
     return {
-      source: 'church_db.ocr_setup_state',
-      churches_total: churches.length,
-      setup_complete: complete,
-      setup_in_progress: incomplete,
-      setup_not_started: notStarted,
+      source: 'churches.setup_complete',
+      setup_incomplete: Number(incomplete[0]?.count || 0),
+      by_onboarding_phase: byPhase,
     };
   }
   if (workflowKey === 'records.certificate.generate') {
@@ -538,24 +629,24 @@ async function getRuntimeStatsForCatalog(pool, workflowKey) {
   }
   if (workflowKey === 'identity.user.admin') {
     const [byChurch] = await pool.query(
-      `SELECT church_id,
-              SUM(CASE WHEN is_locked = 1 THEN 1 ELSE 0 END) AS pending_users,
-              SUM(CASE WHEN is_locked = 0 OR is_locked IS NULL THEN 1 ELSE 0 END) AS active_users
-       FROM users
-       WHERE church_id IS NOT NULL
-       GROUP BY church_id
+      `SELECT cu.church_id,
+              SUM(CASE WHEN u.is_locked = 1 THEN 1 ELSE 0 END) AS pending_users,
+              SUM(CASE WHEN u.is_locked = 0 OR u.is_locked IS NULL THEN 1 ELSE 0 END) AS active_users
+       FROM church_users cu
+       JOIN users u ON u.id = cu.user_id
+       GROUP BY cu.church_id
        ORDER BY pending_users DESC, active_users DESC
        LIMIT 50`
     );
     const [totals] = await pool.query(
       `SELECT
-         SUM(CASE WHEN is_locked = 1 THEN 1 ELSE 0 END) AS pending_users,
-         SUM(CASE WHEN is_locked = 0 OR is_locked IS NULL THEN 1 ELSE 0 END) AS active_users
-       FROM users
-       WHERE church_id IS NOT NULL`
+         SUM(CASE WHEN u.is_locked = 1 THEN 1 ELSE 0 END) AS pending_users,
+         SUM(CASE WHEN u.is_locked = 0 OR u.is_locked IS NULL THEN 1 ELSE 0 END) AS active_users
+       FROM church_users cu
+       JOIN users u ON u.id = cu.user_id`
     );
     return {
-      source: 'users',
+      source: 'church_users',
       pending_users: Number(totals[0]?.pending_users || 0),
       active_users: Number(totals[0]?.active_users || 0),
       by_church: byChurch,
@@ -567,7 +658,8 @@ async function getRuntimeStatsForCatalog(pool, workflowKey) {
 const ENROLLMENT_CATALOG_STEPS = [
   { step_key: 'submit_enrollment', step_name: 'Submit Enrollment', step_sequence: 10, step_kind: 'human' },
   { step_key: 'staff_review', step_name: 'Staff Review', step_sequence: 20, step_kind: 'approval' },
-  { step_key: 'payment', step_name: 'Payment', step_sequence: 30, step_kind: 'human' },
+  { step_key: 'payment_pending', step_name: 'Payment Pending', step_sequence: 30, step_kind: 'human' },
+  { step_key: 'payment_received', step_name: 'Payment Received', step_sequence: 35, step_kind: 'human' },
   { step_key: 'provision_tenant', step_name: 'Provision Tenant', step_sequence: 40, step_kind: 'pipeline_trigger' },
   { step_key: 'create_admin_account', step_name: 'Create Admin Account', step_sequence: 50, step_kind: 'system' },
   { step_key: 'await_first_login', step_name: 'Await First Login', step_sequence: 60, step_kind: 'human' },
@@ -625,6 +717,14 @@ function deriveWorkflowKpi(workflowKey, stats) {
       status: pending > 0 ? 'attention' : 'healthy',
     };
   }
+  if (workflowKey === 'church.ops.setup') {
+    const incomplete = Number(stats.setup_incomplete || 0);
+    return {
+      label: 'Parishes need ops setup',
+      value: incomplete,
+      status: incomplete > 0 ? 'attention' : 'healthy',
+    };
+  }
   return { label: 'Runtime', value: '—', status: 'unknown' };
 }
 
@@ -670,6 +770,7 @@ async function getWorkflowRuntimeSummary(pool) {
   const workflows = [];
 
   for (const wf of list) {
+    if (!isWorkflowFeatureEnabled(wf.workflow_key)) continue;
     const stats = await getRuntimeStatsForCatalog(pool, wf.workflow_key);
     const kpi = deriveWorkflowKpi(wf.workflow_key, stats);
     workflows.push({
@@ -691,6 +792,7 @@ async function getWorkflowRuntimeSummary(pool) {
   const ocrSetup = workflows.find((w) => w.workflow_key === 'ocr.setup.wizard');
   const identity = workflows.find((w) => w.workflow_key === 'identity.user.admin');
   const certificates = workflows.find((w) => w.workflow_key === 'records.certificate.generate');
+  const opsSetup = workflows.find((w) => w.workflow_key === 'church.ops.setup');
 
   const governance = await getGovernancePipelineSummary(pool);
 
@@ -698,10 +800,12 @@ async function getWorkflowRuntimeSummary(pool) {
     generated_at: new Date().toISOString(),
     workflows_total: workflows.length,
     runtime_resolvers: RUNTIME_RESOLVERS.length,
+    feature_flags: getWorkflowFeatureFlags(),
     needs_attention: attentionCount,
     governance,
     totals: {
       open_enrollments: typeof enrollment?.kpi_value === 'number' ? enrollment.kpi_value : null,
+      parishes_ops_setup_incomplete: typeof opsSetup?.kpi_value === 'number' ? opsSetup.kpi_value : null,
       ocr_jobs_pending_review: typeof ocrReview?.kpi_value === 'number' ? ocrReview.kpi_value : null,
       churches_ocr_setup_incomplete: typeof ocrSetup?.kpi_value === 'number' ? ocrSetup.kpi_value : null,
       pending_user_activations: typeof identity?.kpi_value === 'number' ? identity.kpi_value : null,
@@ -726,9 +830,13 @@ module.exports = {
   resolveOcrSetupGoal,
   resolveCertificateGoal,
   resolveIdentityAdminGoal,
+  resolveChurchOpsSetupGoal,
   getEnrollmentLegacyProgress,
   getWorkflowRuntimeSummary,
   getGovernancePipelineSummary,
   deriveWorkflowKpi,
   ENROLLMENT_CATALOG_STEPS,
+  getWorkflowFeatureFlags,
+  isWorkflowFeatureEnabled,
+  countChurchUsersByLockState,
 };

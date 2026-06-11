@@ -14,6 +14,7 @@ const FILING_CHECKLIST = [
 
 const FILED_WORKFLOW_KEYS = [
   'church.enrollment',
+  'church.ops.setup',
   'ocr.batch.review',
   'ocr.setup.wizard',
   'records.certificate.generate',
