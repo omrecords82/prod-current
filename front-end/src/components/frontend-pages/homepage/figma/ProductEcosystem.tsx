@@ -1049,7 +1049,7 @@ export function ProductEcosystem({ activeSlide, isDark }: Props) {
   const activePanel = ACTIVE[activeSlide] ?? null;
 
   return (
-    <div style={{ position: "relative", width: "100%", height: "685px", display: "flex", gap: "6px" }}>
+    <div style={{ position: "relative", width: "100%", maxWidth: "560px", height: "685px", display: "flex", gap: "6px" }}>
       {/* Cathedral background */}
       <CathedralSilhouette isDark={isDark} />
 

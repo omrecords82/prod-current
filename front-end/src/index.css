@@ -542,13 +542,27 @@ html.dark {
   );
 }
 
-/* Figma homepage hero — stack on mobile, side-by-side on desktop */
-.om-figma-hero-grid {
-  grid-template-columns: minmax(0, 1fr);
+/* Figma homepage hero — ecosystem authored at 560px; shrink to fit column */
+.om-figma-ecosystem-frame {
+  width: 100%;
+  max-width: 560px;
+  margin-left: auto;
+  margin-right: 0;
+}
+@media (max-width: 1023px) {
+  .om-figma-ecosystem-frame {
+    max-width: 100%;
+    margin-left: 0;
+  }
+}
+.om-figma-ecosystem-scaler {
+  width: 100%;
+  max-width: 560px;
+  transform-origin: top center;
 }
 @media (min-width: 1024px) {
-  .om-figma-hero-grid {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
-    gap: 40px;
+  .om-figma-ecosystem-scaler {
+    transform-origin: top right;
+    margin-left: auto;
   }
 }

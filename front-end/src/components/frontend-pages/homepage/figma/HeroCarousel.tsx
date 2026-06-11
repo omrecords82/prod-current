@@ -227,19 +227,13 @@ export function HeroCarousel({ embedded = false }: HeroCarouselProps) {
         </div>
       )}
 
-      {/* Main layout */}
-      <div className="om-figma-hero-grid" style={{
-        flex: 1, display: "grid",
-        gridTemplateColumns: "minmax(0, 1fr)",
-        gap: "32px",
-        padding: embedded ? "0 16px 24px" : "0 48px 32px",
-        maxWidth: "1440px", margin: "0 auto", width: "100%",
-        alignItems: "center",
-        boxSizing: "border-box",
-      }}>
+      {/* Main layout — 2 columns on lg+; inline gridTemplateColumns was overriding CSS */}
+      <div
+        className={`om-figma-hero-grid flex-1 grid w-full max-w-[1440px] mx-auto box-border items-start grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] gap-8 lg:gap-10 ${embedded ? 'px-4 sm:px-8 lg:px-12 pb-6' : 'px-12 pb-8'}`}
+      >
 
         {/* ── LEFT PANEL ─────────────────────────────────────────────── */}
-        <div style={{ display: "flex", flexDirection: "column", gap: "24px", paddingTop: "32px", paddingBottom: "16px" }}>
+        <div className="flex min-w-0 flex-col gap-6 pt-6 pb-4 lg:pt-8">
 
           {/* Secondary brand line */}
           <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
@@ -404,11 +398,7 @@ export function HeroCarousel({ embedded = false }: HeroCarouselProps) {
         </div>
 
         {/* ── RIGHT PANEL ────────────────────────────────────────────── */}
-        <div style={{
-          position: "relative",
-          paddingTop: "24px",
-          paddingBottom: "16px",
-        }}>
+        <div className="relative min-w-0 w-full pt-4 pb-4 lg:pt-6">
           {/* Panel label */}
           <div style={{
             position: "absolute", top: "28px", right: "0px",
@@ -427,15 +417,18 @@ export function HeroCarousel({ embedded = false }: HeroCarouselProps) {
             </div>
           </div>
 
-          {/* The ecosystem */}
-          <div style={{
-            borderRadius: "12px",
-            overflow: "hidden",
-            boxShadow: isDark
-              ? "0 32px 80px rgba(0,0,0,0.7), 0 0 0 1px rgba(212,175,55,0.1)"
-              : "0 32px 80px rgba(45,27,105,0.18), 0 0 0 1px rgba(212,175,55,0.2)",
-          }}>
-            <ProductEcosystem activeSlide={activeSlide} isDark={isDark} />
+          {/* The ecosystem — scales to fit column width */}
+          <div
+            className="om-figma-ecosystem-frame overflow-hidden rounded-xl"
+            style={{
+              boxShadow: isDark
+                ? "0 32px 80px rgba(0,0,0,0.7), 0 0 0 1px rgba(212,175,55,0.1)"
+                : "0 32px 80px rgba(45,27,105,0.18), 0 0 0 1px rgba(212,175,55,0.2)",
+            }}
+          >
+            <div className="om-figma-ecosystem-scaler">
+              <ProductEcosystem activeSlide={activeSlide} isDark={isDark} />
+            </div>
           </div>
 
           {/* Bottom gold line accent */}
