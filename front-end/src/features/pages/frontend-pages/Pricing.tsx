@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Check, HelpCircle } from '@/ui/icons';
 import { PUBLIC_ROUTES } from '@/config/publicRoutes';
@@ -7,6 +8,8 @@ import PublicSeo from '@/components/seo/PublicSeo';
 import JsonLd from '@/components/seo/JsonLd';
 import { useLanguage } from '@/context/LanguageContext';
 
+type PricingTier = 'small' | 'medium' | 'large';
+
 // Pricing temporarily hidden by request (2026-05-03). The plan tier
 // + features still ship; just the dollar amounts and billing notes
 // are masked so visitors are routed to Contact for a quote. Flip
@@ -15,6 +18,7 @@ const HIDE_PRICES = true;
 
 const PagePricing = () => {
   const { t } = useLanguage();
+  const [focusedTier, setFocusedTier] = useState<PricingTier>('medium');
 
   // Feature key arrays — stable identifiers, only display labels translate
   const SMALL_FEAT_KEYS = [1, 2, 3, 4, 5, 6] as const;
@@ -113,9 +117,14 @@ const PagePricing = () => {
       {/* Pricing Cards */}
       <section className="py-20 om-section-base">
         <div className="max-w-7xl mx-auto px-6">
-          <div className="grid md:grid-cols-3 gap-8 mb-16">
-            {/* Small Parish */}
+          <div
+            className="grid md:grid-cols-3 gap-8 mb-16 items-stretch"
+            onMouseLeave={() => setFocusedTier('medium')}
+          >
             <PricingCard
+              tier="small"
+              featured={focusedTier === 'small'}
+              onFocus={() => setFocusedTier('small')}
               name={t('pricing.plan_small_name')}
               description={t('pricing.plan_small_desc')}
               price={t('pricing.plan_small_price')}
@@ -124,53 +133,23 @@ const PagePricing = () => {
               features={SMALL_FEAT_KEYS.map((i) => t(`pricing.plan_small_feat${i}`))}
               btnLabel={HIDE_PRICES ? t('pricing.btn_request_quote') : t('pricing.btn_get_started')}
             />
-
-            {/* Medium Parish — Featured */}
-            <div className="bg-gradient-to-br from-[#2d1b4e] to-[#4a2f74] dark:from-[#d4af37] dark:to-[#c29d2f] text-white dark:text-[#2d1b4e] rounded-2xl p-8 relative shadow-xl transform md:scale-105">
-              <div className="absolute top-0 right-8 -translate-y-1/2">
-                <span className="bg-[#d4af37] dark:bg-[#2d1b4e] text-[#2d1b4e] dark:text-[#d4af37] px-4 py-1.5 rounded-full font-om-body text-[13px] font-medium whitespace-nowrap">
-                  {t('pricing.badge_popular')}
-                </span>
-              </div>
-              <div className="mb-6">
-                <h3 className="font-om-body font-medium text-2xl mb-2">{t('pricing.plan_medium_name')}</h3>
-                <p className="font-om-body text-[15px] text-[rgba(255,255,255,0.8)] dark:text-[rgba(45,27,78,0.8)]">
-                  {t('pricing.plan_medium_desc')}
-                </p>
-              </div>
-              <div className="mb-6">
-                {HIDE_PRICES ? (
-                  <p className="font-om-display text-3xl">{t('pricing.btn_request_quote')}</p>
-                ) : (
-                  <>
-                    <div className="flex items-baseline gap-2">
-                      <span className="font-om-display text-5xl">{t('pricing.plan_medium_price')}</span>
-                      <span className="font-om-body text-[16px] text-[rgba(255,255,255,0.8)] dark:text-[rgba(45,27,78,0.8)]">{t('pricing.per_month')}</span>
-                    </div>
-                    <p className="font-om-body text-[14px] text-[rgba(255,255,255,0.8)] dark:text-[rgba(45,27,78,0.8)] mt-2">
-                      {t('pricing.plan_medium_billing')}
-                    </p>
-                  </>
-                )}
-              </div>
-              <ul className="space-y-4 mb-8">
-                {MEDIUM_FEAT_KEYS.map((i) => (
-                  <li key={i} className="flex items-start gap-3">
-                    <Check className="text-[#d4af37] dark:text-[#2d1b4e] flex-shrink-0 mt-0.5" size={20} />
-                    <span className="font-om-body text-[15px]">{t(`pricing.plan_medium_feat${i}`)}</span>
-                  </li>
-                ))}
-              </ul>
-              <Link
-                to={PUBLIC_ROUTES.CONTACT}
-                className="block w-full text-center px-6 py-3 bg-[#d4af37] dark:bg-[#2d1b4e] text-[#2d1b4e] dark:text-white rounded-lg font-om-body font-medium hover:bg-[#c29d2f] dark:hover:bg-[#1f1236] transition-colors"
-              >
-                {HIDE_PRICES ? t('pricing.btn_request_quote') : t('pricing.btn_get_started')}
-              </Link>
-            </div>
-
-            {/* Large Parish */}
             <PricingCard
+              tier="medium"
+              featured={focusedTier === 'medium'}
+              showPopularBadge
+              onFocus={() => setFocusedTier('medium')}
+              name={t('pricing.plan_medium_name')}
+              description={t('pricing.plan_medium_desc')}
+              price={t('pricing.plan_medium_price')}
+              perMonth={t('pricing.per_month')}
+              billingNote={t('pricing.plan_medium_billing')}
+              features={MEDIUM_FEAT_KEYS.map((i) => t(`pricing.plan_medium_feat${i}`))}
+              btnLabel={HIDE_PRICES ? t('pricing.btn_request_quote') : t('pricing.btn_get_started')}
+            />
+            <PricingCard
+              tier="large"
+              featured={focusedTier === 'large'}
+              onFocus={() => setFocusedTier('large')}
               name={t('pricing.plan_large_name')}
               description={t('pricing.plan_large_desc')}
               price={t('pricing.plan_large_price')}
@@ -262,39 +241,116 @@ export default PagePricing;
 
 // ── Local sub-components ──
 
-function PricingCard({ name, description, price, perMonth, billingNote, features, btnLabel }: {
-  name: string; description: string; price: string; perMonth: string; billingNote: string; features: string[]; btnLabel: string;
+function PricingCard({
+  tier,
+  featured,
+  showPopularBadge,
+  onFocus,
+  name,
+  description,
+  price,
+  perMonth,
+  billingNote,
+  features,
+  btnLabel,
+}: {
+  tier: PricingTier;
+  featured: boolean;
+  showPopularBadge?: boolean;
+  onFocus: () => void;
+  name: string;
+  description: string;
+  price: string;
+  perMonth: string;
+  billingNote: string;
+  features: string[];
+  btnLabel: string;
 }) {
+  const { t } = useLanguage();
+
   return (
-    <div className="om-card p-8 hover:shadow-lg">
+    <div
+      className={`
+        relative rounded-2xl p-8 flex flex-col transition-all duration-300 ease-out
+        ${featured
+          ? 'bg-gradient-to-br from-[#2d1b4e] to-[#4a2f74] dark:from-[#24154a] dark:to-[#1a1038] shadow-xl md:scale-[1.03] z-10'
+          : 'om-card hover:shadow-lg md:scale-100 z-0'}
+      `}
+      onMouseEnter={onFocus}
+      onFocus={onFocus}
+      tabIndex={0}
+      role="article"
+      aria-label={name}
+      data-tier={tier}
+    >
+      {showPopularBadge && featured && (
+        <div className="absolute top-0 right-8 -translate-y-1/2">
+          <span className="bg-[var(--om-gold)] text-[var(--om-text-primary)] px-4 py-1.5 rounded-full font-om-body text-[13px] font-semibold whitespace-nowrap shadow-sm">
+            {t('pricing.badge_popular')}
+          </span>
+        </div>
+      )}
+
       <div className="mb-6">
-        <h3 className="font-om-body font-medium text-2xl text-[#2d1b4e] dark:text-white mb-2">{name}</h3>
-        <p className="font-om-body text-[15px] text-[#4a5565] dark:text-gray-400">{description}</p>
+        <h3
+          className={`font-om-display font-semibold text-2xl mb-2 ${
+            featured ? '!text-white' : 'text-[var(--om-text-primary)]'
+          }`}
+        >
+          {name}
+        </h3>
+        <p
+          className={`font-om-body text-[15px] leading-relaxed ${
+            featured ? 'text-white/80' : 'text-[var(--om-text-secondary)]'
+          }`}
+        >
+          {description}
+        </p>
       </div>
+
       <div className="mb-6">
         {HIDE_PRICES ? (
-          <p className="font-om-display text-3xl text-[#2d1b4e] dark:text-white">{btnLabel}</p>
+          <p className={`font-om-display text-3xl ${featured ? '!text-white' : 'text-[var(--om-text-primary)]'}`}>
+            {btnLabel}
+          </p>
         ) : (
           <>
             <div className="flex items-baseline gap-2">
-              <span className="font-om-display text-5xl text-[#2d1b4e] dark:text-white">{price}</span>
-              <span className="font-om-body text-[16px] text-[#4a5565] dark:text-gray-400">{perMonth}</span>
+              <span className={`font-om-display text-5xl ${featured ? '!text-white' : 'text-[var(--om-text-primary)]'}`}>
+                {price}
+              </span>
+              <span className={`font-om-body text-[16px] ${featured ? 'text-white/80' : 'text-[var(--om-text-secondary)]'}`}>
+                {perMonth}
+              </span>
             </div>
-            <p className="font-om-body text-[14px] text-[#4a5565] dark:text-gray-400 mt-2">{billingNote}</p>
+            <p className={`font-om-body text-[14px] mt-2 ${featured ? 'text-white/80' : 'text-[var(--om-text-secondary)]'}`}>
+              {billingNote}
+            </p>
           </>
         )}
       </div>
-      <ul className="space-y-4 mb-8">
+
+      <ul className="space-y-4 mb-8 flex-1">
         {features.map((f, i) => (
           <li key={i} className="flex items-start gap-3">
-            <Check className="text-[#d4af37] flex-shrink-0 mt-0.5" size={20} />
-            <span className="font-om-body text-[15px] text-[#4a5565] dark:text-gray-400">{f}</span>
+            <Check
+              className={`flex-shrink-0 mt-0.5 ${featured ? 'text-[var(--om-gold)]' : 'text-[var(--om-gold)]'}`}
+              size={20}
+            />
+            <span className={`font-om-body text-[15px] ${featured ? 'text-white/90' : 'text-[var(--om-text-secondary)]'}`}>
+              {f}
+            </span>
           </li>
         ))}
       </ul>
+
       <Link
         to={PUBLIC_ROUTES.CONTACT}
-        className="block w-full text-center px-6 py-3 om-btn-outline"
+        className={
+          featured
+            ? 'block w-full text-center om-ds-btn om-ds-btn-primary'
+            : 'block w-full text-center om-ds-btn om-ds-btn-secondary'
+        }
       >
         {btnLabel}
       </Link>
