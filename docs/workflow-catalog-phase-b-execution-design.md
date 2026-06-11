@@ -4,7 +4,7 @@
 
 | Field | Value |
 |-------|-------|
-| **Status** | **Design only** — pending approval before implementation |
+| **Status** | **Design only** — conditional go per [design review](./workflow-catalog-phase-b-execution-review.md); amend §9 before PR1 |
 | **Date** | 2026-06-13 |
 | **Prerequisite** | [Phase A hierarchy](./workflow-catalog-phase-a-hierarchy-design.md) shipped (`20260613_workflow_hierarchy_phase_a.sql`) |
 | **Inputs** | [Gap analysis](./workflow-catalog-architecture-gap-analysis.md) §4.4, §7, §8 · [Open questions](./workflow-catalog-open-questions.md) · `workflowGoalsService.js` resolvers |

@@ -2,11 +2,12 @@
 
 **Last updated:** 2026-06-13  
 **Owners:** OM backend (`orthodoxmetrics/prod`), OMAI control panel (`omai/berry`), shared catalog in `orthodoxmetrics_db`  
-**Status:** Phase A shipped; **Phase B execution model — design pending approval**  
+**Status:** Phase A shipped; **Phase B — conditional go (design review 76→88/100)**  
 **Implementation log:** [workflow-catalog-review-implementation.md](./workflow-catalog-review-implementation.md)  
 **Architecture review:** [workflow-catalog-architecture-gap-analysis.md](./workflow-catalog-architecture-gap-analysis.md)  
 **Phase A design:** [workflow-catalog-phase-a-hierarchy-design.md](./workflow-catalog-phase-a-hierarchy-design.md)  
-**Phase B design:** [workflow-catalog-phase-b-execution-design.md](./workflow-catalog-phase-b-execution-design.md)
+**Phase B design:** [workflow-catalog-phase-b-execution-design.md](./workflow-catalog-phase-b-execution-design.md)  
+**Phase B review:** [workflow-catalog-phase-b-execution-review.md](./workflow-catalog-phase-b-execution-review.md)
 
 ---
 
