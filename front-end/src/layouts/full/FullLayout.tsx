@@ -12,9 +12,7 @@ import config from '@/context/config';
 import ImpersonationBanner from '@/components/ImpersonationBanner';
 import DeploymentFingerprintBar from '@/components/admin/DeploymentFingerprintBar';
 import { getPageTitle } from '@/config/pageTitles';
-import { OmAssistant } from '@/components/OmAssistant';
 import WorkSessionPrompt from '@/components/layout/WorkSessionPrompt';
-import ChurchContext from '@/context/ChurchContext';
 
 const MainWrapper = styled('div')(({ theme }) => ({
   display: 'flex',
@@ -36,7 +34,6 @@ const PageWrapper = styled('div')(({ theme }) => ({
 const FullLayout: FC = () => {
   const { isLayout, activeMode, isCollapse } = useContext(CustomizerContext);
   const theme = useTheme();
-  const churchCtx = useContext(ChurchContext);
   const location = useLocation();
   const { user, authenticated, loading } = useAuth();
   const MiniSidebarWidth = config.miniSidebarWidth;
@@ -117,17 +114,6 @@ const FullLayout: FC = () => {
           <Customizer />
         </PageWrapper>
       </MainWrapper>
-      
-      {/* ------------------------------------------- */}
-      {/* Global OM Assistant (floating chat bubble) */}
-      {/* ------------------------------------------- */}
-      <OmAssistant
-        pageContext={{
-          type: 'global',
-          churchId: churchCtx?.activeChurchId ?? undefined,
-          churchName: churchCtx?.churchMetadata?.church_name,
-        }}
-      />
     </>
   );
 };

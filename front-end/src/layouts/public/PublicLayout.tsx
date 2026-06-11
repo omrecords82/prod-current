@@ -6,8 +6,6 @@ import Customizer from '@/layouts/full/shared/customizer/Customizer';
 import { EditModeProvider, useEditMode } from '@/context/EditModeContext';
 import { useAuth } from '@/hooks/useAuth';
 import { Pencil, Save, X, Undo2, Globe } from 'lucide-react';
-import { OmAssistant } from '@/components/OmAssistant';
-
 const PublicLayout = () => {
   const { isSuperAdmin } = useAuth();
   const mainRef = useRef<HTMLElement | null>(null);
@@ -37,7 +35,6 @@ const PublicLayout = () => {
       </EditModeProvider>
       <SiteFooter />
       {isSuperAdmin() && <Customizer />}
-      <OmAssistant pageContext={{ type: 'public' }} />
     </div>
   );
 };
