@@ -56,8 +56,8 @@ module.exports = {
         },
       },
       fontFamily: {
-        'om-display': ['Cinzel', 'Georgia', '"Times New Roman"', 'serif'],
-        'om-body': ['"Crimson Pro"', 'Georgia', '"Times New Roman"', 'serif'],
+        'om-display': ['"Cormorant Garamond"', 'Georgia', '"Times New Roman"', 'serif'],
+        'om-body': ['Inter', '-apple-system', 'BlinkMacSystemFont', '"Segoe UI"', 'sans-serif'],
         'noto-serif-georgian': ['"Noto Serif Georgian"', '"Noto Serif"', '"Times New Roman"', 'serif'],
         'mono': ['ui-monospace', 'SFMono-Regular', 'Monaco', 'Consolas', 'Liberation Mono', 'Courier New', 'monospace'],
       },

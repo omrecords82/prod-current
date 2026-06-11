@@ -2,17 +2,8 @@
  *
  * Reusable component classes for public pages.
  * All prefixed with `om-` to avoid conflicts with MUI or existing styles.
- * Dark mode uses `.dark` ancestor selector.
- *
- * Surface palette matches the homepage hero (HeroCarousel):
- *   Light — parchment gradient (#EDE7D5 → #F6F1E8)
- *   Dark  — imperial purple gradient (#0E0625 → #2D1B69)
+ * Tokens: src/styles/design-tokens.css
  */
-
-:root {
-  --om-public-bg-light: linear-gradient(145deg, #EDE7D5 0%, #F0EAD8 40%, #F6F1E8 75%, #EBE4D2 100%);
-  --om-public-bg-dark: linear-gradient(145deg, #0E0625 0%, #180B40 35%, #2D1B69 75%, #1A0B38 100%);
-}
 
 /* ========================================
    Page Containers
@@ -22,51 +13,36 @@
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  font-family: 'Crimson Pro', Georgia, 'Times New Roman', serif;
-  --om-public-bg: var(--om-public-bg-light);
-  --om-public-text: #14093A;
-  --om-public-text-muted: rgba(14, 6, 37, 0.55);
-  --om-public-panel: rgba(246, 241, 232, 0.88);
-  --om-public-panel-border: rgba(45, 27, 105, 0.12);
-  --om-public-panel-hover: rgba(237, 231, 213, 0.95);
-  background: var(--om-public-bg);
-  color: var(--om-public-text);
+  font-family: var(--om-font-body);
+  background: var(--om-bg);
+  color: var(--om-text-primary);
 }
 
 .om-page-container :where(h1, h2, h3, h4, h5, h6) {
-  font-family: Cinzel, Georgia, 'Times New Roman', serif;
-}
-
-.dark .om-page-container {
-  --om-public-bg: var(--om-public-bg-dark);
-  --om-public-text: #F6F1E8;
-  --om-public-text-muted: rgba(246, 241, 232, 0.55);
-  --om-public-panel: rgba(45, 27, 105, 0.4);
-  --om-public-panel-border: rgba(212, 175, 55, 0.18);
-  --om-public-panel-hover: rgba(45, 27, 105, 0.55);
-  background: var(--om-public-bg);
-  color: var(--om-public-text);
+  font-family: var(--om-font-heading);
 }
 
 .om-public-header {
-  background: var(--om-public-bg);
-  border-bottom: 1px solid var(--om-public-panel-border);
+  background: var(--om-bg);
+  border-bottom: 1px solid var(--om-border);
   backdrop-filter: blur(10px);
 }
 
 .om-public-footer {
-  background: var(--om-public-bg);
-  border-top: 1px solid var(--om-public-panel-border);
-  color: var(--om-public-text);
+  background: var(--om-bg);
+  border-top: 1px solid var(--om-border);
+  color: var(--om-text-primary);
 }
 
 .om-public-panel {
-  background: var(--om-public-panel);
-  border: 1px solid var(--om-public-panel-border);
+  background: var(--om-surface-elevated);
+  border: 1px solid var(--om-border);
+  border-radius: var(--om-radius-card);
+  box-shadow: var(--om-shadow-card);
 }
 
 .om-public-text-muted {
-  color: var(--om-public-text-muted);
+  color: var(--om-text-secondary);
 }
 
 /* Public chrome: header + main grow + footer pinned to viewport bottom. */
@@ -103,13 +79,13 @@
    ======================================== */
 
 .om-hero-gradient {
-  background: var(--om-public-bg);
-  color: var(--om-public-text);
+  background: var(--om-bg);
+  color: var(--om-text-primary);
 }
 
 .om-hero-gradient .om-hero-subtitle,
 .om-hero-gradient p.om-hero-subtitle {
-  color: var(--om-public-text-muted);
+  color: var(--om-text-secondary);
 }
 
 .om-hero-badge {
@@ -128,9 +104,9 @@
 }
 
 .om-hero-badge-text {
-  font-family: Cinzel, Georgia, serif;
-  font-size: 14px;
-  color: #d4af37;
+  font-family: var(--om-font-heading);
+  font-size: var(--om-text-small);
+  color: var(--om-gold);
   letter-spacing: 0.08em;
 }
 
@@ -141,49 +117,28 @@
 .om-section-base,
 .om-section-elevated,
 .om-section-subtle {
-  background: var(--om-public-bg);
-  color: var(--om-public-text);
+  background: var(--om-bg);
+  color: var(--om-text-primary);
 }
 
 /* ========================================
    Card Components
    ======================================== */
 
-.om-card {
-  background: var(--om-public-panel);
-  border-width: 1px;
-  border-style: solid;
-  border-color: var(--om-public-panel-border);
-  border-radius: 1rem;
-  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-  transition: box-shadow 0.15s ease;
-}
-.om-card:hover {
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
-}
-
-.om-card-compact {
-  background: var(--om-public-panel);
-  border-width: 1px;
-  border-style: solid;
-  border-color: var(--om-public-panel-border);
-  border-radius: 0.75rem;
-}
-
-.om-card-subtle {
-  background: var(--om-public-panel);
-  border-width: 1px;
-  border-style: solid;
-  border-color: var(--om-public-panel-border);
-  border-radius: 0.75rem;
-}
-
+.om-card,
+.om-card-compact,
+.om-card-subtle,
 .om-card-elevated {
-  background: var(--om-public-panel);
-  border-radius: 1rem;
-  border-width: 1px;
-  border-style: solid;
-  border-color: var(--om-public-panel-border);
+  background: var(--om-surface-elevated);
+  border: 1px solid var(--om-border);
+  border-radius: var(--om-radius-card);
+  box-shadow: var(--om-shadow-card);
+  transition: box-shadow var(--om-transition);
+}
+
+.om-card:hover,
+.om-card-elevated:hover {
+  box-shadow: var(--om-shadow-card-hover);
 }
 
 /* ========================================
@@ -194,8 +149,8 @@
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
-  background: var(--om-public-panel);
-  border: 1px solid var(--om-public-panel-border);
+  background: var(--om-surface-elevated);
+  border: 1px solid var(--om-border);
   padding-left: 1rem;
   padding-right: 1rem;
   padding-top: 0.5rem;
@@ -207,8 +162,8 @@
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
-  background: var(--om-public-panel);
-  border: 1px solid var(--om-public-panel-border);
+  background: var(--om-surface-elevated);
+  border: 1px solid var(--om-border);
   padding-left: 1rem;
   padding-right: 1rem;
   padding-top: 0.5rem;
@@ -221,19 +176,15 @@
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
-  background-color: #d4af37;
-  color: #2d1b4e;
+  background-color: var(--om-gold);
+  color: var(--om-text-primary);
   padding-left: 0.75rem;
   padding-right: 0.75rem;
   padding-top: 0.25rem;
   padding-bottom: 0.25rem;
-  border-radius: 9999px;
-  font-size: 13px;
-  font-weight: 500;
-}
-.dark .om-badge-accent {
-  background-color: #d4af37;
-  color: #2d1b4e;
+  border-radius: var(--om-radius-pill);
+  font-size: var(--om-text-small);
+  font-weight: 600;
 }
 
 /* ========================================
@@ -241,76 +192,50 @@
    ======================================== */
 
 .om-heading-primary {
-  font-family: Cinzel, Georgia, serif;
-  font-size: 2.25rem;
-  line-height: 1.25;
-  color: #2d1b4e;
-}
-.dark .om-heading-primary {
-  color: #fff;
+  font-family: var(--om-font-heading);
+  font-size: var(--om-text-h2);
+  line-height: var(--om-leading-heading);
+  color: var(--om-text-primary);
 }
 @media (min-width: 768px) {
   .om-heading-primary {
-    font-size: 3rem;
+    font-size: var(--om-text-h1);
   }
 }
 
 .om-heading-secondary {
-  font-family: Cinzel, Georgia, serif;
-  font-size: 1.875rem;
-  color: #2d1b4e;
-}
-.dark .om-heading-secondary {
-  color: #fff;
+  font-family: var(--om-font-heading);
+  font-size: var(--om-text-h3);
+  color: var(--om-text-primary);
 }
 @media (min-width: 768px) {
   .om-heading-secondary {
-    font-size: 2.25rem;
+    font-size: var(--om-text-h2);
   }
 }
 
 .om-heading-tertiary {
-  font-family: 'Crimson Pro', Georgia, serif;
+  font-family: var(--om-font-heading);
   font-weight: 500;
-  font-size: 1.5rem;
-  color: #2d1b4e;
-}
-.dark .om-heading-tertiary {
-  color: #fff;
+  font-size: var(--om-text-h4);
+  color: var(--om-text-primary);
 }
 
 .om-text-primary {
-  font-family: 'Crimson Pro', Georgia, serif;
-  color: #2d1b4e;
-}
-.dark .om-text-primary {
-  color: #fff;
-}
-
-.om-text-secondary {
-  font-family: 'Crimson Pro', Georgia, serif;
-  color: #4a5565;
-}
-.dark .om-text-secondary {
-  color: #9ca3af;
+  font-family: var(--om-font-body);
+  color: var(--om-text-primary);
 }
 
 .om-text-tertiary {
-  font-family: 'Crimson Pro', Georgia, serif;
-  color: #6b7280;
-}
-.dark .om-text-tertiary {
-  color: #6b7280;
+  font-family: var(--om-font-body);
+  color: var(--om-text-secondary);
 }
 
 .om-text-body {
-  font-family: 'Crimson Pro', Georgia, serif;
-  font-size: 1.125rem;
-  color: #4a5565;
-  line-height: 1.625;
-}
-.dark .om-text-body {
-  color: #9ca3af;
+  font-family: var(--om-font-body);
+  font-size: var(--om-text-body-lg);
+  color: var(--om-text-secondary);
+  line-height: var(--om-leading-body);
 }
 
 /* ========================================
@@ -322,27 +247,23 @@
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  padding-left: 2rem;
-  padding-right: 2rem;
-  padding-top: 1rem;
-  padding-bottom: 1rem;
-  background-color: #2d1b4e;
-  color: #fff;
-  border-radius: 0.5rem;
-  font-family: 'Crimson Pro', Georgia, serif;
-  font-weight: 500;
-  font-size: 16px;
-  transition: color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease;
+  padding: 0.75rem 1.5rem;
+  background-color: var(--om-gold);
+  color: var(--om-text-primary);
+  border: 1px solid var(--om-gold);
+  border-radius: var(--om-radius-button);
+  font-family: var(--om-font-body);
+  font-weight: 600;
+  font-size: var(--om-text-body);
+  transition: background-color var(--om-transition), border-color var(--om-transition);
 }
 .om-btn-primary:hover {
-  background-color: #1f1236;
+  background-color: var(--om-gold-hover);
+  border-color: var(--om-gold-hover);
 }
-.dark .om-btn-primary {
-  background-color: #d4af37;
-  color: #2d1b4e;
-}
-.dark .om-btn-primary:hover {
-  background-color: #c29d2f;
+.om-btn-primary:active {
+  background-color: var(--om-gold-pressed);
+  border-color: var(--om-gold-pressed);
 }
 
 .om-btn-secondary {
@@ -350,24 +271,18 @@
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  padding-left: 2rem;
-  padding-right: 2rem;
-  padding-top: 1rem;
-  padding-bottom: 1rem;
-  background-color: rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(4px);
-  border-width: 1px;
-  border-style: solid;
-  border-color: rgba(255, 255, 255, 0.2);
-  color: #fff;
-  border-radius: 0.5rem;
-  font-family: 'Crimson Pro', Georgia, serif;
-  font-weight: 500;
-  font-size: 16px;
-  transition: color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease;
+  padding: 0.75rem 1.5rem;
+  background: transparent;
+  border: 1px solid var(--om-gold);
+  color: var(--om-gold);
+  border-radius: var(--om-radius-button);
+  font-family: var(--om-font-body);
+  font-weight: 600;
+  font-size: var(--om-text-body);
+  transition: background-color var(--om-transition), border-color var(--om-transition);
 }
 .om-btn-secondary:hover {
-  background-color: rgba(255, 255, 255, 0.2);
+  background: rgba(212, 175, 55, 0.1);
 }
 
 .om-btn-accent {
@@ -375,20 +290,19 @@
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  padding-left: 2rem;
-  padding-right: 2rem;
-  padding-top: 1rem;
-  padding-bottom: 1rem;
-  background-color: #d4af37;
-  color: #2d1b4e;
-  border-radius: 0.5rem;
-  font-family: 'Crimson Pro', Georgia, serif;
-  font-weight: 500;
-  font-size: 16px;
-  transition: color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease;
+  padding: 0.75rem 1.5rem;
+  background-color: var(--om-gold);
+  color: var(--om-text-primary);
+  border: 1px solid var(--om-gold);
+  border-radius: var(--om-radius-button);
+  font-family: var(--om-font-body);
+  font-weight: 600;
+  font-size: var(--om-text-body);
+  transition: background-color var(--om-transition), border-color var(--om-transition);
 }
 .om-btn-accent:hover {
-  background-color: #c29d2f;
+  background-color: var(--om-gold-hover);
+  border-color: var(--om-gold-hover);
 }
 
 .om-btn-outline {

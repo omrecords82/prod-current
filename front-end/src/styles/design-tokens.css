@@ -1,0 +1,292 @@
+/**
+ * Orthodox Metrics — Global Design Tokens
+ * Single source of truth for colors, typography, spacing, radii, shadows, transitions.
+ * Components MUST reference these variables — no hardcoded values in new code.
+ */
+
+:root {
+  /* ── Brand gold ── */
+  --om-gold: #d4af37;
+  --om-gold-hover: #e3c35a;
+  --om-gold-pressed: #b88e1d;
+
+  /* ── Light theme surfaces ── */
+  --om-bg: #f7f3e8;
+  --om-surface: #fffdf8;
+  --om-surface-elevated: #ffffff;
+  --om-border: rgba(27, 20, 100, 0.08);
+  --om-text-primary: #1a1730;
+  --om-text-secondary: #57546a;
+  --om-input-bg: rgba(0, 0, 0, 0.03);
+
+  /* ── Typography families ── */
+  --om-font-heading: 'Cormorant Garamond', Georgia, 'Times New Roman', serif;
+  --om-font-body: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+
+  /* ── Type scale ── */
+  --om-text-h1: 3.5rem;   /* 56px */
+  --om-text-h2: 2.625rem; /* 42px */
+  --om-text-h3: 2rem;     /* 32px */
+  --om-text-h4: 1.5rem;   /* 24px */
+  --om-text-body-lg: 1.125rem; /* 18px */
+  --om-text-body: 1rem;        /* 16px */
+  --om-text-small: 0.875rem;   /* 14px */
+  --om-text-caption: 0.75rem;  /* 12px */
+
+  --om-leading-heading: 1.15;
+  --om-leading-body: 1.6;
+
+  /* ── Spacing ── */
+  --om-space-section-y: 5rem;
+  --om-space-card: 1.5rem; /* 24px */
+  --om-space-stack: 1rem;
+
+  /* ── Radii ── */
+  --om-radius-card: 16px;
+  --om-radius-button: 8px;
+  --om-radius-input: 8px;
+  --om-radius-pill: 9999px;
+
+  /* ── Shadows ── */
+  --om-shadow-card: 0 1px 3px rgba(26, 23, 48, 0.06), 0 4px 12px rgba(26, 23, 48, 0.04);
+  --om-shadow-card-hover: 0 4px 16px rgba(26, 23, 48, 0.1);
+  --om-shadow-elevated: 0 8px 24px rgba(26, 23, 48, 0.12);
+
+  /* ── Motion ── */
+  --om-transition: 150ms ease;
+  --om-transition-slow: 250ms ease;
+
+  /* ── Legacy public aliases (consumed by om-components.css) ── */
+  --om-public-bg-light: var(--om-bg);
+  --om-public-bg-dark: #120a2a;
+  --om-public-bg: var(--om-bg);
+  --om-public-text: var(--om-text-primary);
+  --om-public-text-muted: var(--om-text-secondary);
+  --om-public-panel: var(--om-surface-elevated);
+  --om-public-panel-border: var(--om-border);
+  --om-public-panel-hover: var(--om-surface);
+}
+
+.dark,
+html.dark {
+  --om-bg: #120a2a;
+  --om-surface: #1a1038;
+  --om-surface-elevated: #24154a;
+  --om-border: rgba(212, 175, 55, 0.15);
+  --om-text-primary: #ffffff;
+  --om-text-secondary: rgba(255, 255, 255, 0.7);
+  --om-input-bg: rgba(255, 255, 255, 0.05);
+
+  --om-shadow-card: 0 1px 3px rgba(0, 0, 0, 0.25), 0 4px 12px rgba(0, 0, 0, 0.2);
+  --om-shadow-card-hover: 0 4px 16px rgba(0, 0, 0, 0.35);
+  --om-shadow-elevated: 0 8px 24px rgba(0, 0, 0, 0.4);
+
+  --om-public-bg: var(--om-bg);
+  --om-public-text: var(--om-text-primary);
+  --om-public-text-muted: var(--om-text-secondary);
+  --om-public-panel: var(--om-surface-elevated);
+  --om-public-panel-border: var(--om-border);
+  --om-public-panel-hover: var(--om-surface);
+}
+
+/* ── Global typography ── */
+html {
+  font-family: var(--om-font-body);
+  font-size: var(--om-text-body);
+  color: var(--om-text-primary);
+  background: var(--om-bg);
+}
+
+:where(h1, h2, h3, h4, h5, h6) {
+  font-family: var(--om-font-heading);
+  font-weight: 600;
+  color: var(--om-text-primary);
+  line-height: var(--om-leading-heading);
+}
+
+h1, .om-text-h1 { font-size: var(--om-text-h1); font-weight: 700; }
+h2, .om-text-h2 { font-size: var(--om-text-h2); font-weight: 600; }
+h3, .om-text-h3 { font-size: var(--om-text-h3); font-weight: 600; }
+h4, .om-text-h4 { font-size: var(--om-text-h4); font-weight: 500; }
+
+.om-text-body-lg { font-size: var(--om-text-body-lg); line-height: var(--om-leading-body); }
+.om-text-body { font-size: var(--om-text-body); line-height: var(--om-leading-body); }
+.om-text-small { font-size: var(--om-text-small); line-height: var(--om-leading-body); }
+.om-text-caption { font-size: var(--om-text-caption); line-height: var(--om-leading-body); }
+.om-text-secondary { color: var(--om-text-secondary); }
+
+/* ── Design-system primitives ── */
+.om-ds-card {
+  background: var(--om-surface-elevated);
+  border: 1px solid var(--om-border);
+  border-radius: var(--om-radius-card);
+  box-shadow: var(--om-shadow-card);
+  padding: var(--om-space-card);
+  transition: box-shadow var(--om-transition);
+}
+
+.om-ds-card:hover {
+  box-shadow: var(--om-shadow-card-hover);
+}
+
+.om-ds-section {
+  background: var(--om-bg);
+  color: var(--om-text-primary);
+  padding-block: var(--om-space-section-y);
+}
+
+.om-ds-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  font-family: var(--om-font-body);
+  font-weight: 600;
+  font-size: var(--om-text-body);
+  line-height: 1;
+  border-radius: var(--om-radius-button);
+  padding: 0.75rem 1.5rem;
+  border: 1px solid transparent;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background-color var(--om-transition), border-color var(--om-transition),
+    color var(--om-transition), opacity var(--om-transition);
+}
+
+.om-ds-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.om-ds-btn-primary {
+  background: var(--om-gold);
+  color: var(--om-text-primary);
+  border-color: var(--om-gold);
+}
+
+.om-ds-btn-primary:hover:not(:disabled) {
+  background: var(--om-gold-hover);
+  border-color: var(--om-gold-hover);
+}
+
+.om-ds-btn-primary:active:not(:disabled) {
+  background: var(--om-gold-pressed);
+  border-color: var(--om-gold-pressed);
+}
+
+.om-ds-btn-secondary {
+  background: transparent;
+  color: var(--om-gold);
+  border-color: var(--om-gold);
+}
+
+.om-ds-btn-secondary:hover:not(:disabled) {
+  background: rgba(212, 175, 55, 0.1);
+}
+
+.om-ds-btn-tertiary {
+  background: transparent;
+  color: var(--om-gold);
+  border-color: transparent;
+  padding-inline: 0.5rem;
+}
+
+.om-ds-btn-tertiary:hover:not(:disabled) {
+  opacity: 0.85;
+}
+
+.om-ds-input {
+  width: 100%;
+  font-family: var(--om-font-body);
+  font-size: var(--om-text-body);
+  color: var(--om-text-primary);
+  background: var(--om-input-bg);
+  border: 1px solid var(--om-border);
+  border-radius: var(--om-radius-input);
+  padding: 0.75rem 1rem;
+  transition: border-color var(--om-transition), box-shadow var(--om-transition);
+}
+
+.om-ds-input::placeholder {
+  color: var(--om-text-secondary);
+}
+
+.om-ds-input:focus {
+  outline: none;
+  border-color: var(--om-gold);
+  box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.2);
+}
+
+.om-ds-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(18, 10, 42, 0.55);
+  backdrop-filter: blur(4px);
+  z-index: 1300;
+}
+
+.om-ds-modal {
+  background: var(--om-surface-elevated);
+  border: 1px solid var(--om-border);
+  border-radius: var(--om-radius-card);
+  box-shadow: var(--om-shadow-elevated);
+  padding: var(--om-space-card);
+  max-width: min(560px, calc(100vw - 2rem));
+  width: 100%;
+}
+
+/* MUI auth form — remove blue autofill / default primary surfaces */
+.om-auth-form .MuiOutlinedInput-root {
+  background: var(--om-input-bg);
+  border-radius: var(--om-radius-input);
+  font-family: var(--om-font-body);
+}
+
+.om-auth-form .MuiOutlinedInput-root .MuiOutlinedInput-notchedOutline {
+  border-color: var(--om-border);
+}
+
+.om-auth-form .MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline {
+  border-color: rgba(212, 175, 55, 0.45);
+}
+
+.om-auth-form .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline {
+  border-color: var(--om-gold);
+  border-width: 1px;
+  box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.2);
+}
+
+.om-auth-form .MuiInputLabel-root.Mui-focused {
+  color: var(--om-gold) !important;
+}
+
+.om-auth-form .MuiFormLabel-root {
+  font-family: var(--om-font-body);
+  color: var(--om-text-secondary);
+}
+
+.om-auth-form input:-webkit-autofill,
+.om-auth-form input:-webkit-autofill:hover,
+.om-auth-form input:-webkit-autofill:focus {
+  -webkit-box-shadow: 0 0 0 1000px var(--om-surface-elevated) inset !important;
+  -webkit-text-fill-color: var(--om-text-primary) !important;
+  caret-color: var(--om-text-primary);
+}
+
+.om-auth-form .MuiButton-containedPrimary {
+  background-color: var(--om-gold) !important;
+  color: var(--om-text-primary) !important;
+  font-family: var(--om-font-body) !important;
+  font-weight: 600 !important;
+  border-radius: var(--om-radius-button) !important;
+  box-shadow: none !important;
+}
+
+.om-auth-form .MuiButton-containedPrimary:hover {
+  background-color: var(--om-gold-hover) !important;
+}
+
+.om-auth-form a,
+.om-auth-form .MuiLink-root {
+  color: var(--om-gold) !important;
+}

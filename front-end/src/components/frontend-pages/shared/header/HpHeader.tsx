@@ -80,10 +80,10 @@ const HpHeader = () => {
                     <NavLink
                       key={link.to}
                       to={link.to}
-                      className={`font-om-display text-[13px] tracking-wide transition-colors no-underline ${
+                      className={`font-om-display om-text-small tracking-wide transition-colors no-underline ${
                         isActive
-                          ? 'text-[#2d1b4e] dark:text-white font-medium'
-                          : 'text-[#4a5565] dark:text-gray-400 hover:text-[#2d1b4e] dark:hover:text-white'
+                          ? 'text-[var(--om-text-primary)] font-semibold'
+                          : 'om-text-secondary hover:text-[var(--om-text-primary)]'
                       }`}
                     >
                       {t(link.tKey)}
@@ -101,7 +101,7 @@ const HpHeader = () => {
               <button
                 onClick={() => setLangOpen(!langOpen)}
                 aria-label={t('common.language')}
-                className="flex items-center gap-1.5 px-2.5 py-1.5 text-[#2d1b4e] dark:text-white rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors cursor-pointer border-0 bg-transparent font-om-body text-[13px]"
+                className="flex items-center gap-1.5 px-2.5 py-1.5 text-[var(--om-text-primary)] rounded-lg hover:bg-[var(--om-input-bg)] transition-colors cursor-pointer border-0 bg-transparent font-om-body om-text-small"
               >
                 <IconWorld size={18} />
                 <span className="hidden sm:inline">{currentLang.flag}</span>
@@ -116,10 +116,10 @@ const HpHeader = () => {
                         setLang(opt.code);
                         setLangOpen(false);
                       }}
-                      className={`w-full text-left px-3 py-2 flex items-center gap-2.5 font-om-body text-[14px] transition-colors cursor-pointer border-0 ${
+                      className={`w-full text-left px-3 py-2 flex items-center gap-2.5 font-om-body om-text-small transition-colors cursor-pointer border-0 ${
                         opt.code === lang
-                          ? 'bg-[rgba(45,27,78,0.08)] dark:bg-[rgba(212,175,55,0.15)] text-[#2d1b4e] dark:text-[#d4af37] font-medium'
-                          : 'bg-transparent text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
+                          ? 'bg-[var(--om-input-bg)] text-[var(--om-gold)] font-semibold'
+                          : 'bg-transparent om-text-secondary hover:bg-[var(--om-input-bg)]'
                       }`}
                     >
                       <span className="text-[16px]">{opt.flag}</span>

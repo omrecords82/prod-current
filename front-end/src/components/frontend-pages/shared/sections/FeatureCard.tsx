@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { Card } from '@/design-system';
 import EditableText from '../EditableText';
 
 interface FeatureCardProps {
@@ -12,57 +13,55 @@ interface FeatureCardProps {
 
 /**
  * Reusable card showing an icon, title, and description.
- * Used on Homepage (features grid), About (platform highlights), Tour (additional features).
+ * Uses the unified OM design-system Card.
  */
 const FeatureCard = ({ icon, title, description, layout = 'vertical', editKeyPrefix }: FeatureCardProps) => {
   if (layout === 'horizontal') {
     return (
-      <div className="om-card p-8">
+      <Card className="!p-8">
         <div className="flex items-start gap-6">
-          <div className="flex-shrink-0 w-16 h-16 bg-[#2d1b4e] dark:bg-[#d4af37] rounded-xl flex items-center justify-center">
+          <div className="flex-shrink-0 w-16 h-16 rounded-xl border border-[var(--om-border)] bg-[var(--om-input-bg)] flex items-center justify-center text-[var(--om-gold)]">
             {icon}
           </div>
           <div className="flex-1">
             {editKeyPrefix ? (
-              <EditableText contentKey={`${editKeyPrefix}.title`} as="h3" className="font-om-body font-medium text-xl text-[#2d1b4e] dark:text-white mb-3">
+              <EditableText contentKey={`${editKeyPrefix}.title`} as="h3" className="font-om-display om-text-h4 mb-3">
                 {title}
               </EditableText>
             ) : (
-              <h3 className="font-om-body font-medium text-xl text-[#2d1b4e] dark:text-white mb-3">{title}</h3>
+              <h3 className="font-om-display om-text-h4 mb-3">{title}</h3>
             )}
             {editKeyPrefix ? (
-              <EditableText contentKey={`${editKeyPrefix}.description`} as="p" className="font-om-body text-[15px] text-[#4a5565] dark:text-gray-400 leading-relaxed">
+              <EditableText contentKey={`${editKeyPrefix}.description`} as="p" className="font-om-body om-text-small om-text-secondary leading-relaxed">
                 {description}
               </EditableText>
             ) : (
-              <p className="font-om-body text-[15px] text-[#4a5565] dark:text-gray-400 leading-relaxed">{description}</p>
+              <p className="font-om-body om-text-small om-text-secondary leading-relaxed">{description}</p>
             )}
           </div>
         </div>
-      </div>
+      </Card>
     );
   }
 
   return (
-    <div className="om-card-compact p-6 hover:shadow-md transition-shadow">
-      <div className="om-icon-container-small mb-4">
-        {icon}
-      </div>
+    <Card static className="!p-6 hover:!shadow-[var(--om-shadow-card-hover)]">
+      <div className="om-icon-container-small mb-4 text-[var(--om-gold)]">{icon}</div>
       {editKeyPrefix ? (
-        <EditableText contentKey={`${editKeyPrefix}.title`} as="h3" className="font-om-body font-medium text-xl text-[#2d1b4e] dark:text-white mb-2">
+        <EditableText contentKey={`${editKeyPrefix}.title`} as="h3" className="font-om-display om-text-h4 mb-2">
           {title}
         </EditableText>
       ) : (
-        <h3 className="font-om-body font-medium text-xl text-[#2d1b4e] dark:text-white mb-2">{title}</h3>
+        <h3 className="font-om-display om-text-h4 mb-2">{title}</h3>
       )}
       {editKeyPrefix ? (
-        <EditableText contentKey={`${editKeyPrefix}.description`} as="p" className="font-om-body text-[15px] text-[#4a5565] dark:text-gray-400 leading-relaxed">
+        <EditableText contentKey={`${editKeyPrefix}.description`} as="p" className="font-om-body om-text-small om-text-secondary leading-relaxed">
           {description}
         </EditableText>
       ) : (
-        <p className="font-om-body text-[15px] text-[#4a5565] dark:text-gray-400 leading-relaxed">{description}</p>
+        <p className="font-om-body om-text-small om-text-secondary leading-relaxed">{description}</p>
       )}
-    </div>
+    </Card>
   );
 };
 

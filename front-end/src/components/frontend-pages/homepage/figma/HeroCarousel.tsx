@@ -123,7 +123,7 @@ export function HeroCarousel({ embedded = false }: HeroCarouselProps) {
     return () => clearInterval(id);
   }, [advance, isPaused]);
 
-  const bg = "var(--om-public-bg)";
+  const bg = "var(--om-bg)";
 
   const textPrimary  = isDark ? IV : PK;
   const textMuted    = isDark ? "rgba(246,241,232,0.5)" : "rgba(14,6,37,0.5)";
@@ -138,7 +138,7 @@ export function HeroCarousel({ embedded = false }: HeroCarouselProps) {
       style={{
         width: "100%", minHeight: embedded ? "min(920px, calc(100vh - 72px))" : "100vh",
         background: bg,
-        fontFamily: "Crimson Pro, serif",
+        fontFamily: "var(--om-font-body)",
         position: "relative", overflow: "hidden",
         display: "flex", flexDirection: "column",
       }}
@@ -252,7 +252,7 @@ export function HeroCarousel({ embedded = false }: HeroCarouselProps) {
 
           {/* Supporting text — STATIC */}
           <p style={{
-            fontFamily: "Crimson Pro, serif",
+            fontFamily: "var(--om-font-body)",
             fontSize: "clamp(1rem, 1.3vw, 1.15rem)",
             lineHeight: 1.75, margin: 0,
             color: textMuted,
@@ -289,7 +289,7 @@ export function HeroCarousel({ embedded = false }: HeroCarouselProps) {
                 alignSelf: "flex-start", marginTop: "1px",
               }}>{focus.badge}</div>
               <p style={{
-                fontFamily: "Crimson Pro, serif", fontSize: "13px",
+                fontFamily: "var(--om-font-body)", fontSize: "13px",
                 lineHeight: 1.6, margin: 0, color: textMuted, fontStyle: "italic",
               }}>{focus.desc}</p>
             </motion.div>
@@ -341,7 +341,7 @@ export function HeroCarousel({ embedded = false }: HeroCarouselProps) {
               <div key={i} style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                 <span style={{ fontSize: "7px", color: G, opacity: 0.7 }}>{item.icon}</span>
                 <span style={{
-                  fontFamily: "Crimson Pro, serif", fontSize: "11px",
+                  fontFamily: "var(--om-font-body)", fontSize: "11px",
                   color: textMuted, letterSpacing: "0.2px",
                 }}>{item.text}</span>
               </div>

@@ -140,7 +140,7 @@ const AuthLogin = ({ subtitle, subtext }: loginType) => {
         </Alert>
       )}
 
-      <Box component="form" onSubmit={handleSubmit}>
+      <Box component="form" className="om-auth-form" onSubmit={handleSubmit}>
         <Stack spacing={3}>
           <Box>
             <CustomFormLabel htmlFor="username">{t('auth.label_email')}</CustomFormLabel>

@@ -35,11 +35,11 @@ const SectionHeader = ({ badge, badgeVariant = 'primary', title, subtitle, editK
     )}
     {subtitle && (
       editKeyPrefix ? (
-        <EditableText contentKey={`${editKeyPrefix}.subtitle`} as="p" className="font-om-body text-xl text-[#4a5565] dark:text-gray-400 max-w-2xl mx-auto">
+        <EditableText contentKey={`${editKeyPrefix}.subtitle`} as="p" className="font-om-body om-text-body-lg om-text-secondary max-w-2xl mx-auto">
           {subtitle}
         </EditableText>
       ) : (
-        <p className="font-om-body text-xl text-[#4a5565] dark:text-gray-400 max-w-2xl mx-auto">
+        <p className="font-om-body om-text-body-lg om-text-secondary max-w-2xl mx-auto">
           {subtitle}
         </p>
       )
