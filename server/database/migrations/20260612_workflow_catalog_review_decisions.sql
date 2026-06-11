@@ -206,7 +206,7 @@ INSERT INTO app_workflow_step_components (
   workflow_step_id, component_key, component_type, component_sequence,
   source_app, source_path, implementation_state
 )
-SELECT s.id, 'parish.DatabaseMappingPage', 'page', 10, 'om',
+SELECT s.id, 'parish.DatabaseMappingPage', 'ui', 10, 'om',
   'front-end/src/features/account/parish-management/DatabaseMappingPage.tsx', 'exists'
 FROM app_workflow_steps s
 WHERE s.workflow_version_id = @wf_ops_ver_id AND s.step_key = 'database_mapping'
@@ -216,7 +216,7 @@ INSERT INTO app_workflow_step_components (
   workflow_step_id, component_key, component_type, component_sequence,
   source_app, source_path, implementation_state
 )
-SELECT s.id, 'parish.RecordSettingsPage', 'page', 10, 'om',
+SELECT s.id, 'parish.RecordSettingsPage', 'ui', 10, 'om',
   'front-end/src/features/account/parish-management/RecordSettingsPage.tsx', 'exists'
 FROM app_workflow_steps s
 WHERE s.workflow_version_id = @wf_ops_ver_id AND s.step_key = 'record_settings'
@@ -226,7 +226,7 @@ INSERT INTO app_workflow_step_components (
   workflow_step_id, component_key, component_type, component_sequence,
   source_app, source_path, implementation_state
 )
-SELECT s.id, 'parish.ParishUsersPage', 'page', 10, 'om',
+SELECT s.id, 'parish.ParishUsersPage', 'ui', 10, 'om',
   'front-end/src/features/account/parish-management/ParishUsersPage.tsx', 'exists'
 FROM app_workflow_steps s
 WHERE s.workflow_version_id = @wf_ops_ver_id AND s.step_key = 'parish_staff'
