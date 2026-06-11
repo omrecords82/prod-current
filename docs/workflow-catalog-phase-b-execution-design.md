@@ -4,7 +4,7 @@
 
 | Field | Value |
 |-------|-------|
-| **Status** | **Design only** — conditional go per [design review](./workflow-catalog-phase-b-execution-review.md); amend §9 before PR1 |
+| **Status** | **B-PR1–B-PR4 implemented** — schema + service + reconcilers + backfill; write-through pending B-PR5+ |
 | **Date** | 2026-06-13 |
 | **Prerequisite** | [Phase A hierarchy](./workflow-catalog-phase-a-hierarchy-design.md) shipped (`20260613_workflow_hierarchy_phase_a.sql`) |
 | **Inputs** | [Gap analysis](./workflow-catalog-architecture-gap-analysis.md) §4.4, §7, §8 · [Open questions](./workflow-catalog-open-questions.md) · `workflowGoalsService.js` resolvers |
@@ -443,160 +443,22 @@ Caches reconcile inputs to avoid tenant fan-out on read:
 
 ## 9. SQL schema proposal
 
-**Proposed migration file:** `server/database/migrations/20260614_workflow_execution_phase_b.sql`  
-**Database:** `orthodoxmetrics_db`
+**Canonical migration file:** `server/database/migrations/20260615_workflow_execution_phase_b.sql`  
+**Database:** `orthodoxmetrics_db`  
+**Amendments applied per** [design review](./workflow-catalog-phase-b-execution-review.md) §6
 
-```sql
--- ============================================================================
--- Workflow Catalog Phase B — Execution Model
--- 2026-06-14 | church_workflow_executions + events + summary
--- Prerequisite: 20260613_workflow_hierarchy_phase_a.sql
--- Rollback: §15
--- ============================================================================
+| Change vs original §9 | Detail |
+|-----------------------|--------|
+| `execution_id` | `WEX_<ULID>` in `VARCHAR(32)` |
+| `subject_type` | `VARCHAR(32)` + `workflow_execution_subject_types` registry |
+| `subject_id` | `NOT NULL` — `church:{id}`, `job:{id}`, `ONB_*` |
+| Concurrency | `lock_version`, `workflow_version_id`, `definition_hash` |
+| Events | `dedupe_key NOT NULL`; `WEE_<ULID>` |
+| Summary | + `workflow_execution_step_summary` normalized funnel table |
+| Recovery | + `workflow_execution_outbox` |
+| Partitioning | Deferred to B-PR10 (MariaDB UNIQUE+partition constraint) |
 
--- ─── 1. Per-church workflow executions ──────────────────────────────────────
-
-CREATE TABLE IF NOT EXISTS church_workflow_executions (
-  id                      BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-  execution_id            VARCHAR(36)  NOT NULL COMMENT 'UUID — public ref',
-  church_id               INT          NOT NULL,
-  workflow_key            VARCHAR(96)  NOT NULL,
-  workflow_version        VARCHAR(32)  NOT NULL DEFAULT '1.0.0',
-  app_family_key          VARCHAR(64)  NULL,
-  subject_type            ENUM('church','onboarding_request','ocr_job','crm_lead','certificate_run')
-                          NOT NULL DEFAULT 'church',
-  subject_id              VARCHAR(64)  NULL COMMENT 'ONB_*, job id, etc.; NULL for church-scoped',
-  status                  ENUM('pending','active','blocked','completed','failed','archived')
-                          NOT NULL DEFAULT 'pending',
-  current_step_key        VARCHAR(96)  NULL,
-  current_step_sequence   INT          NULL,
-  blocked_reason          VARCHAR(256) NULL,
-  blocked_at              TIMESTAMP    NULL,
-  source_table            VARCHAR(128) NULL,
-  source_row_id           VARCHAR(64)  NULL,
-  context_snapshot        JSON         NULL,
-  last_reconciled_at      TIMESTAMP    NULL,
-  reconcile_hash          CHAR(64)     NULL COMMENT 'SHA256 of source fields — drift detect',
-  started_at              TIMESTAMP    NULL,
-  completed_at            TIMESTAMP    NULL,
-  failed_at               TIMESTAMP    NULL,
-  archived_at             TIMESTAMP    NULL,
-  started_by_user_id      INT          NULL,
-  completed_by_user_id    INT          NULL,
-  created_at              TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at              TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  UNIQUE KEY uq_execution_id (execution_id),
-  UNIQUE KEY uq_church_workflow_subject (church_id, workflow_key, subject_type, subject_id),
-  KEY idx_cwe_church_status (church_id, status),
-  KEY idx_cwe_workflow_status (workflow_key, status),
-  KEY idx_cwe_workflow_step (workflow_key, current_step_key, status),
-  KEY idx_cwe_family (app_family_key, status),
-  KEY idx_cwe_updated (updated_at),
-  KEY idx_cwe_source (source_table, source_row_id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
--- ─── 2. Step-level execution progress ───────────────────────────────────────
-
-CREATE TABLE IF NOT EXISTS church_workflow_step_executions (
-  id                      BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-  execution_id            VARCHAR(36)  NOT NULL,
-  step_key                VARCHAR(96)  NOT NULL,
-  step_sequence           INT          NOT NULL,
-  step_status             ENUM('pending','active','completed','skipped','failed','blocked')
-                          NOT NULL DEFAULT 'pending',
-  last_transition_source  ENUM('automatic','user','admin','reconciliation','pipeline','system')
-                          NULL,
-  entered_at              TIMESTAMP    NULL,
-  completed_at            TIMESTAMP    NULL,
-  completed_by_user_id    INT          NULL,
-  metadata                JSON         NULL,
-  created_at              TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at              TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  UNIQUE KEY uq_exec_step (execution_id, step_key),
-  KEY idx_cwse_exec_status (execution_id, step_status),
-  CONSTRAINT fk_cwse_execution FOREIGN KEY (execution_id)
-    REFERENCES church_workflow_executions(execution_id) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
--- ─── 3. Append-only execution events (timeline + reporting) ─────────────────
-
-CREATE TABLE IF NOT EXISTS workflow_execution_events (
-  id                      BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-  event_id                VARCHAR(36)  NOT NULL,
-  execution_id            VARCHAR(36)  NOT NULL,
-  church_id               INT          NOT NULL,
-  workflow_key            VARCHAR(96)  NOT NULL,
-  app_family_key          VARCHAR(64)  NULL,
-  event_type              VARCHAR(48)  NOT NULL,
-  from_status             VARCHAR(32)  NULL,
-  to_status               VARCHAR(32)  NULL,
-  from_step_key           VARCHAR(96)  NULL,
-  to_step_key             VARCHAR(96)  NULL,
-  actor_type              ENUM('system','user','admin','reconciler','pipeline') NOT NULL DEFAULT 'system',
-  actor_user_id           INT          NULL,
-  correlation_id          VARCHAR(64)  NULL,
-  dedupe_key              CHAR(64)     NULL,
-  payload                 JSON         NULL,
-  created_at              TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  UNIQUE KEY uq_event_id (event_id),
-  UNIQUE KEY uq_dedupe (dedupe_key),
-  KEY idx_wee_execution (execution_id, created_at),
-  KEY idx_wee_church_time (church_id, created_at),
-  KEY idx_wee_workflow_type (workflow_key, event_type, created_at),
-  KEY idx_wee_correlation (correlation_id),
-  CONSTRAINT fk_wee_execution FOREIGN KEY (execution_id)
-    REFERENCES church_workflow_executions(execution_id) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
--- ─── 4. Cross-tenant execution summary (materialized) ───────────────────────
-
-CREATE TABLE IF NOT EXISTS workflow_execution_summary (
-  workflow_key            VARCHAR(96)  NOT NULL PRIMARY KEY,
-  app_family_key          VARCHAR(64)  NULL,
-  snapshot_at             TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  executions_total        INT          NOT NULL DEFAULT 0,
-  executions_pending      INT          NOT NULL DEFAULT 0,
-  executions_active       INT          NOT NULL DEFAULT 0,
-  executions_blocked      INT          NOT NULL DEFAULT 0,
-  executions_completed    INT          NOT NULL DEFAULT 0,
-  executions_failed       INT          NOT NULL DEFAULT 0,
-  executions_archived     INT          NOT NULL DEFAULT 0,
-  step_distribution       JSON         NULL COMMENT '{ step_key: count } for active only',
-  status_distribution     JSON         NULL,
-  stale                   TINYINT(1)   NOT NULL DEFAULT 0,
-  refresh_duration_ms     INT          NULL,
-  updated_at              TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  KEY idx_wes_family (app_family_key),
-  KEY idx_wes_snapshot (snapshot_at)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
--- ─── 5. Reconcile job bookkeeping ───────────────────────────────────────────
-
-CREATE TABLE IF NOT EXISTS workflow_execution_reconcile_runs (
-  id                      BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-  run_id                  VARCHAR(36)  NOT NULL,
-  run_type                ENUM('nightly','manual','backfill','workflow_scoped') NOT NULL,
-  workflow_key            VARCHAR(96)  NULL,
-  churches_scanned        INT          NOT NULL DEFAULT 0,
-  executions_updated      INT          NOT NULL DEFAULT 0,
-  executions_created      INT          NOT NULL DEFAULT 0,
-  drift_corrected         INT          NOT NULL DEFAULT 0,
-  errors                  INT          NOT NULL DEFAULT 0,
-  started_at              TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  completed_at            TIMESTAMP    NULL,
-  error_log               JSON         NULL,
-  UNIQUE KEY uq_run_id (run_id),
-  KEY idx_werr_started (started_at)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
--- ─── 6. Seed summary rows for filed workflows ───────────────────────────────
-
-INSERT INTO workflow_execution_summary (workflow_key, app_family_key)
-SELECT w.workflow_key, w.app_family_key
-FROM app_workflows w
-WHERE w.lifecycle_status = 'active'
-ON DUPLICATE KEY UPDATE app_family_key = VALUES(app_family_key);
-```
+See migration file for full DDL.
 
 ### 9.1 Indexes rationale
 
