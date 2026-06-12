@@ -8,6 +8,15 @@ const { validateChurchData, sanitizeChurchData, generateChurchId } = require('..
 const ApiResponse = require('../utils/apiResponse');
 
 const router = express.Router();
+const { operationalClientsSql } = require('../utils/churchVisibility');
+
+function churchesListWhere(user, includeDirectory) {
+  const isSuperAdmin = user.role === 'super_admin';
+  if (isSuperAdmin && includeDirectory) {
+    return { clause: "client_status != 'decommissioned'", params: [] };
+  }
+  return { clause: operationalClientsSql(), params: [] };
+}
 
 // Create middleware using requireRole - allows admin, super_admin, and manager access
 const requireChurchAccess = requireRole(['admin', 'super_admin', 'manager', 'church_admin', 'priest']);
@@ -96,9 +105,10 @@ router.get('/my/churches', requireAuth, async (req, res) => {
       }
     }
 
-    // Build query based on user role
-    // Super admins see all provisioned churches (with a database), others see only active ones
+    // Operational clients only (Manville + Test Church) unless include_directory=1
+    const includeDirectory = req.query.include_directory === '1' || req.query.include_directory === 'true';
     const isSuperAdmin = user.role === 'super_admin';
+    const listWhere = churchesListWhere(user, includeDirectory);
     let query = `
       SELECT
         id,
@@ -109,12 +119,14 @@ router.get('/my/churches', requireAuth, async (req, res) => {
         state_province,
         country,
         database_name,
-        is_active
+        is_active,
+        client_status,
+        is_demo
       FROM churches
-      WHERE ${isSuperAdmin ? 'database_name IS NOT NULL' : 'is_active = 1'}
+      WHERE ${listWhere.clause}
     `;
 
-    const params = [];
+    const params = [...listWhere.params];
 
     // Super admins can see all provisioned churches
     if (isSuperAdmin) {
@@ -387,9 +399,10 @@ router.get('/churches', requireAuth, async (req, res) => {
       }));
     }
 
-    // Build query based on user role
-    // Super admins see all provisioned churches (with a database), others see only active ones
+    // Operational clients only unless include_directory=1
+    const includeDirectory = req.query.include_directory === '1' || req.query.include_directory === 'true';
     const isSuperAdmin = user.role === 'super_admin';
+    const listWhere = churchesListWhere(user, includeDirectory);
     let query = `
       SELECT
         id,
@@ -400,16 +413,18 @@ router.get('/churches', requireAuth, async (req, res) => {
         state_province,
         country,
         database_name,
-        is_active
+        is_active,
+        client_status,
+        is_demo
       FROM churches
-      WHERE ${isSuperAdmin ? 'database_name IS NOT NULL' : 'is_active = 1'}
+      WHERE ${listWhere.clause}
     `;
 
-    const params = [];
+    const params = [...listWhere.params];
 
     // Super admins can see all provisioned churches
     if (isSuperAdmin) {
-      console.log(`🔍 [GET /churches] Super admin ${user.email} requesting all provisioned churches`);
+      console.log(`🔍 [GET /churches] Super admin ${user.email} requesting churches (directory=${includeDirectory})`);
     }
     // Other roles see their assigned church
     else if (user.church_id) {

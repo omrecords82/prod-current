@@ -602,16 +602,38 @@ router.put('/users/:id/toggle-status', requireAdmin, async (req, res) => {
 // GET /api/admin/churches - Get all churches (for admin panel / ChurchHeader.tsx)
 router.get('/churches', requireAdmin, async (req, res) => {
     try {
+        const { operationalClientsSql } = require('../utils/churchVisibility');
+        const includeDirectory = req.query.include_directory === '1' || req.query.include_directory === 'true';
+
+        let where = includeDirectory
+            ? 'client_status != \'decommissioned\''
+            : operationalClientsSql();
+
         const [churches] = await getAppPool().query(
-            `SELECT id, name, church_name, is_active 
-             FROM churches 
-             WHERE is_active = 1 
-             ORDER BY name ASC`
+            `SELECT id, name, church_name, is_active, client_status, billing_status,
+                    onboarding_phase, database_name, is_demo, city, state_province
+             FROM churches
+             WHERE ${where}
+             ORDER BY is_demo DESC, name ASC`
         );
-        
+
+        const [[counts]] = await getAppPool().query(
+            `SELECT
+               SUM(CASE WHEN ${operationalClientsSql()} THEN 1 ELSE 0 END) AS operational,
+               SUM(CASE WHEN database_name IS NULL AND client_status = 'directory' THEN 1 ELSE 0 END) AS directory,
+               SUM(CASE WHEN client_status = 'decommissioned' THEN 1 ELSE 0 END) AS decommissioned
+             FROM churches`
+        );
+
         res.json({
             success: true,
-            churches: churches
+            churches,
+            meta: {
+                scope: includeDirectory ? 'all' : 'operational',
+                operational: Number(counts?.operational || 0),
+                directory: Number(counts?.directory || 0),
+                decommissioned: Number(counts?.decommissioned || 0),
+            },
         });
     } catch (err) {
         console.error('❌ Error fetching church list:', err);

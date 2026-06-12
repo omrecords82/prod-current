@@ -202,6 +202,7 @@ docs/*
 !docs/workflow-catalog-phase-b-execution-review.md
 !docs/workflow-catalog-decisions-implementation-plan.md
 !docs/workflow-catalog-cursor-handoff.md
+!docs/om-cp-gap-analysis-2026-06-12.md
 
 # Berry frontend lives in /var/www/omai/berry/ (canonical copy)
 berry/

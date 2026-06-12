@@ -33,15 +33,16 @@ import Breadcrumb from '@/layouts/full/shared/breadcrumb/Breadcrumb';
 interface Church {
     id: number;
     church_name: string;
-    location: string;
-    city: string;
-    country: string;
-    language_preference: string;
-    admin_email: string;
-    timezone: string;
+    name?: string;
+    location?: string;
+    city?: string;
+    state_province?: string;
+    language_preference?: string;
+    admin_email?: string;
     is_active: boolean;
-    created_at: string;
-    updated_at: string;
+    is_demo?: boolean;
+    client_status?: string;
+    database_name?: string | null;
 }
 
 const ChurchAdminList: React.FC = () => {
@@ -140,24 +141,30 @@ const ChurchAdminList: React.FC = () => {
                     </Button>
                 </Box>
 
+                <Alert severity="info" sx={{ mb: 2 }}>
+                    Showing tenant-provisioned parishes only (Manville + Test Church). CRM directory parishes
+                    that have not enrolled are managed in OMAI Church Command Center, not here.
+                </Alert>
+
                 <Card>
                     <CardContent>
                         <Typography variant="h6" gutterBottom>
-                            Select a Church to Administer
+                            Select a Parish to Administer
                         </Typography>
                         <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                            Choose a church below to access its admin panel with user management, records, logs, and administrative tools.
+                            Active clients with tenant databases. Enrollment pipeline parishes appear after
+                            they complete onboarding and are provisioned.
                         </Typography>
 
                         <TableContainer component={Paper} elevation={0}>
                             <Table>
                                 <TableHead>
                                     <TableRow>
-                                        <TableCell>Church Name</TableCell>
+                                        <TableCell>Parish</TableCell>
                                         <TableCell>Location</TableCell>
-                                        <TableCell>Language</TableCell>
+                                        <TableCell>Type</TableCell>
                                         <TableCell>Status</TableCell>
-                                        <TableCell>Admin Email</TableCell>
+                                        <TableCell>Tenant DB</TableCell>
                                         <TableCell>Actions</TableCell>
                                     </TableRow>
                                 </TableHead>
@@ -166,29 +173,33 @@ const ChurchAdminList: React.FC = () => {
                                         <TableRow key={church.id}>
                                             <TableCell>
                                                 <Typography variant="subtitle2" fontWeight="bold">
-                                                    {church.church_name}
+                                                    {church.church_name || church.name}
+                                                </Typography>
+                                                <Typography variant="caption" color="text.secondary">
+                                                    ID {church.id}
                                                 </Typography>
                                             </TableCell>
                                             <TableCell>
-                                                {church.location || 'Not specified'}
+                                                {[church.city, church.state_province].filter(Boolean).join(', ') || church.location || '—'}
                                             </TableCell>
                                             <TableCell>
-                                                <Chip 
-                                                    label={church.language_preference?.toUpperCase() || 'EN'} 
+                                                <Chip
+                                                    label={church.is_demo ? 'Test' : 'Production'}
                                                     size="small"
+                                                    color={church.is_demo ? 'warning' : 'primary'}
                                                     variant="outlined"
                                                 />
                                             </TableCell>
                                             <TableCell>
-                                                <Chip 
-                                                    label={church.is_active ? 'Active' : 'Inactive'} 
+                                                <Chip
+                                                    label={church.client_status?.replace(/_/g, ' ') || (church.is_active ? 'active' : 'inactive')}
                                                     size="small"
-                                                    color={church.is_active ? 'success' : 'error'}
+                                                    color={church.is_active ? 'success' : 'default'}
                                                 />
                                             </TableCell>
                                             <TableCell>
-                                                <Typography variant="body2">
-                                                    {church.admin_email}
+                                                <Typography variant="caption" sx={{ fontFamily: 'monospace' }}>
+                                                    {church.database_name || '—'}
                                                 </Typography>
                                             </TableCell>
                                             <TableCell>
