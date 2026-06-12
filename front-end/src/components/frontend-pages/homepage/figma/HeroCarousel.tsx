@@ -142,8 +142,6 @@ export function HeroCarousel({ embedded = false }: HeroCarouselProps) {
         position: "relative", overflow: "hidden",
         display: "flex", flexDirection: "column",
       }}
-      onMouseEnter={() => setIsPaused(true)}
-      onMouseLeave={() => setIsPaused(false)}
     >
       {/* Parchment grain texture */}
       <ParchmentTexture isDark={isDark} />
@@ -375,7 +373,7 @@ export function HeroCarousel({ embedded = false }: HeroCarouselProps) {
         </div>
 
         {/* ── RIGHT PANEL ────────────────────────────────────────────── */}
-        <div className="relative min-w-0 w-full pt-4 pb-4 lg:pt-6">
+        <div className="relative min-w-0 w-full pt-4 pb-4 lg:pt-8 lg:mt-9">
           {/* Panel label */}
           <div style={{
             position: "absolute", top: "28px", right: "0px",
@@ -394,7 +392,7 @@ export function HeroCarousel({ embedded = false }: HeroCarouselProps) {
             </div>
           </div>
 
-          {/* The ecosystem — scales to fit column width */}
+          {/* The ecosystem — scales to fit column width; pause auto-advance only on direct hover */}
           <div
             className="om-figma-ecosystem-frame overflow-hidden rounded-xl"
             style={{
@@ -402,6 +400,8 @@ export function HeroCarousel({ embedded = false }: HeroCarouselProps) {
                 ? "0 32px 80px rgba(0,0,0,0.7), 0 0 0 1px rgba(212,175,55,0.1)"
                 : "0 32px 80px rgba(45,27,105,0.18), 0 0 0 1px rgba(212,175,55,0.2)",
             }}
+            onMouseEnter={() => setIsPaused(true)}
+            onMouseLeave={() => setIsPaused(false)}
           >
             <div className="om-figma-ecosystem-scaler">
               <ProductEcosystem activeSlide={activeSlide} isDark={isDark} />
