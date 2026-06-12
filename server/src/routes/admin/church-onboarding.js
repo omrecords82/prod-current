@@ -5,6 +5,8 @@ const router = express.Router();
 const { getAppPool } = require('../../config/db');
 const { requireRole } = require('../../middleware/auth');
 const { provisionTenantDb } = require('../../services/tenantProvisioning');
+const { isOperationalChurchId } = require('../../utils/churchVisibility');
+const { assertPhasePromotionAllowed } = require('../../utils/churchPromotionPolicy');
 
 const ADMIN_ROLES = ['super_admin', 'admin'];
 
@@ -63,13 +65,13 @@ router.get('/pipeline', requireRole(ADMIN_ROLES), async (req, res) => {
       ) tok ON tok.church_id = c.id
       LEFT JOIN (
         SELECT
-          church_id,
+          cu.church_id,
           COUNT(*)                                              AS total_users,
-          SUM(CASE WHEN is_locked = 0 THEN 1 ELSE 0 END)      AS active_users,
-          SUM(CASE WHEN is_locked = 1 THEN 1 ELSE 0 END)      AS pending_users
-        FROM users
-        WHERE church_id IS NOT NULL
-        GROUP BY church_id
+          SUM(CASE WHEN u.is_locked = 0 THEN 1 ELSE 0 END)      AS active_users,
+          SUM(CASE WHEN u.is_locked = 1 THEN 1 ELSE 0 END)      AS pending_users
+        FROM church_users cu
+        JOIN users u ON u.id = cu.user_id
+        GROUP BY cu.church_id
       ) usr ON usr.church_id = c.id
       LEFT JOIN church_enrichment_profiles ep ON ep.church_id = c.id
       ORDER BY c.created_at DESC
@@ -102,6 +104,8 @@ router.get('/pipeline', requireRole(ADMIN_ROLES), async (req, res) => {
         jurisdiction: ch.jurisdiction,
         website: ch.website,
         db_name: ch.db_name || ch.database_name,
+        tenant_provisioned: Boolean(ch.db_name || ch.database_name),
+        operational: isOperationalChurchId(ch.id),
         is_active: ch.is_active,
         setup_complete: ch.setup_complete,
         onboarding_phase: ch.onboarding_phase,
@@ -390,12 +394,18 @@ router.post('/promote', requireRole(ADMIN_ROLES), async (req, res) => {
     }
 
     const pool = getAppPool();
-    const [rows] = await pool.query('SELECT id, name, onboarding_phase, db_name, database_name FROM churches WHERE id = ?', [church_id]);
+    const force = req.body.force === true && (req.user?.role === 'super_admin' || req.session?.user?.role === 'super_admin');
+    const [rows] = await pool.query('SELECT id, name, onboarding_phase, db_name, database_name, client_status FROM churches WHERE id = ?', [church_id]);
     if (!rows.length) return res.status(404).json({ success: false, message: 'Church not found.' });
 
     const church = rows[0];
     if (church.onboarding_phase !== from_phase) {
       return res.status(409).json({ success: false, message: `Church is currently phase ${church.onboarding_phase}, not ${from_phase}.` });
+    }
+
+    const gate = await assertPhasePromotionAllowed(pool, church, { fromPhase: from_phase, toPhase: to_phase, force });
+    if (!gate.allowed) {
+      return res.status(gate.status || 403).json({ success: false, code: gate.code, message: gate.reason });
     }
 
     // Phase-specific actions
@@ -438,10 +448,11 @@ router.post('/batch-promote', requireRole(ADMIN_ROLES), async (req, res) => {
     }
 
     const pool = getAppPool();
+    const force = req.body.force === true && (req.user?.role === 'super_admin' || req.session?.user?.role === 'super_admin');
 
     // Get all churches at from_phase
     const [churches] = await pool.query(
-      'SELECT id, name, db_name, database_name FROM churches WHERE onboarding_phase = ?',
+      'SELECT id, name, db_name, database_name, client_status FROM churches WHERE onboarding_phase = ?',
       [from_phase]
     );
 
@@ -453,6 +464,12 @@ router.post('/batch-promote', requireRole(ADMIN_ROLES), async (req, res) => {
 
     for (const church of churches) {
       try {
+        const gate = await assertPhasePromotionAllowed(pool, church, { fromPhase: from_phase, toPhase: to_phase, force });
+        if (!gate.allowed) {
+          results.push({ id: church.id, name: church.name, success: false, error: gate.reason, code: gate.code });
+          continue;
+        }
+
         let dbCreated = false;
 
         // Phase-specific actions
@@ -965,9 +982,10 @@ router.post('/:churchId/promote', requireRole(ADMIN_ROLES), async (req, res) => 
 
   try {
     const pool = getAppPool();
+    const force = req.body.force === true && (req.user?.role === 'super_admin' || req.session?.user?.role === 'super_admin');
 
     const [rows] = await pool.query(
-      'SELECT id, name, onboarding_phase, email FROM churches WHERE id = ?',
+      'SELECT id, name, onboarding_phase, email, client_status, db_name, database_name FROM churches WHERE id = ?',
       [churchId]
     );
     if (rows.length === 0) {
@@ -986,6 +1004,11 @@ router.post('/:churchId/promote', requireRole(ADMIN_ROLES), async (req, res) => 
 
     const nextPhase = currentPhase + 1;
     let dbCreated = false;
+
+    const gate = await assertPhasePromotionAllowed(pool, church, { fromPhase: currentPhase, toPhase: nextPhase, force });
+    if (!gate.allowed) {
+      return res.status(gate.status || 403).json({ success: false, code: gate.code, message: gate.reason });
+    }
 
     // Phase 1→2: Create tenant database from approved template
     if (currentPhase === 1 && nextPhase === 2) {
