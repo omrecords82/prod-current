@@ -49,13 +49,12 @@ async function main() {
       values.push(key, 'pricing', text, md5(text));
     }
     const [result] = await pool.query(
-      `INSERT INTO translations_source (translation_key, namespace, english_text, english_hash, is_active)
+      `INSERT INTO translations_source (translation_key, namespace, english_text, english_hash)
        VALUES ${placeholders}
        ON DUPLICATE KEY UPDATE
          english_text = VALUES(english_text),
          english_hash = VALUES(english_hash),
-         namespace = VALUES(namespace),
-         is_active = 1`,
+         namespace = VALUES(namespace)`,
       values
     );
     affected += result.affectedRows;
