@@ -398,7 +398,7 @@ const CRMActivityWidget: React.FC<{ isDark: boolean; navigate: ReturnType<typeof
   return (
     <div
       className="om-admin-card"
-      onClick={() => navigate('/admin/control-panel/church-lifecycle')}
+      onClick={() => navigate('/admin/churches')}
       style={{ marginBottom: '1.5rem', cursor: 'pointer' }}
     >
       <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
@@ -418,7 +418,7 @@ const CRMActivityWidget: React.FC<{ isDark: boolean; navigate: ReturnType<typeof
                 size="small"
                 onClick={(e: React.MouseEvent) => {
                   e.stopPropagation();
-                  navigate('/admin/control-panel/church-lifecycle', { state: { tab: 'follow-ups' } });
+                  navigate('/admin/churches');
                 }}
                 sx={{
                   ...chipSx,
@@ -440,7 +440,7 @@ const CRMActivityWidget: React.FC<{ isDark: boolean; navigate: ReturnType<typeof
                 size="small"
                 onClick={(e: React.MouseEvent) => {
                   e.stopPropagation();
-                  navigate('/admin/control-panel/church-lifecycle', { state: { tab: 'follow-ups' } });
+                  navigate('/admin/churches');
                 }}
                 sx={{
                   ...chipSx,

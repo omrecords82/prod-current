@@ -82,7 +82,7 @@ export const FEATURE_REGISTRY: FeatureEntry[] = [
   { id: 'interactive-report-jobs', name: 'Interactive Report Jobs', stage: 4, route: '/devel-tools/interactive-reports/jobs', since: '2026-02-01' },
 
   // ── Stage 3: Review ────────────────────────────────────────
-  { id: 'church-lifecycle-detail', name: 'Church Lifecycle Detail', stage: 3, route: '/admin/control-panel/church-lifecycle/:churchId', description: 'Unified church detail view — CRM contacts, activities, follow-ups, record requirements, email workflow, onboarding, and timeline', since: '2026-03-15', changeSetCode: 'CS-0050' },
+  { id: 'church-lifecycle-detail', name: 'Church Lifecycle Detail (OM — redirects to OMAI CCC)', stage: 5, route: '/admin/control-panel/church-lifecycle/:churchId', description: 'Retired — redirects to OMAI Church Command Center', since: '2026-03-15', changeSetCode: 'CS-0050' },
   { id: 'funeral-records-v2', name: 'Funeral Records', stage: 3, route: '/apps/records/funeral', since: '2026-02-01', changeSetCode: 'CS-0039' },
   { id: 'change-sets', name: 'Change Sets', stage: 3, route: '/omai/tools/om-daily', description: 'SDLC delivery container — migrated to OMAI Operations Hub', since: '2026-03-08', changeSetCode: 'CS-0037', scope: 'shared', canonicalParent: 'omai' },
 

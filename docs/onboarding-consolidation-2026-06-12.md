@@ -70,4 +70,5 @@ Directory staging (`batch-stage`) creates phase-1 CRM rows only — never tenant
 
 - CCC drawer uses `GET .../unified/:id?full=1` (single call for lifecycle + enrollment + state)
 - OM `ChurchLifecycleDetailPage` redirects to OMAI CCC via `ChurchLifecycleRedirect`
+- Legacy `ChurchLifecycleDetailPage/` panel tree removed from `front-end` and `packages/om-admin` (2026-06-12)
 - `onboarding_phase` writes frozen when `EXECUTION_READ_PRIMARY=true` — use `churchOnboardingPhase.js` for derived display phase

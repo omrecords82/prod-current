@@ -348,7 +348,7 @@ export const DEPRECATION_REGISTRY: DeprecatedEntry[] = [
     stage: 4,
     files: [
       'features/admin/control-panel/ChurchLifecycleDetailPage.tsx',
-      'features/admin/control-panel/ChurchLifecycleDetailPage/',
+      'features/admin/control-panel/ChurchLifecycleRedirect.tsx',
     ],
     replacement: 'OMAI Church Command Center (/cp/ops/church-command-center)',
     reason: 'OM church-lifecycle UI retired — lifecycle API canonical on OM server; UI lives in OMAI CCC. Route redirects via ChurchLifecycleRedirect.',
