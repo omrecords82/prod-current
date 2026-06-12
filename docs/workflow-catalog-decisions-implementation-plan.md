@@ -60,7 +60,7 @@ Phase B code is **shipped** (B-PR1–13). Decisions change **cutover behavior an
 
 | PR | Work | Decisions |
 |----|------|-----------|
-| **B-PR14** | Manville #46 smoke automation script + checklist doc | J3 |
+| ~~**B-PR14**~~ | ~~Manville #46 smoke automation script + checklist doc~~ | **Shipped** — `server/scripts/workflow-smoke-manville.js` |
 | **B-PR15** | OCR goal gating (G1) + cache event hook (G2) + cron refresh (G3) | G1–G3 |
 | **B-PR16** | Auto `setup_complete` when ops checklist passes (H3) | H3 |
 | **B-PR17** | CRM-only enrollment goal suppression (H5) | H5 |

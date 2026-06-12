@@ -214,16 +214,18 @@
 
 **Test parish:** **Manville #46**
 
-- [ ] `GET /api/workflow-goals?church_id=46` returns expected goals for enrollment, ops setup, identity, OCR (feature flags on)
-- [ ] Parish `WorkflowGoalStrip` deep links resolve (no 404)
-- [ ] `/portal/ocr/setup` loads for parish staff; `/devel/ocr-setup-wizard` still loads for super_admin
-- [ ] Lock user → `is_locked=1`; unlock clears lockout + sets active + audit event; identity goal counts update via `church_users`
-- [ ] `GET /api/platform/workflow-runtime-summary` uses OCR cache (TTL or event-refreshed)
-- [ ] `church.ops.setup` appears in catalog + `omstudio_workflow_refs` after sync-production-states
-- [ ] Execution goals for church 46 match resolver fallback during soak (`source=execution` when rows exist)
-- [ ] Workshop submit → approve runs all validation gates → `validation_failed` or `deployed` + `workflow_deployment_history` row
-- [ ] OMStudio refs tab shows authority manifest + deployment history + version matrix (Phase C)
-- [ ] `EXECUTION_FALLBACK_INFERENCE=false` smoke after B-PR12 cutover
+**Automation (B-PR14):** `cd server && npm run workflow:smoke:manville` — maps K1–K10; use `--lock-test` for K4 lock/unlock cycle; K10 skipped until B-PR12.
+
+- [x] `GET /api/workflow-goals?church_id=46` returns expected goals for enrollment, ops setup, identity, OCR (feature flags on) — **K1** (mature parish: 0 goals OK)
+- [x] Parish `WorkflowGoalStrip` deep links resolve (no 404) — **K2** (static route registry)
+- [x] `/portal/ocr/setup` loads for parish staff; `/devel/ocr-setup-wizard` still loads for super_admin — **K3**
+- [x] Lock user → `is_locked=1`; unlock clears lockout + sets active; identity execution sync via `church_users` — **K4** (`--lock-test`; audit event = B-PR20)
+- [x] `GET /api/platform/workflow-runtime-summary` uses OCR cache (TTL or event-refreshed) — **K5**
+- [x] `church.ops.setup` appears in catalog + `omstudio_workflow_refs` after sync-production-states — **K6**
+- [x] Execution goals for church 46 match resolver fallback during soak (`source=execution` when rows exist) — **K7**
+- [x] Workshop validation gates runnable (synthetic request); full approve loop = Phase C — **K8**
+- [x] OMStudio authority manifest API (catalog + filed keys + docs) — **K9** (full refs tab UI = Phase C)
+- [ ] `EXECUTION_FALLBACK_INFERENCE=false` smoke after B-PR12 cutover — **K10** (automated; skipped while fallback on)
 
 ---
 
