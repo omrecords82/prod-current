@@ -9,6 +9,9 @@ import { Link } from 'react-router-dom';
 export const LOGO_SRC_LIGHT = '/images/logos/light-logo.png';
 export const LOGO_SRC_DARK = '/images/logos/dark-logo.png';
 
+/** Compact O+M cross mark for public header */
+export const LOGO_MARK_SRC = '/images/logos/om-mark-logo.png';
+
 /** @deprecated Use LOGO_SRC_LIGHT / LOGO_SRC_DARK — kept for imports that reference header SVG constants */
 export const LOGO_TOP_SVG_LIGHT = LOGO_SRC_LIGHT;
 export const LOGO_TOP_SVG_DARK = LOGO_SRC_DARK;
@@ -19,8 +22,8 @@ export type BrandLogoProps = {
   href?: string;
   /** When set, overrides theme/customizer (use for scoped pages like enrollment). */
   colorScheme?: 'light' | 'dark';
-  /** `header-svg` alias — same PNG wordmarks as `png` */
-  variant?: 'header-svg' | 'png';
+  /** `mark` = compact O+M cross; `header-svg` / `png` = full wordmarks */
+  variant?: 'header-svg' | 'png' | 'mark';
   /** @deprecated Footer uses wordmark text; kept for compatibility */
   onDarkSurface?: boolean;
 };
@@ -44,8 +47,9 @@ export function resolveBrandLogoSrc(opts: {
   onDarkSurface?: boolean;
   muiMode?: 'light' | 'dark';
   customizerMode?: string;
-  variant?: 'header-svg' | 'png';
+  variant?: 'header-svg' | 'png' | 'mark';
 }): string {
+  if (opts.variant === 'mark') return LOGO_MARK_SRC;
   const scheme = resolveBrandColorScheme(opts);
   if (opts.variant === 'header-svg') {
     return scheme === 'dark' ? LOGO_SRC_DARK : LOGO_SRC_LIGHT;

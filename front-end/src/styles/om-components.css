@@ -77,7 +77,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 1.5rem;
-  min-height: 4.5rem;
+  min-height: 5rem;
 }
 
 .om-public-header__nav {
@@ -90,8 +90,8 @@
 
 .om-public-header__nav-link {
   font-family: var(--om-font-heading);
-  font-size: 0.875rem;
-  letter-spacing: 0.04em;
+  font-size: 1.125rem;
+  letter-spacing: 0.03em;
   text-decoration: none;
   transition: color 0.15s ease;
   white-space: nowrap;

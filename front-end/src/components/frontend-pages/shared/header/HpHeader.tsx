@@ -151,10 +151,9 @@ const HpHeader = () => {
       <div className="om-public-header__main">
         <div className="max-w-7xl mx-auto px-6 om-public-header__main-inner">
           <BrandLogo
-            variant="header-svg"
+            variant="mark"
             href={PUBLIC_ROUTES.HOME}
-            colorScheme={activeMode === 'dark' ? 'dark' : 'light'}
-            className="h-11 w-auto max-h-11 max-w-[min(100%,300px)] object-contain object-left shrink-0"
+            className="h-14 w-auto max-h-14 max-w-[min(100%,220px)] object-contain object-left shrink-0"
           />
 
           {mdUp ? (
