@@ -10,7 +10,7 @@ const { getAppPool, getTenantPool } = require('../config/db');
 const { processJob } = require('../workers/ocrFeederWorker');
 const { extractAgentFieldsForJob } = require('../utils/ocrClassifier');
 
-const CORPUS_BASE = '/var/www/orthodoxmetrics/prod/docs/sample_records';
+const CORPUS_BASE = '/var/omai-ops/data/orthodoxmetrics/ocr-corpus/sample_records';
 const CACHE_DIR = '/var/www/orthodoxmetrics/prod/server/storage/test_cache';
 const CHURCH_ID = 278; // Test Church
 

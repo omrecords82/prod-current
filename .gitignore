@@ -205,6 +205,7 @@ docs/*
 !docs/om-cp-gap-analysis-2026-06-12.md
 !docs/om-omai-cleanup-report-2026-06-12.md
 !docs/onboarding-consolidation-2026-06-12.md
+!docs/garbage.md
 
 # Berry frontend lives in /var/www/omai/berry/ (canonical copy)
 berry/
