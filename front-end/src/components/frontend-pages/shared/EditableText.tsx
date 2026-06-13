@@ -14,6 +14,7 @@ import React, { useRef, useState, useCallback, useEffect, type ReactNode } from 
 import { Pencil, RotateCcw, Globe } from 'lucide-react';
 import { useEditMode } from '@/context/EditModeContext';
 import { useAuth } from '@/hooks/useAuth';
+import { useLanguage } from '@/context/LanguageContext';
 
 const LANG_LABELS: Record<string, string> = { el: 'Greek', ru: 'Russian', ro: 'Romanian', ka: 'Georgian' };
 
@@ -45,6 +46,7 @@ const EditableText: React.FC<EditableTextProps> = ({
 }) => {
   const { isEditMode, getContent, updateContent, overrides, pendingChanges, resetToDefault, translationStatuses, resolveTranslation } = useEditMode();
   const { isSuperAdmin } = useAuth();
+  const { lang } = useLanguage();
   const elRef = useRef<HTMLElement>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
@@ -118,9 +120,10 @@ const EditableText: React.FC<EditableTextProps> = ({
   // Non-edit mode: render normally with no extra wrapper overhead
   if (!canEdit) {
     const ElementTag = Tag as any;
+    const useCmsOverride = lang === 'en' && displayText !== fallback;
     return (
       <ElementTag className={className}>
-        {displayText !== fallback ? displayText : children}
+        {useCmsOverride ? displayText : children}
       </ElementTag>
     );
   }

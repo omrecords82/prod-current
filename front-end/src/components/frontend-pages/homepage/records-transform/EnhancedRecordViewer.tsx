@@ -1,5 +1,6 @@
 import { ReactNode } from 'react';
 import { motion } from 'framer-motion';
+import { useLanguage } from '@/context/LanguageContext';
 import { ImageComparisonPanel } from './ImageComparisonPanel';
 import type { ViewerMode } from './recordsTransformDemoData';
 
@@ -16,6 +17,7 @@ interface EnhancedRecordViewerProps {
 export function EnhancedRecordViewer({
   label, year, count, badge, imageSrc, variant, children,
 }: EnhancedRecordViewerProps) {
+  const { t } = useLanguage();
   const isDifficult = variant === 'difficult';
 
   return (
@@ -37,7 +39,7 @@ export function EnhancedRecordViewer({
           </span>
         )}
         <span className="text-gray-400 dark:text-gray-500 text-xs ml-auto font-om-body">
-          {count} records extracted
+          {t('home.records_extracted_count').replace('{count}', String(count))}
         </span>
       </motion.div>
 
@@ -59,7 +61,7 @@ export function EnhancedRecordViewer({
         animate={{ opacity: 1 }}
         transition={{ delay: 0.6, duration: 0.4 }}
       >
-        Extracted from original parish ledger
+        {t('home.records_extracted_footer')}
       </motion.p>
     </div>
   );

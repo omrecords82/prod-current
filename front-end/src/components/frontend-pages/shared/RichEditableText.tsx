@@ -18,6 +18,7 @@ import Underline from '@tiptap/extension-underline';
 import { Pencil, RotateCcw, Globe, Bold, Italic, Underline as UnderlineIcon, RemoveFormatting, WrapText } from 'lucide-react';
 import { useEditMode } from '@/context/EditModeContext';
 import { useAuth } from '@/hooks/useAuth';
+import { useLanguage } from '@/context/LanguageContext';
 
 const LANG_LABELS: Record<string, string> = { el: 'Greek', ru: 'Russian', ro: 'Romanian', ka: 'Georgian' };
 
@@ -86,6 +87,7 @@ const RichEditableText: React.FC<RichEditableTextProps> = ({
 }) => {
   const { isEditMode, getContent, updateRichContent, overrides, pendingChanges, resetToDefault, contentTypes, translationStatuses, resolveTranslation } = useEditMode();
   const { isSuperAdmin } = useAuth();
+  const { lang } = useLanguage();
   const wrapperRef = useRef<HTMLDivElement>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
@@ -192,7 +194,8 @@ const RichEditableText: React.FC<RichEditableTextProps> = ({
   // ── Non-edit mode: render sanitized HTML or fallback ──
   if (!canEdit) {
     const ElementTag = Tag as any;
-    const isHtml = displayContent !== fallback && /<[a-zA-Z]/.test(displayContent);
+    const useCmsOverride = lang === 'en' && displayContent !== fallback;
+    const isHtml = useCmsOverride && /<[a-zA-Z]/.test(displayContent);
     if (isHtml) {
       return (
         <ElementTag
@@ -203,7 +206,7 @@ const RichEditableText: React.FC<RichEditableTextProps> = ({
     }
     return (
       <ElementTag className={className}>
-        {displayContent !== fallback ? displayContent : children}
+        {useCmsOverride ? displayContent : children}
       </ElementTag>
     );
   }

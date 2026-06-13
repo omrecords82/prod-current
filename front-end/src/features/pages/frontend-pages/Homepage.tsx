@@ -263,7 +263,7 @@ function FeaturesPanel() {
           {t('home.features_title')}
         </RichEditableText>
         <p className="font-om-body om-text-small text-[var(--om-text-secondary)] mt-2">
-          Hover or tap a card to explore more capabilities
+          {t('home.features_hover_hint')}
         </p>
       </div>
 

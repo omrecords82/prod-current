@@ -1,6 +1,14 @@
 import { motion } from 'framer-motion';
 import { Cross, Heart, Church } from 'lucide-react';
+import { useLanguage } from '@/context/LanguageContext';
 import { recordCards, type RecordType } from './recordsTransformDemoData';
+
+const LABEL_KEYS: Record<RecordType, string> = {
+  baptisms: 'home.records_type1_name',
+  marriages: 'home.records_type2_name',
+  funerals: 'home.records_type3_name',
+  custom: 'home.records_type4_card_label',
+};
 
 function OrthodoxCross({ className }: { className?: string }) {
   return (
@@ -27,6 +35,8 @@ interface RecordTypeCardsProps {
 }
 
 export function RecordTypeCards({ activeType, onSelect, onHover }: RecordTypeCardsProps) {
+  const { t } = useLanguage();
+
   return (
     <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 max-w-4xl mx-auto mb-8 md:mb-10">
       {recordCards.map((card) => {
@@ -51,7 +61,7 @@ export function RecordTypeCards({ activeType, onSelect, onHover }: RecordTypeCar
           >
             {card.badge && (
               <span className="absolute top-2.5 right-2.5 md:top-3 md:right-3 text-[9px] md:text-[10px] tracking-wider uppercase px-2 py-0.5 rounded-full bg-[var(--om-surface)] text-[var(--om-gold)] border border-[var(--om-border)] font-om-body font-semibold">
-                {card.badge}
+                {t('home.records_ai_badge')}
               </span>
             )}
 
@@ -66,10 +76,10 @@ export function RecordTypeCards({ activeType, onSelect, onHover }: RecordTypeCar
             </div>
 
             <div className={`text-sm mb-1 font-om-body font-semibold ${isActive ? 'text-[var(--om-text-primary)]' : 'text-[var(--om-text-primary)]'}`}>
-              {card.label}
+              {t(LABEL_KEYS[card.type])}
             </div>
             <div className="text-xs text-[var(--om-text-secondary)] font-om-body">
-              {card.year} &middot; {card.count} records
+              {card.year} &middot; {card.count} {t('home.records_count_suffix')}
             </div>
 
             {isActive && (

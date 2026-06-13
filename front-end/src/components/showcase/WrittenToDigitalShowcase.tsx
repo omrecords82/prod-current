@@ -13,6 +13,7 @@
 
 import { useState, useEffect, useCallback, useRef, ReactNode } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useLanguage } from '@/context/LanguageContext';
 import { RecordTypeCards } from '@/components/frontend-pages/homepage/records-transform/RecordTypeCards';
 import { EnhancedRecordViewer } from '@/components/frontend-pages/homepage/records-transform/EnhancedRecordViewer';
 import { RecordsDataTable, type Column } from '@/components/frontend-pages/homepage/records-transform/RecordsDataTable';
@@ -87,17 +88,18 @@ const customColumns: Column<CustomRow>[] = [
 ];
 
 // ── Digital content for each record type ──
-function DigitalContent({ type }: { type: RecordType }) {
+function DigitalContent({ type, label }: { type: RecordType; label: string }) {
   const card = recordCards.find(c => c.type === type)!;
+  const { t } = useLanguage();
   const isDifficult = type === 'custom';
   const tableDelay = isDifficult ? 0.25 : 0.15;
 
   return (
     <EnhancedRecordViewer
-      label={card.label}
+      label={label}
       year={card.year}
       count={card.count}
-      badge={isDifficult ? card.badge : undefined}
+      badge={isDifficult ? t('home.records_ai_badge') : undefined}
       imageSrc={card.image}
       variant={card.mode}
     >
@@ -124,6 +126,7 @@ export default function WrittenToDigitalShowcase({
   animated = true,
   className,
 }: WrittenToDigitalShowcaseProps) {
+  const { t } = useLanguage();
   const lockedType: RecordType | null = recordType ? singleToMulti[recordType] : null;
   const initialType: RecordType = lockedType || 'baptisms';
 
@@ -202,6 +205,16 @@ export default function WrittenToDigitalShowcase({
   const activeCard = recordCards.find(c => c.type === activeType)!;
   const isCompact = variant === 'compact';
   const showCards = !lockedType;
+
+  const recordLabel = (type: RecordType) => {
+    const keys: Record<RecordType, string> = {
+      baptisms: 'home.records_type1_name',
+      marriages: 'home.records_type2_name',
+      funerals: 'home.records_type3_name',
+      custom: 'home.records_type4_card_label',
+    };
+    return t(keys[type]);
+  };
 
   return (
     <div className={className}>
@@ -285,7 +298,7 @@ export default function WrittenToDigitalShowcase({
                     animate={{ opacity: [1, 0.3, 1] }}
                     transition={{ repeat: Infinity, duration: 1.2 }}
                   />
-                  <span className="text-purple-100 text-sm font-om-body">Extracting records&hellip;</span>
+                  <span className="text-purple-100 text-sm font-om-body">{t('home.records_extracting')}</span>
                 </div>
               </motion.div>
             </motion.div>
@@ -336,7 +349,7 @@ export default function WrittenToDigitalShowcase({
                   animate={{ scale: [1, 1.4, 1] }}
                   transition={{ repeat: Infinity, duration: 0.8 }}
                 />
-                <span className="text-purple-100 text-sm font-om-body">Structuring data&hellip;</span>
+                <span className="text-purple-100 text-sm font-om-body">{t('home.records_structuring')}</span>
               </div>
             </motion.div>
           )}
@@ -349,7 +362,7 @@ export default function WrittenToDigitalShowcase({
           transition={{ duration: 0.5, ease: 'easeInOut' }}
           style={{ pointerEvents: state === 'digital' ? 'auto' : 'none' }}
         >
-          {(state === 'digital' || !animated) && <DigitalContent type={activeType} />}
+          {(state === 'digital' || !animated) && <DigitalContent type={activeType} label={recordLabel(activeType)} />}
         </motion.div>
 
         {/* State indicator dots */}
@@ -375,7 +388,7 @@ export default function WrittenToDigitalShowcase({
       {/* Instruction text (full variant only) */}
       {!isCompact && animated && showCards && (
         <p className="text-center text-purple-300/40 text-xs mt-4 font-om-body">
-          Hover or click a record type to see the transformation &middot; Click again to reset
+          {t('home.records_instruction')}
         </p>
       )}
     </div>
