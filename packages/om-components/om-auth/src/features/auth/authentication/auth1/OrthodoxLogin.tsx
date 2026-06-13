@@ -81,7 +81,7 @@ const OrthodoxLogin: React.FC = () => {
                         <Stack direction="row" alignItems="center" spacing={1.5} mb={3}>
                             <Box
                                 component="img"
-                                src="/images/logos/om-logo.png"
+                                src="/images/logos/light-logo.png"
                                 alt="Orthodox Metrics"
                                 sx={{ width: 40, height: 40, borderRadius: '50%' }}
                             />

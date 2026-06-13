@@ -1,9 +1,13 @@
 import { FOOTER_LINKS, PUBLIC_ROUTES } from '@/config/publicRoutes';
+import { CustomizerContext } from '@/context/CustomizerContext';
 import { useLanguage } from '@/context/LanguageContext';
+import { BrandLogo } from '@/layouts/full/shared/logo/Logo';
+import { useContext } from 'react';
 import { Link } from 'react-router-dom';
 
 const SiteFooter = () => {
   const { t } = useLanguage();
+  const { activeMode } = useContext(CustomizerContext);
   const copyrightText = t('footer.copyright').replace('{year}', String(new Date().getFullYear()));
 
   return (
@@ -17,21 +21,11 @@ const SiteFooter = () => {
         <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-5 gap-x-6 gap-y-8">
           {/* Brand */}
           <div className="col-span-2 lg:col-span-1">
-            <Link
-              to={PUBLIC_ROUTES.HOME}
-              className="no-underline inline-block mb-4"
-              aria-label="Orthodox Metrics LLC"
-            >
-              <span
-                className="font-om-display text-[1.35rem] leading-tight tracking-[0.02em] block"
-                style={{ fontWeight: 400 }}
-              >
-                Orthodox Metrics
-                <span className="text-[#d4af37] font-om-body text-[0.7rem] uppercase tracking-[0.22em] ml-1.5 align-middle">
-                  LLC
-                </span>
-              </span>
-            </Link>
+            <BrandLogo
+              href={PUBLIC_ROUTES.HOME}
+              colorScheme={activeMode === 'dark' ? 'dark' : 'light'}
+              className="h-9 w-auto max-w-[min(100%,260px)] object-contain object-left mb-4"
+            />
           </div>
 
           {/* Product */}

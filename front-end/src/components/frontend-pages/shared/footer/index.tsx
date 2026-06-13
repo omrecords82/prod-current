@@ -1,4 +1,5 @@
 import { PUBLIC_ROUTES } from '@/config/publicRoutes';
+import { BrandLogo } from '@/layouts/full/shared/logo/Logo';
 import { Box, Container, Divider, Grid, IconButton, Stack, Typography, useTheme } from '@mui/material';
 import { IconBrandFacebook, IconBrandLinkedin, IconBrandTwitter } from '@tabler/icons-react';
 import { Link } from 'react-router-dom';
@@ -58,17 +59,13 @@ const Footer = () => {
         >
           {/* Brand column — wider on desktop for breathing room */}
           <Box sx={{ flex: { md: '0 0 280px' }, maxWidth: { md: 280 } }}>
-            <Stack direction="row" alignItems="center" spacing={1} mb={2}>
-              <Box
-                component="img"
-                src="/images/logos/om-logo.png"
-                alt="Orthodox Metrics"
-                sx={{ width: 28, height: 28, borderRadius: '50%' }}
+            <Box mb={2}>
+              <BrandLogo
+                href={PUBLIC_ROUTES.HOME}
+                colorScheme={isDark ? 'dark' : 'light'}
+                className="h-9 w-auto max-w-[min(100%,260px)] object-contain object-left"
               />
-              <Typography variant="subtitle1" fontWeight={700} sx={{ color: textPrimary }}>
-                Orthodox Metrics
-              </Typography>
-            </Stack>
+            </Box>
             <Typography variant="body2" sx={{ color: textSecondary, lineHeight: 1.7, mb: 2, fontSize: '0.85rem' }}>
               Digitizing Orthodox records and empowering the Church with secure, multilingual record-keeping solutions.
             </Typography>

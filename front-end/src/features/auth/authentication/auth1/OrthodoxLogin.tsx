@@ -1,4 +1,5 @@
 import { useAuth } from '@/context/AuthContext';
+import { BrandLogo } from '@/layouts/full/shared/logo/Logo';
 import { Box, Button, Checkbox, Container, FormControlLabel, Grid, Stack, TextField, Typography } from '@mui/material';
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -71,15 +72,10 @@ const OrthodoxLogin: React.FC = () => {
                     <Grid size={{ xs: 12, md: 6 }}>
                         {/* Logo + Brand */}
                         <Stack direction="row" alignItems="center" spacing={1.5} mb={3}>
-                            <Box
-                                component="img"
-                                src="/images/logos/om-logo.png"
-                                alt="Orthodox Metrics"
-                                sx={{ width: 40, height: 40, borderRadius: '50%' }}
+                            <BrandLogo
+                                colorScheme="light"
+                                className="h-10 w-auto max-w-[min(100%,280px)] object-contain object-left"
                             />
-                            <Typography variant="h6" sx={{ fontFamily: '"Cormorant Garamond", Georgia, serif', fontWeight: 700, color: '#D4AF37' }}>
-                                Orthodox Metrics
-                            </Typography>
                         </Stack>
 
                         <Typography variant="caption" sx={{ color: '#7B4F9E', fontWeight: 500, letterSpacing: 0.5, mb: 1, display: 'block' }}>

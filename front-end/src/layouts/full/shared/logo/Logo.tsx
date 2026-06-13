@@ -5,13 +5,13 @@ import { CustomizerContext } from '@/context/CustomizerContext';
 import { styled, useTheme } from '@mui/material';
 import { Link } from 'react-router-dom';
 
-/** App shell / sidebar PNG marks */
-export const LOGO_SRC_LIGHT = '/images/logos/om-logo-light.png';
-export const LOGO_SRC_DARK = '/images/logos/om-logo-dark.png';
+/** Official brand wordmarks (light background / dark background) */
+export const LOGO_SRC_LIGHT = '/images/logos/light-logo.png';
+export const LOGO_SRC_DARK = '/images/logos/dark-logo.png';
 
-/** Public marketing header SVG wordmarks */
-export const LOGO_TOP_SVG_LIGHT = '/images/logos/logo-top.svg';
-export const LOGO_TOP_SVG_DARK = '/images/logos/logo-top-dark.svg';
+/** @deprecated Use LOGO_SRC_LIGHT / LOGO_SRC_DARK — kept for imports that reference header SVG constants */
+export const LOGO_TOP_SVG_LIGHT = LOGO_SRC_LIGHT;
+export const LOGO_TOP_SVG_DARK = LOGO_SRC_DARK;
 
 export type BrandLogoProps = {
   className?: string;
@@ -19,7 +19,7 @@ export type BrandLogoProps = {
   href?: string;
   /** When set, overrides theme/customizer (use for scoped pages like enrollment). */
   colorScheme?: 'light' | 'dark';
-  /** `header-svg` = public site top bar; `png` = app sidebar / auth shells */
+  /** `header-svg` alias — same PNG wordmarks as `png` */
   variant?: 'header-svg' | 'png';
   /** @deprecated Footer uses wordmark text; kept for compatibility */
   onDarkSurface?: boolean;
@@ -48,7 +48,7 @@ export function resolveBrandLogoSrc(opts: {
 }): string {
   const scheme = resolveBrandColorScheme(opts);
   if (opts.variant === 'header-svg') {
-    return scheme === 'dark' ? LOGO_TOP_SVG_DARK : LOGO_TOP_SVG_LIGHT;
+    return scheme === 'dark' ? LOGO_SRC_DARK : LOGO_SRC_LIGHT;
   }
   return scheme === 'dark' ? LOGO_SRC_DARK : LOGO_SRC_LIGHT;
 }

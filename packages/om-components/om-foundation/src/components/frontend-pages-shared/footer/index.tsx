@@ -57,17 +57,14 @@ const Footer = () => {
         >
           {/* Brand column — wider on desktop for breathing room */}
           <Box sx={{ flex: { md: '0 0 280px' }, maxWidth: { md: 280 } }}>
-            <Stack direction="row" alignItems="center" spacing={1} mb={2}>
+            <Box mb={2}>
               <Box
                 component="img"
-                src="/images/logos/om-logo.png"
+                src={isDark ? '/images/logos/dark-logo.png' : '/images/logos/light-logo.png'}
                 alt="Orthodox Metrics"
-                sx={{ width: 28, height: 28, borderRadius: '50%' }}
+                sx={{ height: 36, width: 'auto', maxWidth: 260, objectFit: 'contain' }}
               />
-              <Typography variant="subtitle1" fontWeight={700} sx={{ color: textPrimary }}>
-                Orthodox Metrics
-              </Typography>
-            </Stack>
+            </Box>
             <Typography variant="body2" sx={{ color: textSecondary, lineHeight: 1.7, mb: 2, fontSize: '0.85rem' }}>
               Digitizing Orthodox records and empowering the Church with secure, multilingual record-keeping solutions.
             </Typography>

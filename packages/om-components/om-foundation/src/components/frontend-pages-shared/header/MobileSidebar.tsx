@@ -47,9 +47,9 @@ const MobileSidebar = ({ isPortal = false }: MobileSidebarProps) => {
       <Box px={3} py={2}>
         <Box
           component="img"
-          src="/images/logos/om-logo.png"
+          src={activeMode === 'dark' ? '/images/logos/dark-logo.png' : '/images/logos/light-logo.png'}
           alt={t('common.brand_name')}
-          sx={{ width: 48, height: 48, borderRadius: '50%', objectFit: 'cover' }}
+          sx={{ height: 40, width: 'auto', maxWidth: 280, objectFit: 'contain' }}
         />
       </Box>
       <Box p={3}>

@@ -1,6 +1,6 @@
 import {
-  LOGO_TOP_SVG_DARK,
-  LOGO_TOP_SVG_LIGHT,
+  LOGO_SRC_DARK,
+  LOGO_SRC_LIGHT,
   resolveBrandColorScheme,
 } from '@/layouts/full/shared/logo/Logo';
 
@@ -16,7 +16,7 @@ const HEIGHTS = { sm: 36, md: 40, lg: 48 } as const;
 export function Logo({ colorScheme, className = '', size = 'md' }: LogoProps) {
   const h = HEIGHTS[size];
   const scheme = resolveBrandColorScheme({ colorScheme });
-  const src = scheme === 'dark' ? LOGO_TOP_SVG_DARK : LOGO_TOP_SVG_LIGHT;
+  const src = scheme === 'dark' ? LOGO_SRC_DARK : LOGO_SRC_LIGHT;
 
   return (
     <div className={`inline-flex items-center ${className}`} aria-label="Orthodox Metrics">
@@ -40,7 +40,7 @@ export function LogoMark({
   size?: number;
 }) {
   const scheme = resolveBrandColorScheme({ colorScheme });
-  const src = scheme === 'dark' ? LOGO_TOP_SVG_DARK : LOGO_TOP_SVG_LIGHT;
+  const src = scheme === 'dark' ? LOGO_SRC_DARK : LOGO_SRC_LIGHT;
 
   return (
     <div className={`inline-flex items-center ${className}`} aria-label="Orthodox Metrics">

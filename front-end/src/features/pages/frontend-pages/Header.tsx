@@ -2,6 +2,7 @@ import React from 'react';
 import { Box, Typography, Container } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '@mui/material/styles';
+import { BrandLogo } from '@/layouts/full/shared/logo/Logo';
 
 const Header: React.FC = () => {
   const theme = useTheme();
@@ -55,21 +56,9 @@ const Header: React.FC = () => {
           }}
         >
           {/* Logo on the left */}
-          <Box
-            component="img"
-            src="/images/logos/om-logo.png"
-            alt="Orthodox Metrics"
-            sx={{
-              width: { xs: 72, sm: 88, md: 100 },
-              height: { xs: 72, sm: 88, md: 100 },
-              flexShrink: 0,
-              borderRadius: '50%',
-              objectFit: 'cover',
-              boxShadow:
-                theme.palette.mode === 'dark'
-                  ? '0 2px 12px rgba(0,0,0,0.4)'
-                  : '0 2px 10px rgba(0,0,0,0.08)',
-            }}
+          <BrandLogo
+            colorScheme={theme.palette.mode === 'dark' ? 'dark' : 'light'}
+            className="h-[72px] sm:h-[88px] md:h-[100px] w-auto max-w-[min(100%,320px)] object-contain object-left flex-shrink-0"
           />
 
           {/* Text content */}

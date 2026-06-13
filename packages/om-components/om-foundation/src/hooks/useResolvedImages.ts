@@ -18,7 +18,7 @@ const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
  * 
  * Usage:
  *   const { resolved, sources, loading } = useResolvedImages('component:Header', churchId);
- *   const logoUrl = resolved['nav.logo'] || '/images/logos/dark-logo.svg';
+ *   const logoUrl = resolved['nav.logo'] || '/images/logos/dark-logo.png';
  * 
  * Resolution order: church override > global > key not present (use your own default)
  */
