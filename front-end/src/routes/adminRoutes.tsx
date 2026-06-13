@@ -43,7 +43,7 @@ const OnboardingRecordTablesPage = Loadable(lazy(() => import('../features/accou
  */
 export const adminRoutes = [
   // OMAI Bridge — redirect to OMAI Berry with auth token
-  protectedRoute('/admin/omai', <OmaiBridge />, ROLE_STAFF),
+  protectedRoute('/admin/omai', <OmaiBridge />, ROLE_SUPER_ADMIN),
   guardedRoute('/admin/menu-permissions', <MenuPermissions />, ROLE_SUPER_ADMIN),
   protectedRoute('/admin/publishing-guide', <ChurchPublishingGuide />, ['admin', 'super_admin', 'church_admin']),
   guardedRoute('/admin/blog-admin', <BlogAdmin />, ['super_admin', 'church_admin', 'admin']),
