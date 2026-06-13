@@ -22,7 +22,7 @@ const OrthodoxLogin: React.FC = () => {
                 if (user.role === 'priest' && user.church_id) {
                     navigate(`/apps/records/baptism?church_id=${user.church_id}`);
                 } else {
-                    navigate('/task-wheel');
+                    navigate('/om-daily');
                 }
             }, 2000);
         }

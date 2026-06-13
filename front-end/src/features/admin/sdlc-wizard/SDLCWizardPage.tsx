@@ -56,8 +56,8 @@ const MODE_STEPS: Record<string, string[]> = {
 const BCrumb = [
   { to: '/', title: 'Home' },
   { to: '/admin/control-panel', title: 'Control Panel' },
-  { to: '/admin/control-panel/om-daily', title: 'OM Daily' },
-  { to: '/admin/control-panel/om-daily/change-sets', title: 'Change Sets' },
+  { to: '/om-daily', title: 'OM Daily' },
+  { to: '/om-daily/change-sets', title: 'Change Sets' },
   { title: 'SDLC Wizard' },
 ];
 
@@ -361,7 +361,7 @@ const SDLCWizardPage: React.FC = () => {
                 {createdCsId && (
                   <Button
                     variant="contained"
-                    onClick={() => navigate(`/admin/control-panel/om-daily/change-sets/${createdCsId}`)}
+                    onClick={() => navigate(`/om-daily/change-sets/${createdCsId}`)}
                     startIcon={<PackageIcon />}
                   >
                     View {createdCsCode}
@@ -370,13 +370,13 @@ const SDLCWizardPage: React.FC = () => {
                 {advanceCs && advanceCompleted && (
                   <Button
                     variant="contained"
-                    onClick={() => navigate(`/admin/control-panel/om-daily/change-sets/${advanceCs.id}`)}
+                    onClick={() => navigate(`/om-daily/change-sets/${advanceCs.id}`)}
                     startIcon={<PackageIcon />}
                   >
                     View {advanceCs.code}
                   </Button>
                 )}
-                <Button variant="outlined" onClick={() => navigate('/admin/control-panel/om-daily/change-sets')}>
+                <Button variant="outlined" onClick={() => navigate('/om-daily/change-sets')}>
                   Back to Dashboard
                 </Button>
                 <Button variant="outlined" onClick={handleReset}>

@@ -13,6 +13,7 @@ import Loadable from '../layouts/full/shared/loadable/Loadable';
 // Route sub-modules
 import { adminRoutes } from './adminRoutes';
 import { develRoutes } from './develRoutes';
+import { omDailyLegacyRoutes, omDailyRoutes } from './omDailyRoutes';
 import { portalRoute } from './portalRoutes';
 
 // Records Pages
@@ -86,7 +87,6 @@ const OMLearn = Loadable(lazy(() => import('../features/omlearn/OMLearn')));
 const BigBookDynamicRoute = Loadable(lazy(() => import('../features/admin/BigBookDynamicRoute')));
 
 const Gallery = Loadable(lazy(() => import('../features/devel-tools/om-gallery/Gallery')));
-const TaskWheelPage = Loadable(lazy(() => import('../features/task-wheel/TaskWheelPage')));
 const PageImageIndex = Loadable(lazy(() => import('../features/devel-tools/PageImageIndex')));
 const LiturgicalCalendarPage = Loadable(lazy(() => import('../features/liturgical-calendar/LiturgicalCalendarPage')));
 
@@ -224,14 +224,8 @@ const Router = [
     path: '/',
     element: <FullLayout />,
     children: [
-      {
-        path: '/task-wheel',
-        element: (
-          <ProtectedRoute requiredRole={["super_admin"]}>
-            <TaskWheelPage />
-          </ProtectedRoute>
-        )
-      },
+      omDailyRoutes,
+      ...omDailyLegacyRoutes,
       {
         path: '/dashboards/modern',
         exact: true,
@@ -868,8 +862,8 @@ const Router = [
       // Public "Get Started" entry — same Register inquiry wizard.
       // /auth/register stays as an alias for admin-issued registration-token links.
       { path: '/get-started', element: <Register /> },
-      { path: '/landingpage', element: <Navigate to="/task-wheel" replace /> },
-      { path: '/pages/pricing', element: <Navigate to="/task-wheel" replace /> },
+      { path: '/landingpage', element: <Navigate to="/om-daily" replace /> },
+      { path: '/pages/pricing', element: <Navigate to="/om-daily" replace /> },
       { path: '/pages/faq', element: <Navigate to="/faq" replace /> },
       { path: '/frontend-pages/faq', element: <Navigate to="/faq" replace /> },
       { path: '/frontend-pages/homepage', element: <Navigate to="/" replace /> },

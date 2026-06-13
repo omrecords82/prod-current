@@ -339,7 +339,7 @@ export const isPlatformOperator = (user: User | null | undefined): boolean => {
 
 /** Post-login landing path on orthodoxmetrics.com */
 export const getPostLoginPath = (user: User | null | undefined): string => {
-  if (isPlatformOperator(user)) return '/task-wheel';
+  if (isPlatformOperator(user)) return '/om-daily';
   return '/portal';
 };
 

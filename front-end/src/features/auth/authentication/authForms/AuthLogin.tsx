@@ -99,7 +99,7 @@ const AuthLogin = ({ subtitle, subtext }: loginType) => {
         const userData = JSON.parse(localStorage.getItem('auth_user') || '{}');
         const role = userData?.role;
         if (role === 'super_admin' || role === 'admin') {
-          navigate('/task-wheel', { replace: true });
+          navigate('/om-daily', { replace: true });
         } else {
           navigate('/portal', { replace: true });
         }
