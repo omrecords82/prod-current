@@ -3,6 +3,8 @@ import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { PUBLIC_ROUTES } from "@/config/publicRoutes";
 import { CustomizerContext } from "@/context/CustomizerContext";
+import { useLanguage } from "@/context/LanguageContext";
+import { getHeroCarouselLocale } from "./heroCarouselLocales";
 import { ProductEcosystem } from "./ProductEcosystem";
 
 export interface HeroCarouselProps {
@@ -15,30 +17,6 @@ const GS = "#E6C96A";
 const IV = "#F6F1E8";
 const PD = "#2D1B69";
 const PK = "#14093A";
-
-// Slide-specific focus description (left side sub-content)
-const SLIDE_FOCUS = [
-  {
-    badge: "COMPLETE PLATFORM",
-    desc: "From historic sacramental books to digital certificates — one connected Orthodox parish records system.",
-  },
-  {
-    badge: "OCR & DIGITIZATION",
-    desc: "Convert handwritten baptism, marriage, and funeral registers into searchable, structured digital records with intelligent field extraction.",
-  },
-  {
-    badge: "RECORD MANAGEMENT",
-    desc: "Search, filter, review, and audit every sacramental record across all your parishes with full permission controls.",
-  },
-  {
-    badge: "CERTIFICATES & REPORTS",
-    desc: "Generate official Orthodox parish certificates and documentation directly from verified sacramental records.",
-  },
-  {
-    badge: "PARISH OPERATIONS",
-    desc: "Onboard parishes, manage users and roles, view analytics, and oversee multi-parish record operations from one dashboard.",
-  },
-];
 
 // Small three-bar Orthodox cross SVG
 function OrthodoxCross({ px = 14, color = G, opacity = 1 }: { px?: number; color?: string; opacity?: number }) {
@@ -100,22 +78,20 @@ function ByzantineBorder({ isDark, position }: { isDark: boolean; position: "top
   );
 }
 
-// Flow steps indicator (left side bottom)
-const FLOW_STEPS = [
-  { label: "Records",     short: "1" },
-  { label: "Digitization", short: "2" },
-  { label: "Management", short: "3" },
-  { label: "Certificates", short: "4" },
-  { label: "Operations", short: "5" },
-];
-
 export function HeroCarousel({ embedded = false }: HeroCarouselProps) {
+  const { lang } = useLanguage();
+  const locale = getHeroCarouselLocale(lang);
   const { activeMode } = useContext(CustomizerContext);
   const isDark = activeMode === "dark";
   const [activeSlide, setActiveSlide] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
 
-  const advance = useCallback(() => setActiveSlide(s => (s + 1) % SLIDE_FOCUS.length), []);
+  useEffect(() => { setActiveSlide(0); }, [locale.code]);
+
+  const advance = useCallback(
+    () => setActiveSlide(s => (s + 1) % locale.slides.length),
+    [locale.slides.length],
+  );
 
   useEffect(() => {
     if (isPaused) return;
@@ -127,18 +103,18 @@ export function HeroCarousel({ embedded = false }: HeroCarouselProps) {
 
   const textPrimary  = isDark ? IV : PK;
   const textMuted    = isDark ? "rgba(246,241,232,0.5)" : "rgba(14,6,37,0.5)";
-  const textAccent   = isDark ? GS : PD;
-  const panelBg      = isDark ? "rgba(45,27,105,0.35)" : "rgba(246,241,232,0.7)";
-  const panelBorder  = isDark ? "rgba(212,175,55,0.18)" : "rgba(45,27,105,0.12)";
+  const df = locale.displayFont;
+  const bf = locale.bodyFont;
+  const ls = (scale: number) => `${locale.letterSpacingScale * scale}px`;
 
-  const focus = SLIDE_FOCUS[activeSlide];
+  const focus = locale.slides[activeSlide];
 
   return (
     <div
       style={{
         width: "100%", minHeight: embedded ? "min(920px, calc(100vh - 72px))" : "100vh",
         background: bg,
-        fontFamily: "var(--om-font-body)",
+        fontFamily: bf,
         position: "relative", overflow: "hidden",
         display: "flex", flexDirection: "column",
       }}
@@ -185,19 +161,19 @@ export function HeroCarousel({ embedded = false }: HeroCarouselProps) {
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: "28px" }}>
             {[
-              { label: "Platform", to: PUBLIC_ROUTES.TOUR },
-              { label: "Parishes", to: PUBLIC_ROUTES.SAMPLES },
-              { label: "Security", to: PUBLIC_ROUTES.SECURITY },
-              { label: "About", to: PUBLIC_ROUTES.ABOUT },
+              { label: locale.navPlatform, to: PUBLIC_ROUTES.TOUR },
+              { label: locale.navParishes, to: PUBLIC_ROUTES.SAMPLES },
+              { label: locale.navSecurity, to: PUBLIC_ROUTES.SECURITY },
+              { label: locale.navAbout, to: PUBLIC_ROUTES.ABOUT },
             ].map(l => (
-              <Link key={l.label} to={l.to} style={{ fontFamily: "Cinzel, serif", fontSize: "9.5px", letterSpacing: "1.5px", color: textMuted, textDecoration: "none" }}>{l.label}</Link>
+              <Link key={l.label} to={l.to} style={{ fontFamily: df, fontSize: "9.5px", letterSpacing: ls(1.5), color: textMuted, textDecoration: "none" }}>{l.label}</Link>
             ))}
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
             <Link to={PUBLIC_ROUTES.ENROLL} style={{
               background: `linear-gradient(135deg, ${G}, ${GS})`, borderRadius: "5px", padding: "7px 16px",
-              fontFamily: "Cinzel, serif", fontSize: "9px", letterSpacing: "1.5px", color: PK, fontWeight: 700, textDecoration: "none",
-            }}>ENROLL YOUR PARISH</Link>
+              fontFamily: df, fontSize: "9px", letterSpacing: ls(1.5), color: PK, fontWeight: 700, textDecoration: "none",
+            }}>{locale.primaryCta}</Link>
           </div>
         </div>
       )}
@@ -214,30 +190,31 @@ export function HeroCarousel({ embedded = false }: HeroCarouselProps) {
           <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
             <OrthodoxCross px={12} color={G} opacity={0.7} />
             <span style={{
-              fontFamily: "Cinzel, serif", fontSize: "10px", letterSpacing: "2.5px",
+              fontFamily: df, fontSize: "10px", letterSpacing: ls(2.5),
               color: isDark ? "rgba(212,175,55,0.65)" : "rgba(45,27,105,0.55)",
-            }}>WELCOME TO ORTHODOX METRICS</span>
+            }}>{locale.welcomeEyebrow}</span>
           </div>
 
           {/* Main headline — STATIC */}
           <div>
             <h1 style={{
-              fontFamily: "Cinzel, serif",
+              fontFamily: df,
               fontSize: "clamp(1.8rem, 3vw, 2.9rem)",
               fontWeight: 700, lineHeight: 1.15, margin: 0,
               color: textPrimary,
             }}>
-              The Complete Parish<br />
-              Records Platform
+              {locale.mainHeadline.map((line, i) => (
+                <span key={i}>{i > 0 && <br />}{line}</span>
+              ))}
             </h1>
             <h2 style={{
-              fontFamily: "Cinzel, serif",
+              fontFamily: df,
               fontSize: "clamp(1.1rem, 1.8vw, 1.7rem)",
               fontWeight: 400, lineHeight: 1.4, margin: "8px 0 0",
               color: G,
-              letterSpacing: "1px",
+              letterSpacing: ls(1),
             }}>
-              for Orthodox Churches
+              {locale.goldSubheadline}
             </h2>
           </div>
 
@@ -250,21 +227,19 @@ export function HeroCarousel({ embedded = false }: HeroCarouselProps) {
 
           {/* Supporting text — STATIC */}
           <p style={{
-            fontFamily: "var(--om-font-body)",
+            fontFamily: bf,
             fontSize: "clamp(1rem, 1.3vw, 1.15rem)",
             lineHeight: 1.75, margin: 0,
             color: textMuted,
             maxWidth: "500px",
           }}>
-            Digitize, preserve, search, manage, and generate official documents
-            from baptism, marriage, and funeral records through one secure
-            Orthodox parish platform.
+            {locale.bodyText}
           </p>
 
           {/* Slide-specific focus chip — ANIMATES */}
           <AnimatePresence mode="wait">
             <motion.div
-              key={activeSlide}
+              key={`${locale.code}-${activeSlide}`}
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -8 }}
@@ -282,12 +257,12 @@ export function HeroCarousel({ embedded = false }: HeroCarouselProps) {
                 background: `rgba(212,175,55,0.15)`,
                 border: `1px solid rgba(212,175,55,0.4)`,
                 borderRadius: "4px", padding: "3px 8px",
-                fontFamily: "Cinzel, serif", fontSize: "8px",
-                letterSpacing: "1.5px", color: G, flexShrink: 0,
+                fontFamily: df, fontSize: "8px",
+                letterSpacing: ls(1.5), color: G, flexShrink: 0,
                 alignSelf: "flex-start", marginTop: "1px",
               }}>{focus.badge}</div>
               <p style={{
-                fontFamily: "var(--om-font-body)", fontSize: "13px",
+                fontFamily: bf, fontSize: "13px",
                 lineHeight: 1.6, margin: 0, color: textMuted, fontStyle: "italic",
               }}>{focus.desc}</p>
             </motion.div>
@@ -300,14 +275,14 @@ export function HeroCarousel({ embedded = false }: HeroCarouselProps) {
               style={{
                 background: `linear-gradient(135deg, ${G} 0%, ${GS} 100%)`,
                 border: "none", borderRadius: "6px",
-                color: PK, fontFamily: "Cinzel, serif",
-                fontSize: "10.5px", fontWeight: 700, letterSpacing: "1.5px",
+                color: PK, fontFamily: df,
+                fontSize: "10.5px", fontWeight: 700, letterSpacing: ls(1.5),
                 padding: "13px 28px", cursor: "pointer",
                 boxShadow: "0 4px 20px rgba(212,175,55,0.4)",
                 textDecoration: "none", display: "inline-block",
               }}
             >
-              ENROLL YOUR PARISH
+              {locale.primaryCta}
             </Link>
             <Link
               to={PUBLIC_ROUTES.TOUR}
@@ -315,14 +290,14 @@ export function HeroCarousel({ embedded = false }: HeroCarouselProps) {
                 background: "transparent",
                 border: `1px solid rgba(212,175,55,${isDark ? 0.4 : 0.45})`,
                 borderRadius: "6px", color: G,
-                fontFamily: "Cinzel, serif",
-                fontSize: "10.5px", letterSpacing: "1.5px",
+                fontFamily: df,
+                fontSize: "10.5px", letterSpacing: ls(1.5),
                 padding: "13px 28px", cursor: "pointer",
                 backdropFilter: "blur(6px)",
                 textDecoration: "none", display: "inline-block",
               }}
             >
-              EXPLORE THE PLATFORM
+              {locale.secondaryCta}
             </Link>
           </div>
 
@@ -331,28 +306,24 @@ export function HeroCarousel({ embedded = false }: HeroCarouselProps) {
             display: "flex", flexDirection: "column", gap: "6px",
             paddingTop: "4px",
           }}>
-            {[
-              { icon: "✦", text: "Baptism • Marriage • Funeral Records" },
-              { icon: "✦", text: "Secure Parish Record Preservation" },
-              { icon: "✦", text: "Built for Orthodox Churches" },
-            ].map((item, i) => (
+            {locale.bullets.map((text, i) => (
               <div key={i} style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                <span style={{ fontSize: "7px", color: G, opacity: 0.7 }}>{item.icon}</span>
+                <span style={{ fontSize: "7px", color: G, opacity: 0.7 }}>✦</span>
                 <span style={{
-                  fontFamily: "var(--om-font-body)", fontSize: "11px",
+                  fontFamily: bf, fontSize: "11px",
                   color: textMuted, letterSpacing: "0.2px",
-                }}>{item.text}</span>
+                }}>{text}</span>
               </div>
             ))}
           </div>
 
           {/* Slide dots + progress */}
           <div style={{ display: "flex", alignItems: "center", gap: "10px", paddingTop: "4px" }}>
-            {FLOW_STEPS.map((step, i) => (
+            {locale.slides.map((step, i) => (
               <button
                 key={i}
                 onClick={() => setActiveSlide(i)}
-                title={step.label}
+                title={step.badge}
                 style={{
                   width: i === activeSlide ? "28px" : "7px",
                   height: "7px",
@@ -364,10 +335,10 @@ export function HeroCarousel({ embedded = false }: HeroCarouselProps) {
               />
             ))}
             <span style={{
-              fontFamily: "Cinzel, serif", fontSize: "9px",
-              color: textMuted, letterSpacing: "1px", marginLeft: "4px",
+              fontFamily: df, fontSize: "9px",
+              color: textMuted, letterSpacing: ls(1), marginLeft: "4px",
             }}>
-              {String(activeSlide + 1).padStart(2, "0")} / {String(SLIDE_FOCUS.length).padStart(2, "0")}
+              {String(activeSlide + 1).padStart(2, "0")} / {String(locale.slides.length).padStart(2, "0")}
             </span>
           </div>
         </div>
@@ -386,9 +357,9 @@ export function HeroCarousel({ embedded = false }: HeroCarouselProps) {
             <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
               <OrthodoxCross px={10} color={G} opacity={0.7} />
               <span style={{
-                fontFamily: "Cinzel, serif", fontSize: "8px",
-                letterSpacing: "1.8px", color: G,
-              }}>PLATFORM ECOSYSTEM</span>
+                fontFamily: df, fontSize: "8px",
+                letterSpacing: ls(1.8), color: G,
+              }}>{locale.ecosystemLabel}</span>
             </div>
           </div>
 
@@ -404,7 +375,7 @@ export function HeroCarousel({ embedded = false }: HeroCarouselProps) {
             onMouseLeave={() => setIsPaused(false)}
           >
             <div className="om-figma-ecosystem-scaler">
-              <ProductEcosystem activeSlide={activeSlide} isDark={isDark} />
+              <ProductEcosystem activeSlide={activeSlide} isDark={isDark} locale={locale} />
             </div>
           </div>
 
@@ -419,7 +390,7 @@ export function HeroCarousel({ embedded = false }: HeroCarouselProps) {
 
       {/* Bottom progress bar */}
       <motion.div
-        key={activeSlide}
+        key={`${locale.code}-${activeSlide}-bar`}
         style={{
           position: "absolute", bottom: "6px", left: "48px",
           height: "2px", background: G, borderRadius: "1px",
