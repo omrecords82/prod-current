@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { PUBLIC_ROUTES } from "@/config/publicRoutes";
+import { useEnrollmentCopy } from "../../enrollmentCopy";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
 import { Card, CardContent } from "../ui/card";
@@ -18,19 +19,22 @@ type Props = {
   onStart: () => void;
 };
 
-/** Figma: baptism-small-footer 1 (node 65:24) — sacrament illustrations */
-const SACRAMENT_ILLUSTRATIONS = [
-  { key: "baptism", label: "Baptism Records", width: 233 },
-  { key: "marriage", label: "Marriage Records", width: 233 },
-  { key: "funeral", label: "Funeral Records", width: 292 },
-] as const;
+const FLOW_ICONS = [FileSignature, UploadCloud, Cpu, ClipboardCheck] as const;
 
 const SACRAMENT_ROTATE_MS = 5000;
 const SACRAMENT_VIEWPORT_HEIGHT = 275;
 
 function SacramentIllustrationRotator({
+  sacraments,
+  carouselLabel,
+  slidesLabel,
+  showingLabel,
   onSlideChange,
 }: {
+  sacraments: { key: string; label: string }[];
+  carouselLabel: string;
+  slidesLabel: string;
+  showingLabel: (label: string) => string;
   onSlideChange?: (index: number) => void;
 }) {
   const [activeIndex, setActiveIndex] = useState(0);
@@ -48,13 +52,14 @@ function SacramentIllustrationRotator({
     if (prefersReduced) return;
 
     const id = window.setInterval(() => {
-      setActiveIndex((i) => (i + 1) % SACRAMENT_ILLUSTRATIONS.length);
+      setActiveIndex((i) => (i + 1) % sacraments.length);
     }, SACRAMENT_ROTATE_MS);
 
     return () => window.clearInterval(id);
-  }, [paused]);
+  }, [paused, sacraments.length]);
 
-  const active = SACRAMENT_ILLUSTRATIONS[activeIndex];
+  const active = sacraments[activeIndex];
+  const widths: Record<string, number> = { baptism: 233, marriage: 233, funeral: 292 };
 
   return (
     <div
@@ -62,7 +67,7 @@ function SacramentIllustrationRotator({
       style={{ height: SACRAMENT_VIEWPORT_HEIGHT }}
       role="region"
       aria-roledescription="carousel"
-      aria-label="Sacramental record illustrations"
+      aria-label={carouselLabel}
       aria-live="polite"
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
@@ -71,8 +76,9 @@ function SacramentIllustrationRotator({
         if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setPaused(false);
       }}
     >
-      {SACRAMENT_ILLUSTRATIONS.map(({ key, label, width }, i) => {
+      {sacraments.map(({ key, label }, i) => {
         const isActive = i === activeIndex;
+        const width = widths[key] ?? 233;
         return (
           <div
             key={key}
@@ -102,9 +108,9 @@ function SacramentIllustrationRotator({
           </div>
         );
       })}
-      <p className="sr-only">Now showing: {active.label}</p>
-      <div className="absolute -bottom-8 left-0 right-0 flex justify-center gap-2" role="tablist" aria-label="Sacrament slides">
-        {SACRAMENT_ILLUSTRATIONS.map(({ label }, i) => (
+      <p className="sr-only">{showingLabel(active.label)}</p>
+      <div className="absolute -bottom-8 left-0 right-0 flex justify-center gap-2" role="tablist" aria-label={slidesLabel}>
+        {sacraments.map(({ label }, i) => (
           <button
             key={label}
             type="button"
@@ -126,6 +132,7 @@ function SacramentIllustrationRotator({
 
 export function Landing({ onStart }: Props) {
   const [activeSacrament, setActiveSacrament] = useState(0);
+  const { landing, sacraments, stepLabel } = useEnrollmentCopy();
 
   return (
     <div className="flex-1 w-full bg-background text-foreground flex flex-col">
@@ -141,17 +148,15 @@ export function Landing({ onStart }: Props) {
           <div className="space-y-7">
             <div className="flex items-center gap-2">
               <Badge variant="outline" className="border-[#d4af37]/40 text-[#2d1b4e] dark:text-[#d4af37]">
-                For Orthodox Parishes
+                {landing.badge}
               </Badge>
             </div>
             <h1 className="font-om-display text-4xl lg:text-5xl leading-[1.1] text-[var(--om-text-primary)]">
-              Digitize and manage your{" "}
-              <span className="text-[var(--om-gold)]">Orthodox church records.</span>
+              {landing.headlinePrefix}{" "}
+              <span className="text-[var(--om-gold)]">{landing.headlineAccent}</span>
             </h1>
             <p className="font-om-body text-lg text-muted-foreground max-w-xl">
-              Orthodox Metrics helps parishes safely organize baptism, marriage, and funeral
-              records — preserving the work of generations in a calm, secure workspace built for
-              the Church.
+              {landing.body}
             </p>
             <div className="flex flex-wrap gap-3">
               <Button
@@ -159,60 +164,38 @@ export function Landing({ onStart }: Props) {
                 onClick={onStart}
                 className="bg-[var(--om-gold)] hover:bg-[var(--om-gold-hover)] text-[var(--om-text-primary)] font-medium px-8 py-4 rounded-lg text-[16px]"
               >
-                Start Church Setup <ArrowRight className="ml-2 h-4 w-4" />
+                {landing.ctaStart} <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
               <Button size="lg" variant="outline" asChild className="px-8 py-4 rounded-lg text-[16px]">
-                <Link to={PUBLIC_ROUTES.CONTACT}>Contact Orthodox Metrics</Link>
+                <Link to={PUBLIC_ROUTES.CONTACT}>{landing.ctaContact}</Link>
               </Button>
             </div>
             <div className="flex flex-wrap gap-x-8 gap-y-3 text-sm text-muted-foreground pt-2">
-              <TrustItem icon={ShieldCheck} text="Reviewed by Orthodox Metrics staff" />
-              <TrustItem icon={Lock} text="Encrypted records storage" />
+              <TrustItem icon={ShieldCheck} text={landing.trustReviewed} />
+              <TrustItem icon={Lock} text={landing.trustEncrypted} />
             </div>
           </div>
 
           <Card className="border-[#d4af37]/30 shadow-xl">
             <CardContent className="p-6 space-y-5">
               <div className="text-sm uppercase tracking-[0.18em] text-muted-foreground">
-                How onboarding works
+                {landing.onboardingTitle}
               </div>
-              {[
-                {
-                  n: 1,
-                  icon: FileSignature,
-                  t: "Sign up your parish",
-                  d: "Tell us about your church, jurisdiction, and contact.",
-                },
-                {
-                  n: 2,
-                  icon: UploadCloud,
-                  t: "Upload your records",
-                  d: "Scanned books, PDFs, or images — in batches.",
-                },
-                {
-                  n: 3,
-                  icon: Cpu,
-                  t: "We process them",
-                  d: "Orthodox Metrics staff review and structure each batch.",
-                },
-                {
-                  n: 4,
-                  icon: ClipboardCheck,
-                  t: "Review results",
-                  d: "Search, export, or request corrections from your dashboard.",
-                },
-              ].map((step) => (
-                <div key={step.n} className="flex gap-4">
-                  <div className="shrink-0 h-9 w-9 rounded-md bg-[rgba(212,175,55,0.12)] dark:bg-[#1e2a3a] text-[#2d1b4e] dark:text-[#d4af37] flex items-center justify-center">
-                    <step.icon className="h-4 w-4" />
+              {landing.landingSteps.map((step, idx) => {
+                const Icon = FLOW_ICONS[idx];
+                return (
+                  <div key={step.n} className="flex gap-4">
+                    <div className="shrink-0 h-9 w-9 rounded-md bg-[rgba(212,175,55,0.12)] dark:bg-[#1e2a3a] text-[#2d1b4e] dark:text-[#d4af37] flex items-center justify-center">
+                      <Icon className="h-4 w-4" />
+                    </div>
+                    <div>
+                      <div className="text-sm text-muted-foreground">{stepLabel(step.n)}</div>
+                      <div>{step.title}</div>
+                      <div className="text-sm text-muted-foreground">{step.desc}</div>
+                    </div>
                   </div>
-                  <div>
-                    <div className="text-sm text-muted-foreground">Step {step.n}</div>
-                    <div>{step.t}</div>
-                    <div className="text-sm text-muted-foreground">{step.d}</div>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </CardContent>
           </Card>
         </div>
@@ -220,25 +203,26 @@ export function Landing({ onStart }: Props) {
 
       <section className="border-t border-border om-section-base">
         <div className="max-w-6xl mx-auto px-6 py-16 pb-20 grid lg:grid-cols-[345px_1fr] gap-12 lg:gap-16 items-start">
-          <SacramentIllustrationRotator onSlideChange={setActiveSacrament} />
+          <SacramentIllustrationRotator
+            sacraments={sacraments}
+            carouselLabel={landing.carouselLabel}
+            slidesLabel={landing.carouselSlidesLabel}
+            showingLabel={landing.carouselShowing}
+            onSlideChange={setActiveSacrament}
+          />
           <div className="space-y-8 pt-4 lg:pt-8 min-h-[275px]">
-            {SACRAMENT_ILLUSTRATIONS.map(({ key, label }, i) => (
+            {sacraments.map((item, i) => (
               <div
-                key={key}
+                key={item.key}
                 className={`transition-opacity duration-500 ${
                   i === activeSacrament ? "opacity-100" : "opacity-40"
                 }`}
               >
                 <h3 className="font-om-display text-xl text-[var(--om-text-primary)] mb-1">
-                  {label}
+                  {item.label}
                 </h3>
                 <p className="font-om-body text-[15px] text-muted-foreground leading-relaxed">
-                  {key === "baptism" &&
-                    "Digitize baptism registers with sponsors, clergy, dates, and full search across your parish history."}
-                  {key === "marriage" &&
-                    "Preserve marriage records including witnesses, dispensations, and crowning details in one secure workspace."}
-                  {key === "funeral" &&
-                    "Organize funeral and memorial registers with clergy, burial details, and decades of parish history."}
+                  {item.desc}
                 </p>
               </div>
             ))}
@@ -249,7 +233,7 @@ export function Landing({ onStart }: Props) {
   );
 }
 
-function TrustItem({ icon: Icon, text }: { icon: any; text: string }) {
+function TrustItem({ icon: Icon, text }: { icon: typeof ShieldCheck; text: string }) {
   return (
     <div className="flex items-center gap-2">
       <Icon className="h-4 w-4 text-[#2d1b4e] dark:text-[#d4af37]" />
@@ -257,4 +241,3 @@ function TrustItem({ icon: Icon, text }: { icon: any; text: string }) {
     </div>
   );
 }
-

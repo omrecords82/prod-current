@@ -24,6 +24,12 @@ import { CustomizerContext } from "@/context/CustomizerContext";
 import type { ParishGeoJSON } from "@/features/devel-tools/us-church-map/ParishDetailMap";
 import { apiClient } from "@/api/utils/axiosInstance";
 import { inferLocationFields, reconcileInferredLocation } from "../../lib/inferLocationFields";
+import {
+  useEnrollmentCopy,
+  validateContactFields,
+  validateModulesFields,
+  validateParishFields,
+} from "../../enrollmentCopy";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
 import { Card, CardContent } from "../ui/card";
@@ -36,55 +42,11 @@ import {
     SelectTrigger,
     SelectValue,
 } from "../ui/select";
-const steps = [
-  { key: "find-parish", label: "Find Your Parish", n: 1 },
-  { key: "contact", label: "Your Contact", n: 2 },
-  { key: "parish", label: "Parish Info", n: 3 },
-  { key: "location", label: "Location", n: 4 },
-  { key: "modules", label: "Record Modules", n: 5 },
-] as const;
-
-type WizardStepKey = (typeof steps)[number]["key"];
+type WizardStepKey = "find-parish" | "contact" | "parish" | "location" | "modules";
 type StepKey = WizardStepKey | "confirm";
-
-const IMPORT_METHOD_OPTIONS = [
-  {
-    value: "om_full_service",
-    label: "Have Orthodox Metrics handle everything",
-    description:
-      "Our team manages digitization, OCR, and onboarding — you focus on approving records.",
-  },
-  {
-    value: "self_service",
-    label: "Self Service",
-    description:
-      "Your parish handles scanning records and uploading them through the platform.",
-  },
-] as const;
-
-const START_TIMELINE_OPTIONS = [
-  { value: "asap", label: "As Soon As Possible" },
-  { value: "few_weeks", label: "A few weeks from now" },
-  { value: "month_plus", label: "A month or more before I'm ready" },
-] as const;
-
-type ImportMethod = (typeof IMPORT_METHOD_OPTIONS)[number]["value"] | "";
-type StartTimeline = (typeof START_TIMELINE_OPTIONS)[number]["value"] | "";
-
-const MODULE_LABELS: Record<string, string> = {
-  baptism: "Baptism",
-  marriage: "Marriage",
-  funeral: "Funeral",
-  custom: "Custom Records",
-};
-
-function formatImportMethod(value: ImportMethod): string {
-  return IMPORT_METHOD_OPTIONS.find((o) => o.value === value)?.label ?? value;
-}
-
-function formatStartTimeline(value: StartTimeline): string {
-  return START_TIMELINE_OPTIONS.find((o) => o.value === value)?.label ?? value;
-}
+type ImportMethod = "om_full_service" | "self_service" | "";
+type StartTimeline = "asap" | "few_weeks" | "month_plus" | "";
+type EnrollmentCopy = ReturnType<typeof useEnrollmentCopy>;
 
 type Props = {
   onCancel: () => void;
@@ -114,48 +76,21 @@ const STATE_NAMES: Record<string, string> = {
 };
 const STATE_CODES = Object.keys(STATE_NAMES);
 
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
 const EnrollmentParishMap = lazy(() =>
   import("@/features/devel-tools/us-church-map/ParishDetailMap").then((m) => ({
     default: m.EnrollmentParishMap,
   }))
 );
 
-function getContactErrors(p: any): Record<string, string> {
-  const e: Record<string, string> = {};
-  if (!String(p.firstName ?? "").trim()) e.firstName = "First name is required";
-  if (!String(p.lastName ?? "").trim()) e.lastName = "Last name is required";
-  if (!String(p.email ?? "").trim()) e.email = "Email is required";
-  else if (!EMAIL_RE.test(String(p.email).trim())) e.email = "Enter a valid email address";
-  return e;
-}
-
-function getParishErrors(p: any): Record<string, string> {
-  const e: Record<string, string> = {};
-  if (!String(p.churchName ?? "").trim()) e.churchName = "Church name is required";
-  return e;
-}
-
-function getModulesStepErrors(
-  modules: Record<string, boolean>,
-  importMethod: ImportMethod,
-  startTimeline: StartTimeline,
-): Record<string, string> {
-  const e: Record<string, string> = {};
-  if (!Object.values(modules).some(Boolean)) {
-    e.modules = "Select at least one record module.";
-  }
-  if (!importMethod) {
-    e.importMethod = "Choose how you want to import your records.";
-  }
-  if (!startTimeline) {
-    e.startTimeline = "Let us know when you hope to get started.";
-  }
-  return e;
-}
+const MODULE_ICONS: Record<string, typeof Droplets> = {
+  baptism: Droplets,
+  marriage: HeartHandshake,
+  funeral: Flame,
+  custom: FileText,
+};
 
 export function Onboarding({ onCancel, onComplete }: Props) {
+  const copy = useEnrollmentCopy();
   const [step, setStep] = useState<StepKey>("find-parish");
 
   // Frame 1: parish location
@@ -250,15 +185,15 @@ export function Onboarding({ onCancel, onComplete }: Props) {
   const markLocationUserEdited = (field: "country" | "timezone" | "zip") =>
     setLocSource((s) => ({ ...s, [field]: "user" }));
 
-  const stepIndex = steps.findIndex((s) => s.key === step);
+  const stepIndex = copy.wizardSteps.findIndex((s) => s.key === step);
 
   const findParishComplete =
     parish.selected !== null ||
     (parish.notListed && parish.manualName.trim().length > 0);
 
-  const contactErrors = getContactErrors(profile);
-  const parishErrors = getParishErrors(profile);
-  const modulesErrors = getModulesStepErrors(modules, importMethod, startTimeline);
+  const contactErrors = validateContactFields(profile, copy.t);
+  const parishErrors = validateParishFields(profile, copy.t);
+  const modulesErrors = validateModulesFields(modules, importMethod, startTimeline, copy.t);
   const contactComplete = Object.keys(contactErrors).length === 0;
   const parishComplete = Object.keys(parishErrors).length === 0;
   const modulesComplete = Object.keys(modulesErrors).length === 0;
@@ -303,7 +238,7 @@ export function Onboarding({ onCancel, onComplete }: Props) {
         secondAdmin: false,
       });
       if (!data.success) {
-        setSubmitError(data.message || "Submission failed. Please try again.");
+        setSubmitError(data.message || copy.errors.submitFailed);
         return;
       }
       setConfirmation({
@@ -315,7 +250,7 @@ export function Onboarding({ onCancel, onComplete }: Props) {
       const msg =
         err instanceof Error && err.message
           ? err.message
-          : "Network error. Please try again later.";
+          : copy.errors.network;
       setSubmitError(msg);
     } finally {
       setSubmitting(false);
@@ -353,9 +288,9 @@ export function Onboarding({ onCancel, onComplete }: Props) {
         }));
       }
     }
-    if (stepIndex < steps.length - 1) {
+    if (stepIndex < copy.wizardSteps.length - 1) {
       setTriedNext(false);
-      setStep(steps[stepIndex + 1].key);
+      setStep(copy.wizardSteps[stepIndex + 1].key);
     }
   }
   function goBack() {
@@ -364,13 +299,13 @@ export function Onboarding({ onCancel, onComplete }: Props) {
       setStep("modules");
       return;
     }
-    if (stepIndex > 0) setStep(steps[stepIndex - 1].key);
+    if (stepIndex > 0) setStep(copy.wizardSteps[stepIndex - 1].key);
     else onCancel();
   }
 
   const selectedModules = Object.entries(modules)
     .filter(([, v]) => v)
-    .map(([k]) => MODULE_LABELS[k] ?? k);
+    .map(([k]) => copy.moduleLabels[k] ?? k);
   const showWizardSteps = step !== "confirm";
 
   const stepButtonClass = (done: boolean, active: boolean) =>
@@ -391,13 +326,14 @@ export function Onboarding({ onCancel, onComplete }: Props) {
     <div className="flex-1 w-full bg-background text-foreground flex flex-col om-section-base">
       <div className="max-w-7xl mx-auto px-6 pt-4 w-full flex justify-end shrink-0">
         <Button variant="ghost" onClick={onCancel} className="font-om-body">
-          <X className="h-4 w-4 mr-2" /> Cancel
+          <X className="h-4 w-4 mr-2" /> {copy.nav.cancel}
         </Button>
       </div>
 
       <div className="flex-1 max-w-7xl mx-auto px-6 py-4 lg:py-8 w-full">
         {step === "confirm" ? (
           <ConfirmStep
+            copy={copy}
             profile={profile}
             modules={selectedModules}
             importMethod={importMethod}
@@ -410,10 +346,10 @@ export function Onboarding({ onCancel, onComplete }: Props) {
         {showWizardSteps && (
         <nav
           className="lg:hidden -mx-6 px-4 mb-6 overflow-x-auto overscroll-x-contain"
-          aria-label="Enrollment progress"
+          aria-label={copy.wizard.progressAria}
         >
           <ol className="flex gap-2 min-w-max pb-1">
-            {steps.map((s, i) => {
+            {copy.wizardSteps.map((s, i) => {
               const done = i < stepIndex;
               const active = i === stepIndex;
               return (
@@ -445,10 +381,10 @@ export function Onboarding({ onCancel, onComplete }: Props) {
         {showWizardSteps && (
         <aside className="hidden lg:block">
           <div className="text-xs uppercase tracking-[0.18em] text-muted-foreground mb-1">
-            Onboarding Wizard
+            {copy.wizard.title}
           </div>
           <p className="font-['Inter'] text-[13px] text-muted-foreground mb-3">
-            Step {stepIndex + 1} of {steps.length} · about 5 minutes
+            {copy.wizardProgress(stepIndex + 1, copy.wizardSteps.length)} · {copy.wizard.duration}
           </p>
           <p className="font-['Inter'] text-[12px] text-muted-foreground mb-3">
             <a href="mailto:info@orthodoxmetrics.com" className="text-[#2d1b4e] dark:text-[#d4af37] no-underline hover:underline">
@@ -456,7 +392,7 @@ export function Onboarding({ onCancel, onComplete }: Props) {
             </a>
           </p>
           <ol className="space-y-1">
-            {steps.map((s, i) => {
+            {copy.wizardSteps.map((s, i) => {
               const done = i < stepIndex;
               const active = i === stepIndex;
               return (
@@ -472,7 +408,7 @@ export function Onboarding({ onCancel, onComplete }: Props) {
                       {done ? <Check className="h-3.5 w-3.5" /> : s.n}
                     </span>
                     <div>
-                      <div className="text-xs opacity-70">Step {s.n}</div>
+                      <div className="text-xs opacity-70">{copy.stepLabel(s.n)}</div>
                       <div className="text-sm">{s.label}</div>
                     </div>
                   </button>
@@ -485,16 +421,17 @@ export function Onboarding({ onCancel, onComplete }: Props) {
 
         <div className="space-y-6 min-w-0">
           {step === "find-parish" && (
-            <FindParishStep parish={parish} setParish={setParish} />
+            <FindParishStep copy={copy} parish={parish} setParish={setParish} />
           )}
           {step === "contact" && (
-            <ContactStep profile={profile} setProfile={setProfile} errors={contactErrors} showErrors={triedNext} />
+            <ContactStep copy={copy} profile={profile} setProfile={setProfile} errors={contactErrors} showErrors={triedNext} />
           )}
           {step === "parish" && (
-            <ParishInfoStep profile={profile} setProfile={setProfile} errors={parishErrors} showErrors={triedNext} />
+            <ParishInfoStep copy={copy} profile={profile} setProfile={setProfile} errors={parishErrors} showErrors={triedNext} />
           )}
           {step === "location" && (
             <LocationStep
+              copy={copy}
               profile={profile}
               setProfile={setProfile}
               locSource={locSource}
@@ -503,6 +440,7 @@ export function Onboarding({ onCancel, onComplete }: Props) {
           )}
           {step === "modules" && (
             <ModulesStep
+              copy={copy}
               modules={modules}
               setModules={setModules}
               importMethod={importMethod}
@@ -534,7 +472,7 @@ export function Onboarding({ onCancel, onComplete }: Props) {
               <div className="flex items-start gap-2 p-3 rounded-md border border-destructive/40 bg-destructive/5 text-sm text-destructive">
                 <CircleAlert className="h-4 w-4 mt-0.5 shrink-0" />
                 <div>
-                  <div>Please complete the required fields highlighted above before continuing.</div>
+                  <div>{copy.wizard.completeRequired}</div>
                   {step === "modules" && !modulesComplete && (
                     <ul className="mt-2 list-disc pl-4 space-y-0.5">
                       {Object.values(modulesErrors).map((msg) => (
@@ -549,12 +487,12 @@ export function Onboarding({ onCancel, onComplete }: Props) {
           {step !== "confirm" && step !== "modules" && (
             <div className="flex items-center justify-between pt-2">
               <Button variant="ghost" onClick={goBack}>
-                <ArrowLeft className="h-4 w-4 mr-2" /> Back
+                <ArrowLeft className="h-4 w-4 mr-2" /> {copy.nav.back}
               </Button>
               <div className="flex items-center gap-2">
                 {step === "location" && (
                   <Button variant="outline" onClick={goNext}>
-                    Skip for now
+                    {copy.nav.skip}
                   </Button>
                 )}
                 <Button
@@ -562,7 +500,7 @@ export function Onboarding({ onCancel, onComplete }: Props) {
                   disabled={!canProceed || submitting}
                   className="bg-[#d4af37] hover:bg-[#c29d2f] text-[#2d1b4e] font-medium px-6"
                 >
-                  {step === "location" ? "Continue" : "Next"}{" "}
+                  {step === "location" ? copy.nav.continue : copy.nav.next}{" "}
                   <ArrowRight className="h-4 w-4 ml-2" />
                 </Button>
               </div>
@@ -581,19 +519,22 @@ function SectionCard({
   number,
   title,
   description,
+  stepLabelText,
   children,
 }: {
   number: number;
   title: string;
   description?: string;
+  stepLabelText?: string;
   children: React.ReactNode;
 }) {
+  const copy = useEnrollmentCopy();
   return (
     <Card className="border-border">
       <CardContent className="p-6 space-y-6">
         <div className="space-y-1 border-b border-border pb-4">
           <div className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
-            Step {number}
+            {stepLabelText ?? copy.stepLabel(number)}
           </div>
           <h2 className="font-['Georgia'] text-xl text-[#2d1b4e] dark:text-[#d4af37]" style={{ fontWeight: 400 }}>{title}</h2>
           {description && <p className="text-sm text-muted-foreground">{description}</p>}
@@ -638,9 +579,11 @@ function Field({
 }
 
 function FindParishStep({
+  copy,
   parish,
   setParish,
 }: {
+  copy: EnrollmentCopy;
   parish: {
     state: string;
     query: string;
@@ -744,11 +687,12 @@ function FindParishStep({
   return (
     <SectionCard
       number={1}
-      title="Find Your Parish"
-      description="Select your state, then pick your parish on the map or search by name. We match you to our CRM directory and pre-fill your profile."
+      title={copy.findParish.title}
+      description={copy.findParish.description}
+      stepLabelText={copy.stepLabel(1)}
     >
       <div className="space-y-5">
-        <Field label="State" required>
+        <Field label={copy.location.state} required>
           <Select
             value={state}
             onValueChange={(v) =>
@@ -756,7 +700,7 @@ function FindParishStep({
             }
           >
             <SelectTrigger>
-              <SelectValue placeholder="Select your state…" />
+              <SelectValue placeholder={copy.findParish.statePlaceholder} />
             </SelectTrigger>
             <SelectContent>
               {STATE_CODES.map((code) => (
@@ -771,22 +715,22 @@ function FindParishStep({
         {state && !notListed && (
           <div className="space-y-2">
             <div className="text-sm font-medium">
-              Parish map
+              {copy.findParish.mapLabel}
               <span className="text-destructive ml-0.5">*</span>
             </div>
             <p className="text-xs text-muted-foreground">
-              Zoom and tap a pin, or search by name below. Pins use our CRM parish directory.
+              {copy.findParish.mapHint}
             </p>
             <div className="rounded-md border border-border overflow-hidden bg-muted/30">
               {geoLoading ? (
                 <div className="flex items-center justify-center gap-2 h-[340px] text-sm text-muted-foreground">
-                  <Loader2 className="h-4 w-4 animate-spin" /> Loading map…
+                  <Loader2 className="h-4 w-4 animate-spin" /> {copy.findParish.loadingMap}
                 </div>
               ) : geoData ? (
                 <Suspense
                   fallback={
                     <div className="flex items-center justify-center h-[340px] text-sm text-muted-foreground">
-                      <Loader2 className="h-4 w-4 animate-spin mr-2" /> Loading map…
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" /> {copy.findParish.loadingMap}
                     </div>
                   }
                 >
@@ -801,7 +745,7 @@ function FindParishStep({
                 </Suspense>
               ) : (
                 <div className="p-4 text-sm text-muted-foreground">
-                  Map unavailable. Use parish search below.
+                  {copy.findParish.mapUnavailable}
                 </div>
               )}
             </div>
@@ -810,16 +754,16 @@ function FindParishStep({
 
         {state && !notListed && (
           <Field
-            label="Parish name"
+            label={copy.findParish.parishName}
             required
-            hint="Start typing to search Orthodox parishes in your state."
+            hint={copy.findParish.parishHint}
           >
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
               <Input
                 value={selected ? selected.name : query}
                 onChange={(e) => update({ query: e.target.value, selected: null })}
-                placeholder="e.g. Holy Trinity"
+                placeholder={copy.findParish.parishPlaceholder}
                 className="pl-9"
               />
               {searching && (
@@ -831,8 +775,7 @@ function FindParishStep({
               <div className="mt-2 rounded-md border border-border overflow-hidden">
                 {results.length === 0 && !searching ? (
                   <div className="px-3 py-3 text-sm text-muted-foreground">
-                    No parishes found. Try a different spelling or use{" "}
-                    <em>I don't see my church</em> below.
+                    {copy.findParish.noResults}
                   </div>
                 ) : (
                   <ul className="max-h-64 overflow-y-auto divide-y divide-border">
@@ -871,7 +814,7 @@ function FindParishStep({
               size="sm"
               onClick={() => update({ selected: null, query: "" })}
             >
-              Change
+              {copy.findParish.selected}
             </Button>
           </div>
         )}
@@ -887,19 +830,19 @@ function FindParishStep({
               }
             >
               <Building2 className="h-3.5 w-3.5 mr-2" />
-              {notListed ? "Cancel — search the list" : "I don't see my church"}
+              {notListed ? copy.findParish.cancelSearch : copy.findParish.notListed}
             </Button>
             {notListed && (
               <div className="mt-3">
                 <Field
-                  label="Enter your parish name"
+                  label={copy.findParish.manualLabel}
                   required
-                  hint="We'll add it to the directory after we verify with you."
+                  hint={copy.findParish.manualHint}
                 >
                   <Input
                     value={manualName}
                     onChange={(e) => update({ manualName: e.target.value })}
-                    placeholder="e.g. SS Peter & Paul Orthodox Church"
+                    placeholder={copy.findParish.manualPlaceholder}
                   />
                 </Field>
               </div>
@@ -911,8 +854,7 @@ function FindParishStep({
       <div className="flex items-start gap-3 p-4 rounded-lg bg-[rgba(212,175,55,0.08)] dark:bg-[rgba(30,42,58,0.8)] border border-[#d4af37]/25 dark:border-white/8 text-sm">
         <MapPin className="h-4 w-4 mt-0.5 text-[#2d1b4e] dark:text-[#d4af37] shrink-0" />
         <div>
-          Parishes shown on the map come from the Orthodox Metrics CRM directory.
-          If yours is not listed, choose <em>I don&apos;t see my church</em> and we will verify it with you.
+          {copy.findParish.crmTip}
         </div>
       </div>
     </SectionCard>
@@ -920,6 +862,7 @@ function FindParishStep({
 }
 
 function ContactStep({
+  copy,
   profile,
   setProfile,
   errors = {},
@@ -931,18 +874,19 @@ function ContactStep({
   return (
     <SectionCard
       number={2}
-      title="Your Contact"
-      description="Who should we reach about this enrollment? Just the basics — we will ask for parish details next."
+      title={copy.contact.title}
+      description={copy.contact.description}
+      stepLabelText={copy.stepLabel(2)}
     >
       <div className="grid md:grid-cols-2 gap-5 max-w-xl">
-        <Field label="First name" required error={err("firstName")}>
+        <Field label={copy.contact.firstName} required error={err("firstName")}>
           <Input value={profile.firstName} onChange={(e) => set("firstName", e.target.value)} autoComplete="given-name" />
         </Field>
-        <Field label="Last name" required error={err("lastName")}>
+        <Field label={copy.contact.lastName} required error={err("lastName")}>
           <Input value={profile.lastName} onChange={(e) => set("lastName", e.target.value)} autoComplete="family-name" />
         </Field>
         <div className="md:col-span-2">
-          <Field label="Email" required hint="We send approval and onboarding updates here." error={err("email")}>
+          <Field label={copy.contact.email} required hint={copy.contact.emailHint} error={err("email")}>
             <Input type="email" value={profile.email} onChange={(e) => set("email", e.target.value)} autoComplete="email" />
           </Field>
         </div>
@@ -952,6 +896,7 @@ function ContactStep({
 }
 
 function ParishInfoStep({
+  copy,
   profile,
   setProfile,
   errors = {},
@@ -963,48 +908,41 @@ function ParishInfoStep({
   return (
     <SectionCard
       number={3}
-      title="Parish Info"
-      description="Confirm your church name and add optional details. Jurisdiction and size help us route your request."
+      title={copy.parishInfo.title}
+      description={copy.parishInfo.description}
+      stepLabelText={copy.stepLabel(3)}
     >
       <div className="grid md:grid-cols-2 gap-5">
-        <Field label="Church name" required error={err("churchName")}>
+        <Field label={copy.parishInfo.churchName} required error={err("churchName")}>
           <Input value={profile.churchName} onChange={(e) => set("churchName", e.target.value)} />
         </Field>
-        <Field label="Jurisdiction" hint="Optional — select if you know it.">
+        <Field label={copy.parishInfo.jurisdiction} hint={copy.parishInfo.jurisdictionHint}>
           <Select value={profile.jurisdiction} onValueChange={(v) => set("jurisdiction", v)}>
-            <SelectTrigger><SelectValue placeholder="Select jurisdiction…" /></SelectTrigger>
+            <SelectTrigger><SelectValue placeholder={copy.parishInfo.jurisdictionPlaceholder} /></SelectTrigger>
             <SelectContent>
-              {[
-                "Greek Orthodox Archdiocese of America",
-                "Orthodox Church in America (OCA)",
-                "Antiochian Orthodox Christian Archdiocese",
-                "Serbian Orthodox Church",
-                "Russian Orthodox Church Outside Russia",
-                "Romanian Orthodox Archdiocese",
-                "Other",
-              ].map((j) => (
-                <SelectItem key={j} value={j}>{j}</SelectItem>
+              {copy.jurisdictions.map((j) => (
+                <SelectItem key={j.slug} value={j.value}>{j.value}</SelectItem>
               ))}
             </SelectContent>
           </Select>
         </Field>
-        <Field label="Phone" hint="Optional">
+        <Field label={copy.parishInfo.phone} hint={copy.parishInfo.optional}>
           <Input value={profile.phone} onChange={(e) => set("phone", e.target.value)} type="tel" />
         </Field>
-        <Field label="Website" hint="Optional">
+        <Field label={copy.parishInfo.website} hint={copy.parishInfo.optional}>
           <Input value={profile.website} onChange={(e) => set("website", e.target.value)} />
         </Field>
-        <Field label="Approximate church size" hint="Optional">
+        <Field label={copy.parishInfo.size} hint={copy.parishInfo.optional}>
           <Select value={profile.size} onValueChange={(v) => set("size", v)}>
-            <SelectTrigger><SelectValue placeholder="Select church size…" /></SelectTrigger>
+            <SelectTrigger><SelectValue placeholder={copy.parishInfo.sizePlaceholder} /></SelectTrigger>
             <SelectContent>
-              {["Under 100", "100–200", "200–500", "500–1000", "1000+"].map((v) => (
-                <SelectItem key={v} value={v}>{v}</SelectItem>
+              {copy.churchSizes.map((v) => (
+                <SelectItem key={v.slug} value={v.value}>{v.value}</SelectItem>
               ))}
             </SelectContent>
           </Select>
         </Field>
-        <Field label="How did you hear about us?" hint="Optional">
+        <Field label={copy.parishInfo.referral} hint={copy.parishInfo.optional}>
           <Input value={profile.referral} onChange={(e) => set("referral", e.target.value)} />
         </Field>
       </div>
@@ -1013,6 +951,7 @@ function ParishInfoStep({
 }
 
 function LocationStep({
+  copy,
   profile,
   setProfile,
   locSource = {},
@@ -1049,22 +988,23 @@ function LocationStep({
   return (
     <SectionCard
       number={4}
-      title="Location"
-      description="Optional now — add your parish address when you have it, or skip and continue. You can update this after approval."
+      title={copy.location.title}
+      description={copy.location.description}
+      stepLabelText={copy.stepLabel(4)}
     >
       <div className="grid md:grid-cols-2 gap-5">
-        <Field label="Street address" hint="Optional">
+        <Field label={copy.location.street} hint={copy.parishInfo.optional}>
           <Input value={profile.address} onChange={(e) => set("address", e.target.value)} />
         </Field>
-        <Field label="City" hint="Optional">
+        <Field label={copy.location.city} hint={copy.parishInfo.optional}>
           <Input value={profile.city} onChange={(e) => set("city", e.target.value)} />
         </Field>
-        <Field label="State / Province" hint="Optional">
+        <Field label={copy.location.state} hint={copy.parishInfo.optional}>
           <Input value={profile.state} onChange={(e) => set("state", e.target.value)} />
         </Field>
         <Field
-          label="Postal code"
-          hint={zipSuggested ? "Suggested from city/state — confirm or change." : "Optional"}
+          label={copy.location.zip}
+          hint={zipSuggested ? copy.location.zipSuggested : copy.parishInfo.optional}
         >
           <Input
             list="enroll-zip-suggestions"
@@ -1084,12 +1024,12 @@ function LocationStep({
             </datalist>
           )}
         </Field>
-        <Field label="Country" hint="Optional">
+        <Field label={copy.location.country} hint={copy.parishInfo.optional}>
           <Input value={profile.country} onChange={(e) => setLoc("country", e.target.value)} />
         </Field>
-        <Field label="Timezone" hint="Optional">
+        <Field label={copy.location.timezone} hint={copy.parishInfo.optional}>
           <Select value={profile.timezone} onValueChange={(v) => setLoc("timezone", v)}>
-            <SelectTrigger><SelectValue placeholder="Select timezone…" /></SelectTrigger>
+            <SelectTrigger><SelectValue placeholder={copy.location.timezonePlaceholder} /></SelectTrigger>
             <SelectContent>
               {tzOptions.map((tz) => (
                 <SelectItem key={tz} value={tz}>{tz}</SelectItem>
@@ -1102,48 +1042,13 @@ function LocationStep({
   );
 }
 
-const MODULE_SUB_STAGES = [
-  { n: 1, label: "Record Types" },
-  { n: 2, label: "Import Method" },
-  { n: 3, label: "Start Timeline" },
-] as const;
-
-const MODULE_CARDS = [
-  {
-    key: "baptism",
-    icon: Droplets,
-    title: "Baptism Records",
-    desc: "Names, sponsors, clergy, and dates of holy baptism — searchable across decades.",
-    recommended: true,
-  },
-  {
-    key: "marriage",
-    icon: HeartHandshake,
-    title: "Marriage Records",
-    desc: "Sacramental marriages with full witness, clergy, and dispensation details.",
-    recommended: true,
-  },
-  {
-    key: "funeral",
-    icon: Flame,
-    title: "Funeral Records",
-    desc: "Honor the departed with organized funeral, burial, and memorial records.",
-    recommended: false,
-  },
-  {
-    key: "custom",
-    icon: FileText,
-    title: "Custom Records",
-    desc: "Other parish registers, historical ledgers, or record types tailored to your needs.",
-    recommended: false,
-  },
-] as const;
-
 function ModulesSelectionSummary({
+  copy,
   modules,
   importMethod,
   showImport,
 }: {
+  copy: EnrollmentCopy;
   modules: Record<string, boolean>;
   importMethod?: ImportMethod;
   showImport?: boolean;
@@ -1154,17 +1059,17 @@ function ModulesSelectionSummary({
   return (
     <div className="rounded-lg border border-border bg-muted/60 px-4 py-3 space-y-2">
       <div className="flex flex-wrap items-center gap-2 text-sm">
-        <span className="text-muted-foreground shrink-0">Selected modules:</span>
+        <span className="text-muted-foreground shrink-0">{copy.modules.selectedModules}</span>
         {selected.map(([k]) => (
           <Badge key={k} variant="outline" className="font-normal">
-            {MODULE_LABELS[k] ?? k}
+            {copy.moduleLabels[k] ?? k}
           </Badge>
         ))}
       </div>
       {showImport && importMethod && (
         <p className="text-sm text-muted-foreground">
-          <span className="text-[#2d1b4e] dark:text-[#d4af37] font-medium">Import: </span>
-          {formatImportMethod(importMethod)}
+          <span className="text-[#2d1b4e] dark:text-[#d4af37] font-medium">{copy.modules.importLabel}</span>
+          {copy.formatImportMethod(importMethod)}
         </p>
       )}
     </div>
@@ -1172,6 +1077,7 @@ function ModulesSelectionSummary({
 }
 
 function ModulesStep({
+  copy,
   modules,
   setModules,
   importMethod,
@@ -1182,6 +1088,7 @@ function ModulesStep({
   onBackToWizardStep,
   submitting = false,
 }: {
+  copy: EnrollmentCopy;
   modules: Record<string, boolean>;
   setModules: React.Dispatch<React.SetStateAction<Record<string, boolean>>>;
   importMethod: ImportMethod;
@@ -1195,7 +1102,7 @@ function ModulesStep({
   const [subStage, setSubStage] = useState(1);
   const [triedAdvance, setTriedAdvance] = useState(false);
   const [transitioning, setTransitioning] = useState(false);
-  const stageMeta = MODULE_SUB_STAGES[subStage - 1];
+  const stageMeta = copy.moduleSubStages[subStage - 1];
   const moduleCount = Object.values(modules).filter(Boolean).length;
   const hasModules = moduleCount > 0;
   const hasImport = Boolean(importMethod);
@@ -1248,11 +1155,11 @@ function ModulesStep({
 
   const stageError =
     triedAdvance && subStage === 1 && !hasModules
-      ? "Select at least one record module."
+      ? copy.errors.modules
       : triedAdvance && subStage === 2 && !hasImport
-        ? "Choose how you want to import your records."
+        ? copy.errors.importMethod
         : triedAdvance && subStage === 3 && !hasTimeline
-          ? "Let us know when you hope to get started."
+          ? copy.errors.startTimeline
           : undefined;
 
   const primaryDisabled =
@@ -1264,11 +1171,12 @@ function ModulesStep({
   return (
     <SectionCard
       number={5}
-      title="Record Modules & Next Steps"
-      description="Choose your record types, import approach, and preferred start timeline."
+      title={copy.modules.title}
+      description={copy.modules.description}
+      stepLabelText={copy.stepLabel(5)}
     >
       <p className="font-['Inter'] text-sm text-muted-foreground mb-4" aria-live="polite">
-        {stageMeta.n} of {MODULE_SUB_STAGES.length} — {stageMeta.label}
+        {copy.moduleStageProgress(stageMeta.n, copy.moduleSubStages.length, stageMeta.label)}
       </p>
 
       <div className="min-h-[280px] md:min-h-[300px]">
@@ -1278,12 +1186,12 @@ function ModulesStep({
           {subStage === 1 && (
             <div className="space-y-4">
               <p className="font-['Inter'] text-[15px] text-muted-foreground">
-                Select every sacramental record type you want to manage digitally.
+                {copy.modules.selectPrompt}
               </p>
               <div className="grid sm:grid-cols-2 gap-4">
-                {MODULE_CARDS.map((c) => {
+                {copy.moduleCards.map((c) => {
                   const selected = modules[c.key];
-                  const Icon = c.icon;
+                  const Icon = MODULE_ICONS[c.key];
                   return (
                     <button
                       key={c.key}
@@ -1302,7 +1210,7 @@ function ModulesStep({
                         </div>
                         {c.recommended && (
                           <Badge className="bg-[#d4af37] text-[#2d1b4e] border-transparent">
-                            Recommended
+                            {copy.modules.recommended}
                           </Badge>
                         )}
                       </div>
@@ -1312,7 +1220,7 @@ function ModulesStep({
                       </div>
                       <div className="mt-4 flex items-center justify-between">
                         <span className="text-xs text-muted-foreground">
-                          {selected ? "Selected" : "Tap to select"}
+                          {selected ? copy.modules.selected : copy.modules.tapToSelect}
                         </span>
                         <span
                           className={`h-5 w-5 rounded-full border flex items-center justify-center ${
@@ -1330,15 +1238,15 @@ function ModulesStep({
               </div>
               <div className="flex flex-wrap items-center justify-between gap-3 p-4 rounded-md bg-muted">
                 <div className="text-sm">
-                  <span className="text-muted-foreground">Selected modules: </span>
-                  <strong>{moduleCount}</strong> of {MODULE_CARDS.length}
+                  <span className="text-muted-foreground">{copy.modules.selectedCount}</span>
+                  <strong>{moduleCount}</strong> of {copy.moduleCards.length}
                 </div>
                 <div className="flex flex-wrap gap-2">
                   {Object.entries(modules)
                     .filter(([, v]) => v)
                     .map(([k]) => (
                       <Badge key={k} variant="outline">
-                        {MODULE_LABELS[k] ?? k}
+                        {copy.moduleLabels[k] ?? k}
                       </Badge>
                     ))}
                 </div>
@@ -1348,13 +1256,13 @@ function ModulesStep({
 
           {subStage === 2 && (
             <div className="space-y-4">
-              <ModulesSelectionSummary modules={modules} />
+              <ModulesSelectionSummary copy={copy} modules={modules} />
               <fieldset className="border-0 p-0 m-0 min-w-0">
                 <legend className="font-['Inter'] text-base font-medium mb-3 block w-full">
-                  How do you want to import your records? <span className="text-destructive">*</span>
+                  {copy.modules.importQuestion} <span className="text-destructive">*</span>
                 </legend>
-                <div className="grid md:grid-cols-2 gap-4" role="radiogroup" aria-label="Record import method">
-                  {IMPORT_METHOD_OPTIONS.map((opt) => {
+                <div className="grid md:grid-cols-2 gap-4" role="radiogroup" aria-label={copy.modules.importAria}>
+                  {copy.importMethods.map((opt) => {
                     const selected = importMethod === opt.value;
                     return (
                       <button
@@ -1381,13 +1289,13 @@ function ModulesStep({
 
           {subStage === 3 && (
             <div className="space-y-4">
-              <ModulesSelectionSummary modules={modules} importMethod={importMethod} showImport />
+              <ModulesSelectionSummary copy={copy} modules={modules} importMethod={importMethod} showImport />
               <fieldset className="border-0 p-0 m-0 min-w-0">
                 <legend className="font-['Inter'] text-base font-medium mb-3 block w-full">
-                  How soon are you interested in getting started? <span className="text-destructive">*</span>
+                  {copy.modules.timelineQuestion} <span className="text-destructive">*</span>
                 </legend>
-                <div className="grid sm:grid-cols-1 md:grid-cols-3 gap-3" role="radiogroup" aria-label="Preferred start timeline">
-                  {START_TIMELINE_OPTIONS.map((opt) => {
+                <div className="grid sm:grid-cols-1 md:grid-cols-3 gap-3" role="radiogroup" aria-label={copy.modules.timelineAria}>
+                  {copy.startTimelines.map((opt) => {
                     const selected = startTimeline === opt.value;
                     return (
                       <button
@@ -1411,8 +1319,7 @@ function ModulesStep({
               <div className="flex items-start gap-3 p-4 rounded-lg bg-[rgba(212,175,55,0.08)] dark:bg-[rgba(30,42,58,0.8)] border border-[#d4af37]/25 dark:border-white/8 text-sm">
                 <ShieldCheck className="h-4 w-4 mt-0.5 text-[#2d1b4e] dark:text-[#d4af37] shrink-0" />
                 <div>
-                  Click <strong>Submit Enrollment</strong> when you're ready. Our team will follow up using
-                  the contact details you provided.
+                  {copy.modules.submitTip}
                 </div>
               </div>
             </div>
@@ -1428,7 +1335,7 @@ function ModulesStep({
 
       <div className="flex items-center justify-between gap-4 mt-6 pt-6 border-t border-border">
         <Button type="button" variant="ghost" onClick={handleBack} disabled={submitting}>
-          <ArrowLeft className="h-4 w-4 mr-2" /> Back
+          <ArrowLeft className="h-4 w-4 mr-2" /> {copy.nav.back}
         </Button>
         {subStage < 3 ? (
           <Button
@@ -1437,7 +1344,7 @@ function ModulesStep({
             disabled={primaryDisabled}
             className="bg-[#d4af37] hover:bg-[#c29d2f] text-[#2d1b4e] font-medium px-6"
           >
-            Continue <ArrowRight className="h-4 w-4 ml-2" />
+            {copy.nav.continue} <ArrowRight className="h-4 w-4 ml-2" />
           </Button>
         ) : (
           <Button
@@ -1448,11 +1355,11 @@ function ModulesStep({
           >
             {submitting ? (
               <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Submitting…
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" /> {copy.nav.submitting}
               </>
             ) : (
               <>
-                Submit Enrollment <ArrowRight className="h-4 w-4 ml-2" />
+                {copy.nav.submit} <ArrowRight className="h-4 w-4 ml-2" />
               </>
             )}
           </Button>
@@ -1462,34 +1369,8 @@ function ModulesStep({
   );
 }
 
-const CONFIRM_NEXT_STEPS = [
-  {
-    title: "Enrollment Request Reviewed",
-    description:
-      "We review the information you submitted and assess your parish's record-management needs.",
-    icon: Check,
-  },
-  {
-    title: "Personal Follow-Up",
-    description:
-      "A member of our team will contact you within 48 hours to discuss your parish, answer questions, and confirm next steps.",
-    icon: Phone,
-  },
-  {
-    title: "Planning & Preparation",
-    description:
-      "We help determine your records, onboarding approach, and the best setup for your parish.",
-    icon: Mail,
-  },
-  {
-    title: "Onboarding Begins",
-    description:
-      "Once everything is confirmed, we begin the setup and onboarding process with your parish.",
-    icon: ArrowRight,
-  },
-] as const;
-
 function ConfirmStep({
+  copy,
   profile,
   modules,
   importMethod,
@@ -1497,6 +1378,7 @@ function ConfirmStep({
   reference,
   onHome,
 }: {
+  copy: EnrollmentCopy;
   profile: any;
   modules: string[];
   importMethod: ImportMethod;
@@ -1507,6 +1389,7 @@ function ConfirmStep({
   const [copied, setCopied] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
   const requestId = reference || "—";
+  const confirmIcons = [Check, Phone, Mail, ArrowRight] as const;
 
   function copyReference() {
     if (!requestId || requestId === "—") return;
@@ -1547,7 +1430,7 @@ function ConfirmStep({
           <div className="inline-flex items-center gap-3 mb-2">
             <ConfirmOrthodoxCross className="w-7 h-9 text-[#d4af37]" />
             <h3 className="text-[#1a2e52] dark:text-[#d4af37] tracking-wide text-sm font-medium">
-              ORTHODOX METRICS
+              {copy.confirm.brand}
             </h3>
           </div>
         </motion.div>
@@ -1599,27 +1482,25 @@ function ConfirmStep({
               className="text-center max-w-2xl mx-auto space-y-4"
             >
               <h1 className="font-['Georgia'] text-2xl md:text-3xl text-[#1a2e52] dark:text-foreground" style={{ fontWeight: 400 }}>
-                We&apos;ve Received Your Enrollment Request
+                {copy.confirm.receivedTitle}
               </h1>
               <p className="text-[#1a2e52]/80 dark:text-muted-foreground leading-relaxed">
-                Thank you{profile.firstName ? `, ${profile.firstName}` : ""} for your interest in Orthodox Metrics.
-                Your enrollment request for <strong>{profile.churchName}</strong> has been submitted successfully.
-                Our team will review your information and you can expect to hear from us within the next 48 hours.
+                {copy.confirmReceivedBody(profile.firstName, profile.churchName)}
               </p>
               {reference && (
                 <div className="inline-flex flex-wrap items-center justify-center gap-2 px-4 py-2 rounded-lg bg-[#f5f3ef] dark:bg-muted border border-[#1a2e52]/10">
-                  <span className="text-sm text-[#1a2e52]/70 dark:text-muted-foreground">Reference:</span>
+                  <span className="text-sm text-[#1a2e52]/70 dark:text-muted-foreground">{copy.confirm.reference}</span>
                   <code className="text-sm font-medium text-[#1a2e52] dark:text-foreground">{requestId}</code>
                   <Button
                     variant="ghost"
                     size="icon"
                     className="h-7 w-7"
                     onClick={copyReference}
-                    title="Copy reference"
+                    title={copy.confirm.copyReference}
                   >
                     <Copy className="h-3.5 w-3.5" />
                   </Button>
-                  {copied && <span className="text-xs text-muted-foreground">Copied</span>}
+                  {copied && <span className="text-xs text-muted-foreground">{copy.confirm.copied}</span>}
                 </div>
               )}
             </motion.div>
@@ -1628,13 +1509,15 @@ function ConfirmStep({
 
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1 }}>
           <h2 className="text-center font-['Georgia'] text-xl text-[#1a2e52] dark:text-foreground mb-8" style={{ fontWeight: 400 }}>
-            What Happens Next
+            {copy.confirm.whatNext}
           </h2>
 
           <div className="grid sm:grid-cols-2 gap-4 md:gap-6 mb-12">
-            {CONFIRM_NEXT_STEPS.map((stepItem, index) => (
+            {copy.confirmNextSteps.map((stepItem, index) => {
+              const Icon = confirmIcons[index];
+              return (
               <motion.div
-                key={stepItem.title}
+                key={`${stepItem.title}-${index}`}
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: 1.2 + index * 0.15 }}
@@ -1643,7 +1526,7 @@ function ConfirmStep({
                 <div className="flex gap-4">
                   <div className="shrink-0">
                     <div className="w-12 h-12 bg-[#1a2e52]/5 rounded-lg flex items-center justify-center">
-                      <stepItem.icon className="w-6 h-6 text-[#d4af37]" />
+                      {Icon ? <Icon className="w-6 h-6 text-[#d4af37]" /> : null}
                     </div>
                   </div>
                   <div className="min-w-0 flex-1">
@@ -1659,7 +1542,8 @@ function ConfirmStep({
                   </div>
                 </div>
               </motion.div>
-            ))}
+            );
+            })}
           </div>
         </motion.div>
 
@@ -1669,14 +1553,14 @@ function ConfirmStep({
             animate={{ opacity: 1, height: "auto" }}
             className="bg-white dark:bg-card rounded-xl p-6 mb-8 border border-[#1a2e52]/10 shadow-sm"
           >
-            <h3 className="text-[#1a2e52] dark:text-foreground font-medium mb-4">Your submission</h3>
+            <h3 className="text-[#1a2e52] dark:text-foreground font-medium mb-4">{copy.confirm.submissionTitle}</h3>
             <dl className="space-y-3 text-sm">
               {[
-                ["Church", profile.churchName],
-                ["Contact email", profile.email],
-                ["Modules", modules.join(", ") || "None"],
-                ["Import approach", formatImportMethod(importMethod)],
-                ["Getting started", formatStartTimeline(startTimeline)],
+                [copy.confirm.detailChurch, profile.churchName],
+                [copy.confirm.detailEmail, profile.email],
+                [copy.confirm.detailModules, modules.join(", ") || copy.confirm.none],
+                [copy.confirm.detailImport, copy.formatImportMethod(importMethod)],
+                [copy.confirm.detailTimeline, copy.formatStartTimeline(startTimeline)],
               ].map(([label, value]) => (
                 <div key={label} className="flex flex-col sm:flex-row sm:gap-4">
                   <dt className="sm:w-36 shrink-0 text-muted-foreground">{label}</dt>
@@ -1693,9 +1577,9 @@ function ConfirmStep({
           transition={{ delay: 1.8 }}
           className="bg-[#f5f3ef] dark:bg-muted/40 rounded-xl p-6 md:p-8 mb-10 text-center border border-[#d4af37]/20"
         >
-          <h3 className="text-[#1a2e52] dark:text-foreground font-medium mb-3">Need help before then?</h3>
+          <h3 className="text-[#1a2e52] dark:text-foreground font-medium mb-3">{copy.confirm.helpTitle}</h3>
           <p className="text-[#1a2e52]/80 dark:text-muted-foreground mb-6 max-w-xl mx-auto">
-            If you have questions or would like to share additional details, our team is happy to help.
+            {copy.confirm.helpBody}
           </p>
 
           <div className="flex flex-wrap justify-center gap-3">
@@ -1704,7 +1588,7 @@ function ConfirmStep({
               className="bg-[#1a2e52] hover:bg-[#0f1a2e] text-white px-6"
             >
               <Home className="w-4 h-4 mr-2" />
-              Return to Homepage
+              {copy.confirm.returnHome}
             </Button>
 
             <Button
@@ -1714,7 +1598,7 @@ function ConfirmStep({
             >
               <a href="/contact">
                 <Mail className="w-4 h-4 mr-2" />
-                Contact Us
+                {copy.confirm.contactUs}
               </a>
             </Button>
 
@@ -1723,7 +1607,7 @@ function ConfirmStep({
               onClick={() => setShowDetails((v) => !v)}
               className="border border-[#1a2e52]/30 text-[#1a2e52] dark:text-foreground hover:bg-[#f5f3ef] dark:hover:bg-muted"
             >
-              {showDetails ? "Hide Enrollment Details" : "View Enrollment Details"}
+              {showDetails ? copy.confirm.hideDetails : copy.confirm.showDetails}
             </Button>
           </div>
         </motion.div>
@@ -1734,7 +1618,7 @@ function ConfirmStep({
           transition={{ delay: 2 }}
           className="text-center text-sm text-[#1a2e52]/60 dark:text-muted-foreground"
         >
-          © {new Date().getFullYear()} Orthodox Metrics. Preserving parish records with care and precision.
+          {copy.confirm.footer}
         </motion.p>
       </div>
     </div>
