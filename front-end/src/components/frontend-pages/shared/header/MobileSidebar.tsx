@@ -78,6 +78,7 @@ const MobileSidebar = ({ isPortal = false }: MobileSidebarProps) => {
         <BrandLogo
           variant="mark"
           href={PUBLIC_ROUTES.HOME}
+          colorScheme={activeMode === 'dark' ? 'dark' : 'light'}
           className="h-12 w-auto max-h-12 max-w-[200px] object-contain object-left"
         />
       </Box>

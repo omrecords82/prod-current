@@ -153,6 +153,7 @@ const HpHeader = () => {
           <BrandLogo
             variant="mark"
             href={PUBLIC_ROUTES.HOME}
+            colorScheme={activeMode === 'dark' ? 'dark' : 'light'}
             className="h-14 w-auto max-h-14 max-w-[min(100%,220px)] object-contain object-left shrink-0"
           />
 

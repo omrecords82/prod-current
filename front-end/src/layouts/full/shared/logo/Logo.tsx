@@ -4,12 +4,13 @@ import config from '@/context/config';
 import { CustomizerContext } from '@/context/CustomizerContext';
 import { styled, useTheme } from '@mui/material';
 import { Link } from 'react-router-dom';
+import { OmMarkLogo } from './OmMarkLogo';
 
 /** Official brand wordmarks (light background / dark background) */
 export const LOGO_SRC_LIGHT = '/images/logos/light-logo.png';
 export const LOGO_SRC_DARK = '/images/logos/dark-logo.png';
 
-/** Compact O+M cross mark for public header */
+/** Compact O+M cross mark for public header (PNG fallback; header uses SVG OmMarkLogo) */
 export const LOGO_MARK_SRC = '/images/logos/om-mark-logo.png';
 
 /** @deprecated Use LOGO_SRC_LIGHT / LOGO_SRC_DARK — kept for imports that reference header SVG constants */
@@ -67,6 +68,31 @@ export function BrandLogo({
 }: BrandLogoProps) {
   const { activeMode } = useContext(CustomizerContext);
   const theme = useTheme();
+  const scheme = resolveBrandColorScheme({
+    colorScheme,
+    onDarkSurface,
+    muiMode: theme.palette.mode,
+    customizerMode: activeMode,
+  });
+
+  if (variant === 'mark') {
+    const mark = (
+      <OmMarkLogo
+        colorScheme={scheme}
+        className={className}
+        height={height}
+      />
+    );
+    if (href) {
+      return (
+        <a href={href} className="flex items-center no-underline om-brand-mark">
+          {mark}
+        </a>
+      );
+    }
+    return <span className="inline-flex om-brand-mark">{mark}</span>;
+  }
+
   const src = resolveBrandLogoSrc({
     colorScheme,
     onDarkSurface,
