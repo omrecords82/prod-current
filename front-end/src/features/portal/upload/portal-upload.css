@@ -1,0 +1,98 @@
+/* Portal upload — MUI surfaces inside themed rm-scope */
+.rm-scope.portal-upload .MuiPaper-root {
+  background-color: var(--rm-card);
+  color: var(--rm-fg);
+  border-color: var(--rm-border);
+}
+
+.rm-scope.portal-upload .MuiTypography-root {
+  color: inherit;
+}
+
+.rm-scope.portal-upload .MuiTypography-colorTextSecondary,
+.rm-scope.portal-upload .MuiFormLabel-root,
+.rm-scope.portal-upload .MuiInputLabel-root {
+  color: var(--rm-muted-fg);
+}
+
+.rm-scope.portal-upload .MuiOutlinedInput-root {
+  color: var(--rm-fg);
+}
+
+.rm-scope.portal-upload .MuiOutlinedInput-notchedOutline {
+  border-color: var(--rm-border);
+}
+
+.rm-scope.portal-upload .MuiButton-containedPrimary {
+  background-color: var(--rm-accent);
+  color: #fff;
+}
+
+.rm-scope.portal-upload .MuiButton-containedPrimary:hover {
+  background-color: var(--rm-accent-hover);
+}
+
+.rm-scope.portal-upload .MuiButton-outlinedPrimary {
+  border-color: var(--rm-accent);
+  color: var(--rm-accent);
+}
+
+.rm-scope.portal-upload .MuiChip-colorPrimary {
+  background-color: var(--rm-accent);
+  color: #fff;
+}
+
+.rm-scope.portal-upload .MuiDivider-root {
+  border-color: var(--rm-border);
+}
+
+.rm-scope.portal-upload .MuiAlert-root {
+  background-color: var(--rm-muted);
+  color: var(--rm-fg);
+}
+
+.rm-scope.portal-upload .portal-upload-tabs {
+  display: inline-flex;
+  gap: 0.25rem;
+  padding: 0.25rem;
+  border-radius: 0.75rem;
+  border: 1px solid var(--rm-border);
+  background: var(--rm-muted);
+}
+
+.rm-scope.portal-upload .portal-upload-tab {
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--rm-muted-fg);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.rm-scope.portal-upload .portal-upload-tab:hover {
+  color: var(--rm-fg);
+}
+
+.rm-scope.portal-upload .portal-upload-tab[data-active='true'] {
+  background: var(--rm-card);
+  color: var(--rm-fg);
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--rm-fg) 8%, transparent);
+}
+
+.rm-scope.portal-upload .portal-upload-dropzone {
+  border: 2px dashed var(--rm-border);
+  background: var(--rm-muted);
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.rm-scope.portal-upload .portal-upload-dropzone[data-active='true'] {
+  border-color: var(--rm-accent);
+  background: var(--rm-accent-soft);
+}
+
+.rm-scope.portal-upload .portal-upload-dropzone:hover {
+  border-color: color-mix(in srgb, var(--rm-accent) 50%, var(--rm-border));
+}

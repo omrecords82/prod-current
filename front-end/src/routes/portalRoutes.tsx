@@ -19,7 +19,7 @@ const FuneralRecordsPage = Loadable(lazy(() => import('../features/records-centr
 const BaptismRecordEntryPage = Loadable(lazy(() => import('../features/records-centralized/baptism/BaptismRecordEntryPage')));
 const MarriageRecordEntryPage = Loadable(lazy(() => import('../features/records-centralized/marriage/MarriageRecordEntryPage')));
 const FuneralRecordEntryPage = Loadable(lazy(() => import('../features/records-centralized/funeral/FuneralRecordEntryPage')));
-const UploadRecordsPage = Loadable(lazy(() => import('../features/records-centralized/apps/upload-records/UploadRecordsPage')));
+const PortalUploadPage = Loadable(lazy(() => import('../features/portal/PortalUploadPage')));
 const OMChartsPage = Loadable(lazy(() => import('../features/church/apps/om-charts/OMChartsPage')));
 const CertificateGeneratorPage = Loadable(lazy(() => import('../features/certificates/CertificateGeneratorPage')));
 const OrthodoxScheduleGuidelinesPage = Loadable(lazy(() => import('../features/admin/control-panel/OrthodoxScheduleGuidelinesPage')));
@@ -60,7 +60,7 @@ export const portalRoute = {
     protectedRoute('records/funeral/new', <FuneralRecordEntryPage />, ROLE_ALL_CHURCH),
     protectedRoute('records/funeral/edit/:id', <FuneralRecordEntryPage />, ROLE_ALL_CHURCH),
     // Upload Records (church_admin + priest)
-    protectedRoute('upload', <UploadRecordsPage />, ROLE_STAFF),
+    protectedRoute('upload', <PortalUploadPage />, ROLE_STAFF),
     // Charts (church_admin + priest)
     protectedRoute('charts', <OMChartsPage />, ROLE_STAFF),
     // Certificates — new template-based flow

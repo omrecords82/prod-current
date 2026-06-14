@@ -31,6 +31,7 @@ import { Navigate, NavLink, Outlet, useLocation, useNavigate } from 'react-route
 const PORTAL_LINKS = [
   { title: 'Portal', to: '/portal', match: (p: string) => p === '/portal' },
   { title: 'Church Records', to: '/portal/records', match: (p: string) => p.startsWith('/portal/records') },
+  { title: 'Upload', to: '/portal/upload', match: (p: string) => p.startsWith('/portal/upload') },
   { title: 'Analytics', to: '/portal/charts', match: (p: string) => p.startsWith('/portal/charts') },
   { title: 'Help', to: '/portal/guide', match: (p: string) => p.startsWith('/portal/guide') },
 ];
@@ -44,6 +45,7 @@ const LANG_OPTIONS = [
 
 function getPageLabel(pathname: string): string {
   if (pathname.startsWith('/portal/records')) return 'Church Records';
+  if (pathname.startsWith('/portal/upload')) return 'Upload Records';
   if (pathname.startsWith('/portal/charts')) return 'Analytics';
   if (pathname.startsWith('/portal/guide')) return 'Help';
   if (pathname.startsWith('/portal/certificates')) return 'Certificates';
@@ -239,14 +241,16 @@ const ModernPortalLayout: React.FC = () => {
   }
 
   const isRecordsRoute = location.pathname.startsWith('/portal/records');
+  const isUploadRoute = location.pathname.startsWith('/portal/upload');
+  const isFullWidthRoute = isRecordsRoute || isUploadRoute;
   const portalMax = 'min(100%, 96rem)';
-  const maxWidth = isRecordsRoute
+  const maxWidth = isFullWidthRoute
     ? '100%'
     : isLayout === 'boxed'
       ? '72rem'
       : portalMax;
 
-  const mainPadding = isRecordsRoute ? 'px-3 py-5 sm:px-5 lg:px-6' : 'px-4 py-6 sm:px-6 lg:px-8';
+  const mainPadding = isFullWidthRoute ? 'px-3 py-5 sm:px-5 lg:px-6' : 'px-4 py-6 sm:px-6 lg:px-8';
 
   return (
     <div
