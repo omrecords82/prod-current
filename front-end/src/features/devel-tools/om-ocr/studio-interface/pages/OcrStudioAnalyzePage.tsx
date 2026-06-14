@@ -1,5 +1,5 @@
-import React, { useCallback, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useCallback, useRef, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Alert,
   Box,
@@ -7,6 +7,9 @@ import {
   Checkbox,
   Chip,
   CircularProgress,
+  Dialog,
+  DialogContent,
+  DialogTitle,
   FormControl,
   IconButton,
   InputLabel,
@@ -23,17 +26,19 @@ import {
   Tooltip,
   Typography,
 } from '@mui/material';
-import { IconCloudUpload, IconScan, IconTrash, IconUpload } from '@tabler/icons-react';
+import { IconCloudUpload, IconScan, IconTrash, IconUpload, IconX } from '@tabler/icons-react';
 import { toast } from 'react-toastify';
 import OcrSetupGate from '@/features/devel-tools/om-ocr/components/OcrSetupGate';
+import { ocrStudioPathWithChurch } from '@/features/devel-tools/om-ocr/utils/ocrStudioChurch';
+import { AnalyzePreviewThumb } from '../components/AnalyzePreviewThumb';
 import { OcrStudioHubPanel } from '../components/OcrStudioHubPanel';
 import { PageHeader } from '../components/PageHeader';
 import { useOcrStudioChurch } from '../hooks/useOcrStudioChurch';
 import {
   ANALYZE_ACCEPTED_TYPES,
-  analyzePreviewUrl,
   useOcrAnalyze,
   type AnalyzeLayoutType,
+  type AnalyzeQueueItem,
   type AnalyzeRecordType,
 } from '../hooks/useOcrAnalyze';
 import { useOcrStudioPaths } from '../OcrStudioPathContext';
@@ -66,9 +71,11 @@ function confidencePct(n: number): string {
 
 export default function OcrStudioAnalyzePage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { toScreen } = useOcrStudioPaths();
   const { churchId, churchLabel } = useOcrStudioChurch();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [previewItem, setPreviewItem] = useState<AnalyzeQueueItem | null>(null);
   const {
     sessionId,
     items,
@@ -100,6 +107,14 @@ export default function OcrStudioAnalyzePage() {
     analyzeFiles(e.dataTransfer.files).catch((err) => toast.error(err.message));
   }, [analyzeFiles, setDragActive]);
 
+  const goToMyUploads = useCallback(() => {
+    const path = ocrStudioPathWithChurch(toScreen('upload-intake'), searchParams, churchId ?? undefined);
+    const [base, qs = ''] = path.split('?');
+    const merged = new URLSearchParams(qs);
+    merged.set('tab', 'uploads');
+    navigate(`${base}?${merged.toString()}`);
+  }, [churchId, navigate, searchParams, toScreen]);
+
   const handleCommit = useCallback(async () => {
     if (!churchId || selectedCount === 0) return;
     try {
@@ -109,13 +124,13 @@ export default function OcrStudioAnalyzePage() {
           ? `Submitted ${jobIds.length} image(s) to OCR — ${remainingCount} still in analyze queue`
           : `Submitted ${jobIds.length} image(s) to OCR processing`,
       );
-      if (remainingCount === 0) {
-        navigate(toScreen('upload-intake'));
+      if (jobIds.length > 0) {
+        goToMyUploads();
       }
     } catch (err: any) {
       toast.error(err?.response?.data?.message || err?.message || 'Upload failed');
     }
-  }, [churchId, commitToUpload, navigate, toScreen]);
+  }, [churchId, commitToUpload, goToMyUploads, selectedCount]);
 
   const needsReviewCount = items.filter((i) => i.needsReview && !i.analyzing && !i.error).length;
   const progressPct = analyzeProgress && analyzeProgress.total > 0
@@ -261,19 +276,14 @@ export default function OcrStudioAnalyzePage() {
                       />
                     </TableCell>
                     <TableCell>
-                      {churchId && sessionId && !item.analyzing ? (
-                        <Box
-                          component="img"
-                          src={analyzePreviewUrl(churchId, sessionId, item.id)}
-                          alt=""
-                          sx={{
-                            width: 56,
-                            height: 56,
-                            objectFit: 'cover',
-                            borderRadius: 1,
-                            border: '1px solid',
-                            borderColor: 'divider',
-                          }}
+                      {churchId && sessionId && !item.analyzing && !item.error ? (
+                        <AnalyzePreviewThumb
+                          churchId={churchId}
+                          sessionId={sessionId}
+                          fileId={item.id}
+                          alt={item.originalFilename}
+                          size={56}
+                          onClick={() => setPreviewItem(item)}
                         />
                       ) : (
                         <Box sx={{ width: 56, height: 56, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -428,6 +438,33 @@ export default function OcrStudioAnalyzePage() {
             Review suggestions for any file marked as needing attention before submitting.
           </Alert>
         )}
+
+        <Dialog
+          open={!!previewItem && !!churchId && !!sessionId}
+          onClose={() => setPreviewItem(null)}
+          maxWidth="md"
+          fullWidth
+        >
+          <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', pr: 1 }}>
+            <Typography variant="subtitle1" fontWeight={600} noWrap sx={{ flex: 1, mr: 1 }}>
+              {previewItem?.originalFilename}
+            </Typography>
+            <IconButton size="small" onClick={() => setPreviewItem(null)} aria-label="Close preview">
+              <IconX size={18} />
+            </IconButton>
+          </DialogTitle>
+          <DialogContent sx={{ display: 'flex', justifyContent: 'center', pb: 3 }}>
+            {previewItem && churchId && sessionId && (
+              <AnalyzePreviewThumb
+                churchId={churchId}
+                sessionId={sessionId}
+                fileId={previewItem.id}
+                alt={previewItem.originalFilename}
+                size="fill"
+              />
+            )}
+          </DialogContent>
+        </Dialog>
       </OcrStudioHubPanel>
     </OcrSetupGate>
   );

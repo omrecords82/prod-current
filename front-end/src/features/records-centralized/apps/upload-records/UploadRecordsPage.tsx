@@ -305,6 +305,7 @@ const UploadRecordsPage: React.FC = () => {
   const [dragActive, setDragActive] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const historyPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const queueRef = useRef<QueuedFile[]>([]);
   queueRef.current = queue;
 
@@ -395,21 +396,48 @@ const UploadRecordsPage: React.FC = () => {
     return () => { cancelled = true; };
   }, [effectiveChurchId]);
 
+  const shouldPollHistory = useMemo(
+    () => history.some((job) => {
+      if (job.status === 'failed' || job.status === 'error') return false;
+      const rs = job.review_status || 'uploaded';
+      return !['agent_extracted', 'ready_to_seed', 'seeded'].includes(rs);
+    }),
+    [history],
+  );
+
   // ─── Fetch upload history ──
-  const fetchHistory = useCallback(async () => {
+  const fetchHistory = useCallback(async (opts?: { silent?: boolean }) => {
     if (!effectiveChurchId) return;
-    setHistoryLoading(true);
+    if (!opts?.silent) setHistoryLoading(true);
     try {
       const res: any = await apiClient.get(`/api/church/${effectiveChurchId}/ocr/jobs?limit=200`);
       const jobs: OcrJob[] = res?.data?.jobs || res?.jobs || [];
       setHistory(jobs);
     } catch { setHistory([]); }
-    finally { setHistoryLoading(false); }
+    finally { if (!opts?.silent) setHistoryLoading(false); }
   }, [effectiveChurchId]);
 
   useEffect(() => {
     if (activeTab === 1) fetchHistory();
   }, [activeTab, fetchHistory]);
+
+  useEffect(() => {
+    if (activeTab !== 1 || !effectiveChurchId || !shouldPollHistory) {
+      if (historyPollRef.current) {
+        clearInterval(historyPollRef.current);
+        historyPollRef.current = null;
+      }
+      return;
+    }
+    fetchHistory({ silent: true });
+    historyPollRef.current = setInterval(() => fetchHistory({ silent: true }), 4000);
+    return () => {
+      if (historyPollRef.current) {
+        clearInterval(historyPollRef.current);
+        historyPollRef.current = null;
+      }
+    };
+  }, [activeTab, effectiveChurchId, shouldPollHistory, fetchHistory]);
 
   const syncQueueFromServer = useCallback(async () => {
     if (!effectiveChurchId) return;
