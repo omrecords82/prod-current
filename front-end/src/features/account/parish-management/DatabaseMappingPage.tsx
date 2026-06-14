@@ -19,23 +19,31 @@ import {
     Button,
     Chip,
     CircularProgress,
+    FormControl,
     FormControlLabel,
+    InputLabel,
+    MenuItem,
     Paper,
     Radio,
+    Select,
     Slider,
     Snackbar,
+    Stack,
     Switch,
     TextField,
     Typography,
     useTheme,
 } from '@mui/material';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import apiClient from '@/api/utils/axiosInstance';
+import { useAuth } from '@/context/AuthContext';
 import { useChurch } from '@/context/ChurchContext';
+import churchService from '@/shared/lib/churchService';
 import { useParishSettings } from './useParishSettings';
 
 const BASE = '/account/parish-management/database-mapping';
+const DEFAULT_OPERATIONAL_CHURCH_ID = 46;
 
 // ── Step definitions ────────────────────────────────────────────
 
@@ -135,6 +143,13 @@ const EXCLUDED_COLUMNS = new Set([
 interface ColumnInfo {
   name: string;
   type?: string;
+}
+
+function parseColumnsResponse(res: unknown): ColumnInfo[] {
+  const payload = res as { columns?: ColumnInfo[]; data?: { columns?: ColumnInfo[] } };
+  if (Array.isArray(payload?.columns)) return payload.columns;
+  if (Array.isArray(payload?.data?.columns)) return payload.data.columns;
+  return [];
 }
 
 /** snake_case → Title Case fallback label (e.g. burial_location → Burial Location). */
@@ -279,8 +294,10 @@ function savedMappingForType(s: MappingSettings | undefined, type: string): Type
 const DatabaseMappingPage: React.FC = () => {
   const { step } = useParams<{ step?: string }>();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
+  const { isSuperAdmin } = useAuth();
 
   // ── Persistence via parish settings API ─────────────────────
   const { data: savedSettings, loading: settingsLoading, saving, error: settingsError, patch: patchSettings } = useParishSettings<MappingSettings>('mapping');
@@ -291,8 +308,43 @@ const DatabaseMappingPage: React.FC = () => {
     return idx >= 0 ? idx : 0;
   }, [step]);
 
-  const { activeChurchId } = useChurch();
-  const churchId = activeChurchId;
+  const { activeChurchId, churchMetadata, setActiveChurchId } = useChurch();
+  const churchParam = searchParams.get('church') || searchParams.get('church_id');
+  const churchId = activeChurchId
+    ?? churchMetadata?.church_id
+    ?? (churchParam ? Number(churchParam) : null)
+    ?? DEFAULT_OPERATIONAL_CHURCH_ID;
+
+  const [churches, setChurches] = useState<Array<{ id: number; name: string; church_name?: string }>>([]);
+
+  // Keep ChurchContext aligned with the operational parish (defaults to church 46).
+  useEffect(() => {
+    const paramId = churchParam ? Number(churchParam) : null;
+    const resolved = (paramId && Number.isFinite(paramId) && paramId > 0)
+      ? paramId
+      : DEFAULT_OPERATIONAL_CHURCH_ID;
+
+    if (!activeChurchId || activeChurchId !== resolved) {
+      setActiveChurchId(resolved);
+    }
+    if (!churchParam || Number(churchParam) !== resolved) {
+      setSearchParams({ church: String(resolved) }, { replace: true });
+    }
+  }, [activeChurchId, churchParam, setActiveChurchId, setSearchParams]);
+
+  useEffect(() => {
+    if (!isSuperAdmin()) return;
+    (async () => {
+      try {
+        const list = await churchService.fetchChurches();
+        setChurches((Array.isArray(list) ? list : []).sort((a, b) =>
+          (a.church_name || a.name || '').localeCompare(b.church_name || b.name || ''),
+        ));
+      } catch {
+        /* optional picker */
+      }
+    })();
+  }, [isSuperAdmin]);
 
   const [selectedRecord, setSelectedRecord] = useState('baptism');
   const [fields, setFields] = useState<FieldDef[]>([]);
@@ -311,23 +363,24 @@ const DatabaseMappingPage: React.FC = () => {
   // Clear column cache when churchId changes
   useEffect(() => {
     columnsCache.current = {};
+    lastInitializedChurchIdRef.current = null;
   }, [churchId]);
 
   // Fetch the real column list for a record type (cached after first fetch).
   const fetchColumns = useCallback(async (type: string): Promise<ColumnInfo[]> => {
     if (columnsCache.current[type]) return columnsCache.current[type];
-    if (!churchId) return [];
-    try {
-      const res = await apiClient.get<{ columns: ColumnInfo[] }>(
-        `/api/parish-settings/${churchId}/record-columns/${type}`,
-      );
-      const cols = ((res as any)?.columns ?? []) as ColumnInfo[];
-      columnsCache.current[type] = cols;
-      return cols;
-    } catch (err) {
-      delete columnsCache.current[type];
-      throw err;
+    if (!churchId) {
+      throw new Error('Parish not selected — cannot load database columns.');
     }
+    const res = await apiClient.get(
+      `/api/parish-settings/${churchId}/record-columns/${type}`,
+    );
+    const cols = parseColumnsResponse(res);
+    if (!cols.length) {
+      throw new Error(`No columns returned for church ${churchId} ${type} records.`);
+    }
+    columnsCache.current[type] = cols;
+    return cols;
   }, [churchId]);
 
   const loadFieldsForType = useCallback(async (type: string) => {
@@ -337,10 +390,6 @@ const DatabaseMappingPage: React.FC = () => {
 
     try {
       cols = await fetchColumns(type);
-      if (!cols.length) {
-        cols = metaFallbackColumns(type);
-        warning = `Live database columns were empty for ${type} records. Showing default field list.`;
-      }
     } catch (err: any) {
       cols = metaFallbackColumns(type);
       warning = err?.message || 'Could not load live database columns. Showing default field list.';
@@ -387,6 +436,16 @@ const DatabaseMappingPage: React.FC = () => {
     })();
     return () => { cancelled = true; };
   }, [settingsLoading, savedSettings, churchId, loadFieldsForType]);
+
+  const handleChurchChange = useCallback((nextId: number) => {
+    setActiveChurchId(nextId);
+    setSearchParams({ church: String(nextId) }, { replace: true });
+    lastInitializedChurchIdRef.current = null;
+    columnsCache.current = {};
+    setFields([]);
+    setColumnsWarning(null);
+    setColumnsError(null);
+  }, [setActiveChurchId, setSearchParams]);
 
   const goTo = (idx: number) => {
     if (idx === 0) navigate(BASE);
@@ -1073,6 +1132,31 @@ const DatabaseMappingPage: React.FC = () => {
         <Typography sx={{ fontFamily: "'Inter'", fontSize: '0.8125rem', color: isDark ? '#9ca3af' : '#6b7280' }}>
           Configure how your church database fields are displayed and searched
         </Typography>
+        <Stack direction="row" spacing={1} alignItems="center" sx={{ mt: 1, flexWrap: 'wrap' }}>
+          <Chip
+            size="small"
+            label={`Parish #${churchId}`}
+            variant="outlined"
+            sx={{ fontFamily: "'Inter'", fontSize: '0.7rem' }}
+          />
+          {isSuperAdmin() && churches.length > 0 && (
+            <FormControl size="small" sx={{ minWidth: 220 }}>
+              <InputLabel id="db-map-church-label">Parish</InputLabel>
+              <Select
+                labelId="db-map-church-label"
+                label="Parish"
+                value={churchId}
+                onChange={(e) => handleChurchChange(Number(e.target.value))}
+              >
+                {churches.map((c) => (
+                  <MenuItem key={c.id} value={c.id}>
+                    {(c.church_name || c.name || `Church ${c.id}`)} (#{c.id})
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          )}
+        </Stack>
       </Box>
 
       {settingsLoading && (
