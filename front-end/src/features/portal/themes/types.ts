@@ -1,21 +1,30 @@
 import type { ComponentType, ReactNode } from 'react';
+import type { PortalHubLayoutProps } from './hub/portalHubTypes';
 
-/** Parish portal layout themes — each maps to a cohesive component family. */
-export type PortalLayoutThemeId = 'modern' | 'heritage' | 'cathedral';
+/** Parish portal layout themes — each maps to a distinct hub structure + component family. */
+export type PortalLayoutThemeId =
+  | 'modern'
+  | 'art-deco'
+  | 'neo-gothic'
+  | 'paper'
+  | 'bento'
+  | 'glass';
+
+/** Legacy ids persisted before the 6-theme expansion */
+export type LegacyPortalLayoutThemeId = 'heritage' | 'cathedral';
 
 export interface PortalThemeMeta {
   id: PortalLayoutThemeId;
   label: string;
   description: string;
-  /** When false, UI shows the theme as coming soon and falls back to modern. */
+  previewGradient: string;
   available: boolean;
 }
 
 export interface PortalThemeBundle {
   meta: PortalThemeMeta;
-  /** Root layout shell for /portal/* routes. */
   Layout: ComponentType;
-  /** CSS scope class applied to the portal root element. */
+  HubLayout: ComponentType<PortalHubLayoutProps>;
   scopeClass: string;
 }
 

@@ -9,7 +9,7 @@ import type { PortalLayoutThemeId, PortalThemeContextValue } from './types';
 import './portal-themes.css';
 
 interface ThemeSettings {
-  portalLayoutTheme?: PortalLayoutThemeId;
+  portalLayoutTheme?: PortalLayoutThemeId | 'heritage' | 'cathedral';
 }
 
 const PortalThemeContext = createContext<PortalThemeContextValue | null>(null);

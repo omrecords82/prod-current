@@ -19,6 +19,7 @@ import SaveOutlinedIcon from '@mui/icons-material/SaveOutlined';
 import {
   DEFAULT_PORTAL_LAYOUT_THEME,
   PORTAL_THEME_META,
+  resolvePortalLayoutTheme,
 } from '@/features/portal/themes/registry';
 import type { PortalLayoutThemeId } from '@/features/portal/themes/types';
 import { useParishSettingsWithLocal } from './useParishSettings';
@@ -85,7 +86,13 @@ const ThemeStudioPage: React.FC = () => {
     save,
   } = useParishSettingsWithLocal<ThemeSettings>('theme');
 
-  const settings: ThemeSettings = { ...DEFAULTS, ...(serverData ?? {}) };
+  const settings: ThemeSettings = {
+    ...DEFAULTS,
+    ...(serverData ?? {}),
+    portalLayoutTheme: resolvePortalLayoutTheme(
+      (serverData as ThemeSettings | undefined)?.portalLayoutTheme ?? DEFAULTS.portalLayoutTheme,
+    ),
+  };
 
   const setField = <K extends keyof ThemeSettings>(key: K, value: ThemeSettings[K]) => {
     updateLocal((prev) => ({ ...DEFAULTS, ...(prev ?? {}), [key]: value }));
@@ -163,59 +170,51 @@ const ThemeStudioPage: React.FC = () => {
             Portal Layout Theme
           </Typography>
           <Typography sx={{ fontFamily: "'Inter'", fontSize: '0.75rem', color: isDark ? '#9ca3af' : '#6b7280', mb: 2 }}>
-            Each layout uses a matched set of React components — structure and navigation differ, not just colors.
+            Six distinct hub layouts — each changes structure, components, and visual style on /portal.
           </Typography>
-          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' }, gap: 2, mb: 4 }}>
+          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', lg: 'repeat(3, 1fr)' }, gap: 2, mb: 4 }}>
             {portalLayoutThemes.map((layoutTheme) => {
               const isSelected = settings.portalLayoutTheme === layoutTheme.id;
-              const isDisabled = !layoutTheme.available;
               return (
                 <Paper
                   key={layoutTheme.id}
                   variant="outlined"
                   role="button"
-                  tabIndex={isDisabled ? -1 : 0}
-                  aria-disabled={isDisabled}
+                  tabIndex={0}
                   aria-label={`Select ${layoutTheme.label} layout${isSelected ? ' (selected)' : ''}`}
-                  onClick={() => {
-                    if (!isDisabled) setField('portalLayoutTheme', layoutTheme.id);
-                  }}
+                  onClick={() => setField('portalLayoutTheme', layoutTheme.id)}
                   onKeyDown={(e: React.KeyboardEvent) => {
-                    if (isDisabled) return;
                     if (e.key === 'Enter' || e.key === ' ') {
                       e.preventDefault();
                       setField('portalLayoutTheme', layoutTheme.id);
                     }
                   }}
                   sx={{
-                    p: 2.5,
                     borderRadius: 2,
-                    cursor: isDisabled ? 'not-allowed' : 'pointer',
-                    opacity: isDisabled ? 0.55 : 1,
+                    overflow: 'hidden',
+                    cursor: 'pointer',
                     borderWidth: isSelected ? 2 : 1,
                     borderColor: isSelected
                       ? isDark ? '#3b82f6' : '#2563eb'
                       : isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.08)',
                   }}
                 >
-                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
-                    <Typography sx={{ fontFamily: "'Inter'", fontSize: '0.9375rem', fontWeight: 600, color: isDark ? '#f3f4f6' : '#111827' }}>
-                      {layoutTheme.label}
+                  <Box sx={{ height: 56, background: layoutTheme.previewGradient }} />
+                  <Box sx={{ p: 2.5 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
+                      <Typography sx={{ fontFamily: "'Inter'", fontSize: '0.9375rem', fontWeight: 600, color: isDark ? '#f3f4f6' : '#111827' }}>
+                        {layoutTheme.label}
+                      </Typography>
+                      {isSelected && (
+                        <Typography sx={{ fontFamily: "'Inter'", fontSize: '0.625rem', fontWeight: 600, color: isDark ? '#93c5fd' : '#2563eb' }}>
+                          Active
+                        </Typography>
+                      )}
+                    </Box>
+                    <Typography sx={{ fontFamily: "'Inter'", fontSize: '0.75rem', color: isDark ? '#9ca3af' : '#6b7280' }}>
+                      {layoutTheme.description}
                     </Typography>
-                    {isSelected && (
-                      <Typography sx={{ fontFamily: "'Inter'", fontSize: '0.625rem', fontWeight: 600, color: isDark ? '#93c5fd' : '#2563eb' }}>
-                        Active
-                      </Typography>
-                    )}
-                    {isDisabled && (
-                      <Typography sx={{ fontFamily: "'Inter'", fontSize: '0.625rem', fontWeight: 600, color: isDark ? '#6b7280' : '#9ca3af' }}>
-                        Coming soon
-                      </Typography>
-                    )}
                   </Box>
-                  <Typography sx={{ fontFamily: "'Inter'", fontSize: '0.75rem', color: isDark ? '#9ca3af' : '#6b7280' }}>
-                    {layoutTheme.description}
-                  </Typography>
                 </Paper>
               );
             })}

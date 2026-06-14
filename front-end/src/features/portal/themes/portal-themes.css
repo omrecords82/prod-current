@@ -1,10 +1,43 @@
 /*
- * Parish portal layout themes — scoped design tokens.
- * Modern uses a clean SaaS workspace (Inter, slate neutrals, blue accent).
+ * Parish portal — six layout theme scopes.
+ * Each scope defines design tokens + theme-specific surface styles.
  */
 
+/* ── Shared token bridge for shadcn-style utilities ── */
+.portal-modern,
+.portal-art-deco,
+.portal-neo-gothic,
+.portal-paper,
+.portal-bento,
+.portal-glass {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: var(--background);
+  color: var(--foreground);
+  -webkit-font-smoothing: antialiased;
+}
+
+.portal-modern .rm-scope,
+.portal-art-deco .rm-scope,
+.portal-neo-gothic .rm-scope,
+.portal-paper .rm-scope,
+.portal-bento .rm-scope,
+.portal-glass .rm-scope {
+  --rm-accent: var(--primary);
+  --rm-accent-dark: var(--primary);
+  --rm-accent-hover: var(--primary);
+  --rm-accent-soft: var(--accent);
+  --rm-bg: var(--background);
+  --rm-fg: var(--foreground);
+  --rm-card: var(--card);
+  --rm-muted: var(--muted);
+  --rm-muted-fg: var(--muted-foreground);
+  --rm-border: var(--border);
+  --rm-popover: var(--popover);
+}
+
+/* ═══ 1. Modern Professional ═══ */
 .portal-modern {
-  --background: #f8fafc;
+  --background: #eef2f7;
   --foreground: #0f172a;
   --card: #ffffff;
   --card-foreground: #0f172a;
@@ -19,66 +52,180 @@
   --accent: #eff6ff;
   --accent-foreground: #1d4ed8;
   --destructive: #dc2626;
-  --destructive-foreground: #ffffff;
   --border: #e2e8f0;
   --input: #e2e8f0;
   --ring: rgba(37, 99, 235, 0.35);
   --radius: 0.625rem;
-
-  --portal-header-height: 64px;
-  --portal-max-width: 1400px;
-  --portal-content-pt: 1.75rem;
-  --portal-content-pb: 4rem;
-
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  background: var(--background);
-  color: var(--foreground);
-  -webkit-font-smoothing: antialiased;
 }
 
 html.dark .portal-modern {
   --background: #0b0f17;
   --foreground: #e8e9ed;
   --card: #151a24;
-  --card-foreground: #e8e9ed;
   --popover: #151a24;
-  --popover-foreground: #e8e9ed;
   --primary: #3b82f6;
-  --primary-foreground: #ffffff;
   --secondary: #1a2030;
-  --secondary-foreground: #cbd5e1;
   --muted: #1a2030;
   --muted-foreground: #94a3b8;
   --accent: rgba(59, 130, 246, 0.15);
   --accent-foreground: #93c5fd;
-  --destructive: #ef4444;
   --border: #2a3142;
   --input: #2a3142;
-  --ring: rgba(59, 130, 246, 0.45);
 }
 
-/* Bridge records-management accent tokens inside Modern portal */
-.portal-modern .rm-scope {
-  --rm-accent: var(--primary);
-  --rm-accent-dark: #1d4ed8;
-  --rm-accent-hover: #1d4ed8;
-  --rm-accent-soft: var(--accent);
-  --rm-bg: var(--background);
-  --rm-fg: var(--foreground);
-  --rm-card: var(--card);
-  --rm-muted: var(--muted);
-  --rm-muted-fg: var(--muted-foreground);
-  --rm-border: var(--border);
-  --rm-popover: var(--popover);
+/* ═══ 2. Art Deco Elegance ═══ */
+.portal-art-deco {
+  --background: linear-gradient(160deg, #1a2744 0%, #2d3a5c 40%, #1a2744 100%);
+  --foreground: #f5eed6;
+  --card: rgba(26, 39, 68, 0.85);
+  --card-foreground: #f5eed6;
+  --popover: #1a2744;
+  --popover-foreground: #f5eed6;
+  --primary: #c9a227;
+  --primary-foreground: #1a1208;
+  --secondary: rgba(201, 162, 39, 0.12);
+  --secondary-foreground: #f5eed6;
+  --muted: rgba(255, 255, 255, 0.06);
+  --muted-foreground: #c9b896;
+  --accent: rgba(201, 162, 39, 0.18);
+  --accent-foreground: #f5eed6;
+  --border: rgba(201, 162, 39, 0.45);
+  --input: rgba(201, 162, 39, 0.25);
+  --ring: rgba(201, 162, 39, 0.5);
+  --portal-gold: #c9a227;
+  --portal-gold-dark: #a67c00;
+  --portal-gold-soft: rgba(201, 162, 39, 0.15);
+  --radius: 0.75rem;
+  background: linear-gradient(160deg, #1a2744 0%, #2d3a5c 40%, #1a2744 100%);
 }
 
-html.dark .portal-modern .rm-scope {
-  --rm-accent-dark: #1e40af;
-  --rm-accent-hover: #60a5fa;
+.portal-art-deco-ornament {
+  border: 2px solid var(--portal-gold);
+  border-radius: 1rem;
+  padding: 1.25rem;
+  background: rgba(26, 39, 68, 0.5);
 }
 
-.portal-modern * {
-  border-color: var(--border);
+.portal-art-deco-serif {
+  font-family: Georgia, 'Times New Roman', serif;
+}
+
+/* ═══ 3. Neo-Gothic Dark ═══ */
+.portal-neo-gothic {
+  --background: #07070d;
+  --foreground: #e8e9ed;
+  --card: rgba(20, 20, 32, 0.9);
+  --card-foreground: #e8e9ed;
+  --popover: #141420;
+  --popover-foreground: #e8e9ed;
+  --primary: #818cf8;
+  --primary-foreground: #0f0f1a;
+  --secondary: #1a1a2e;
+  --secondary-foreground: #c4b5fd;
+  --muted: #1a1a2e;
+  --muted-foreground: #94a3b8;
+  --accent: rgba(129, 140, 248, 0.15);
+  --accent-foreground: #c4b5fd;
+  --border: rgba(129, 140, 248, 0.25);
+  --input: rgba(129, 140, 248, 0.2);
+  --ring: rgba(236, 72, 153, 0.4);
+  --radius: 0.5rem;
+}
+
+.portal-neo-frame {
+  border: 1px solid rgba(129, 140, 248, 0.2);
+  border-radius: 0.75rem;
+  padding: 1rem;
+  background: radial-gradient(ellipse at top, rgba(76, 29, 149, 0.15), transparent 60%);
+}
+
+/* ═══ 4. Minimalist Paper ═══ */
+.portal-paper {
+  --background: #f7f3eb;
+  --foreground: #1a1a1a;
+  --card: #faf8f4;
+  --card-foreground: #1a1a1a;
+  --popover: #faf8f4;
+  --popover-foreground: #1a1a1a;
+  --primary: #1a1a1a;
+  --primary-foreground: #faf8f4;
+  --secondary: #ede8df;
+  --secondary-foreground: #3d3d3d;
+  --muted: #ede8df;
+  --muted-foreground: #6b6b6b;
+  --accent: #e8e0d0;
+  --accent-foreground: #1a1a1a;
+  --border: #d4cfc4;
+  --input: #d4cfc4;
+  --ring: rgba(26, 26, 26, 0.2);
+  --radius: 0.25rem;
+}
+
+.portal-paper-texture {
+  background-color: #f7f3eb;
+  background-image: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+}
+
+.portal-paper-serif {
+  font-family: Georgia, 'Times New Roman', serif;
+}
+
+/* ═══ 5. Flat Bento Grid ═══ */
+.portal-bento {
+  --background: #e8f4f2;
+  --foreground: #1e293b;
+  --card: #ffffff;
+  --card-foreground: #1e293b;
+  --popover: #ffffff;
+  --popover-foreground: #1e293b;
+  --primary: #0ea5e9;
+  --primary-foreground: #ffffff;
+  --secondary: #f0fdfa;
+  --secondary-foreground: #0f766e;
+  --muted: #f0fdfa;
+  --muted-foreground: #64748b;
+  --accent: #ccfbf1;
+  --accent-foreground: #0f766e;
+  --border: #99f6e4;
+  --input: #99f6e4;
+  --ring: rgba(14, 165, 233, 0.35);
+  --radius: 1rem;
+}
+
+/* ═══ 6. Futuristic Glass ═══ */
+.portal-glass {
+  --background: #0f0c29;
+  --foreground: #e8e9ed;
+  --card: rgba(255, 255, 255, 0.08);
+  --card-foreground: #e8e9ed;
+  --popover: rgba(30, 27, 75, 0.95);
+  --popover-foreground: #e8e9ed;
+  --primary: #818cf8;
+  --primary-foreground: #0f0c29;
+  --secondary: rgba(255, 255, 255, 0.06);
+  --secondary-foreground: #c7d2fe;
+  --muted: rgba(255, 255, 255, 0.06);
+  --muted-foreground: #a5b4fc;
+  --accent: rgba(129, 140, 248, 0.2);
+  --accent-foreground: #c7d2fe;
+  --border: rgba(255, 255, 255, 0.15);
+  --input: rgba(255, 255, 255, 0.12);
+  --ring: rgba(129, 140, 248, 0.45);
+  --radius: 1rem;
+  background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
+}
+
+.portal-glass-card {
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+}
+
+.portal-glass-orbit {
+  border: 1px dashed rgba(255, 255, 255, 0.12);
+  border-radius: 50%;
 }
 
 @theme inline {
@@ -97,7 +244,6 @@ html.dark .portal-modern .rm-scope {
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
-  --color-destructive-foreground: var(--destructive-foreground);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);

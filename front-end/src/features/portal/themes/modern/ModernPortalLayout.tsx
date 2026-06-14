@@ -1,4 +1,5 @@
 import ScrollToTop from '@/components/frontend-pages/shared/scroll-to-top';
+import { usePortalTheme } from '@/features/portal/themes/PortalThemeContext';
 import {
   Button,
   DropdownMenu,
@@ -221,6 +222,7 @@ const PortalFooter: React.FC = () => {
 const ModernPortalLayout: React.FC = () => {
   const { authenticated, loading } = useAuth();
   const { isLayout } = useContext(CustomizerContext);
+  const { bundle } = usePortalTheme();
   const location = useLocation();
 
   if (loading) {
@@ -238,7 +240,7 @@ const ModernPortalLayout: React.FC = () => {
   const maxWidth = isLayout === 'boxed' ? '72rem' : 'var(--portal-max-width)';
 
   return (
-    <div className="portal-modern flex min-h-screen flex-col">
+    <div className={`${bundle.scopeClass} flex min-h-screen flex-col`}>
       <PortalHeader />
       <main
         className="mx-auto w-full flex-1 px-4 py-6 sm:px-6 lg:px-8"
