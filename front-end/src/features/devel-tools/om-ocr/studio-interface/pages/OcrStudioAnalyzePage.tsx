@@ -32,6 +32,7 @@ import { IconCloudUpload, IconFolder, IconRotate, IconRotateClockwise, IconScan,
 import { toast } from 'react-toastify';
 import OcrSetupGate from '@/features/devel-tools/om-ocr/components/OcrSetupGate';
 import { ocrStudioPathWithChurch } from '@/features/devel-tools/om-ocr/utils/ocrStudioChurch';
+import { AnalyzeAuditPanel } from '../components/AnalyzeAuditPanel';
 import { AnalyzePreviewThumb, type AnalyzePreviewVariant } from '../components/AnalyzePreviewThumb';
 import { OcrStudioHubPanel } from '../components/OcrStudioHubPanel';
 import { PageHeader } from '../components/PageHeader';
@@ -94,6 +95,7 @@ export default function OcrStudioAnalyzePage() {
   const {
     sessionId,
     items,
+    allItems,
     completedItems,
     analyzingCount,
     pendingQueueCount,
@@ -107,6 +109,10 @@ export default function OcrStudioAnalyzePage() {
     analyzeProgress,
     previewVersion,
     dragActive,
+    auditReport,
+    auditLoading,
+    issueFilter,
+    setIssueFilter,
     setDragActive,
     analyzeFiles,
     updateItem,
@@ -165,7 +171,7 @@ export default function OcrStudioAnalyzePage() {
     }
   }, [previewItem, rotateItem]);
 
-  const needsReviewCount = items.filter((i) => i.needsReview && !i.analyzing && !i.error).length;
+  const needsReviewCount = allItems.filter((i) => i.needsReview && !i.analyzing && !i.error).length;
   const progressPct = analyzeProgress && analyzeProgress.total > 0
     ? Math.round((analyzeProgress.completed / analyzeProgress.total) * 100)
     : 0;
@@ -179,7 +185,7 @@ export default function OcrStudioAnalyzePage() {
         />
 
         <Alert severity="info" sx={{ mb: 2 }}>
-          Records persist across visits for this parish. Drop images or choose a folder — subfolders are scanned automatically.
+          Records persist across visits for this parish. Drop images or choose a folder — subfolders are scanned automatically. When analysis finishes, the audit panel summarizes issues and suggests system improvements.
         </Alert>
 
         <Paper
@@ -273,7 +279,22 @@ export default function OcrStudioAnalyzePage() {
           </Box>
         )}
 
-        {items.length > 0 && (
+        {(allItems.length > 0 || auditReport) && !isAnalyzing && (
+          <AnalyzeAuditPanel
+            report={auditReport}
+            loading={auditLoading}
+            activeIssueFilter={issueFilter}
+            onIssueFilter={setIssueFilter}
+          />
+        )}
+
+        {issueFilter && (
+          <Alert severity="info" sx={{ mb: 2 }}>
+            Showing {items.length} of {allItems.length} images with issue: {QUALITY_ISSUE_LABELS[issueFilter] || issueFilter}
+          </Alert>
+        )}
+
+        {allItems.length > 0 && (
           <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
             <Chip icon={<IconScan size={14} />} label={`${completedItems.length} analyzed`} size="small" />
             {analyzingCount > 0 && (
@@ -305,7 +326,7 @@ export default function OcrStudioAnalyzePage() {
           </Box>
         )}
 
-        {items.length > 0 && (
+        {allItems.length > 0 && (
           <Paper variant="outlined" sx={{ overflow: 'auto', mb: 3 }}>
             <Table size="small" stickyHeader>
               <TableHead>
@@ -518,7 +539,7 @@ export default function OcrStudioAnalyzePage() {
           </Paper>
         )}
 
-        {items.length > 0 && (
+        {allItems.length > 0 && (
           <Stack direction="row" spacing={2} alignItems="center" flexWrap="wrap" useFlexGap>
             <Button
               variant="contained"
@@ -529,7 +550,7 @@ export default function OcrStudioAnalyzePage() {
             >
               {isCommitting
                 ? 'Uploading…'
-                : selectedCount === items.length
+                : selectedCount === allItems.length
                   ? `Upload all ${selectedCount} optimized image(s)`
                   : `Upload ${selectedCount} selected image(s)`}
             </Button>
@@ -541,7 +562,7 @@ export default function OcrStudioAnalyzePage() {
           </Stack>
         )}
 
-        {items.length === 0 && !isAnalyzing && (
+        {allItems.length === 0 && !isAnalyzing && (
           <Alert severity="info" sx={{ mt: 1 }}>
             Analysis uses local image optimization and Tesseract OCR — no cloud Vision calls until you upload.
             Review suggestions for any file marked as needing attention before submitting.

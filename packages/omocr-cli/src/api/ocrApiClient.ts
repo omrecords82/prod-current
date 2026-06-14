@@ -190,4 +190,26 @@ export class OcrApiClient {
   validateJobAdmin(jobId: number) {
     return this.request<unknown>('GET', `/api/ocr/validate/${jobId}`);
   }
+
+  // ── Analyze (pre-upload) ──────────────────────────────────────────────────
+
+  scanAnalyzeDirectory(
+    rootPath: string,
+    options: { churchId?: number; recursive?: boolean; maxFiles?: number; sessionId?: string },
+  ) {
+    const cid = this.churchId(options.churchId);
+    return this.request<{ report: unknown }>('POST', `/api/church/${cid}/ocr/analyze/scan-directory`, {
+      body: {
+        rootPath,
+        recursive: options.recursive !== false,
+        maxFiles: options.maxFiles ?? 500,
+        sessionId: options.sessionId,
+      },
+    });
+  }
+
+  getAnalyzeAuditReport(sessionId: string, churchId?: number) {
+    const cid = this.churchId(churchId);
+    return this.request<{ report: unknown }>('GET', `/api/church/${cid}/ocr/analyze/${sessionId}/audit-report`);
+  }
 }

@@ -8,6 +8,7 @@ import { registerTestCommands } from '../commands/test/index.js';
 import { registerValidateCommands, registerArtifactsCommands } from '../commands/validate/index.js';
 import { registerTemplateCommands } from '../commands/template/index.js';
 import { registerConfigCommands, buildConfigContext } from '../commands/config/index.js';
+import { registerAnalyzeCommands } from '../commands/analyze/index.js';
 
 export function createProgram(): Command {
   const program = new Command();
@@ -44,6 +45,7 @@ export function createProgram(): Command {
   registerArtifactsCommands(program, getCtx);
   registerTemplateCommands(program, getCtx);
   registerConfigCommands(program, getCtx);
+  registerAnalyzeCommands(program, getCtx);
 
   program.showHelpAfterError('(use omocr --help)');
   return program;

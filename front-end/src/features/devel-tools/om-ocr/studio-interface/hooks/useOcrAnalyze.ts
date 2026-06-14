@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { apiClient } from '@/shared/lib/axiosInstance';
+import type { AnalyzeAuditReport } from '../components/AnalyzeAuditPanel';
 
 export type AnalyzeRecordType = 'baptism' | 'marriage' | 'funeral' | 'custom';
 export type AnalyzeLayoutType = 'tabular' | 'form' | 'narrative';
@@ -109,6 +110,9 @@ export function useOcrAnalyze(churchId: number | null) {
   const [pendingQueueCount, setPendingQueueCount] = useState(0);
   const [previewVersion, setPreviewVersion] = useState(0);
   const [restoringSession, setRestoringSession] = useState(false);
+  const [auditReport, setAuditReport] = useState<AnalyzeAuditReport | null>(null);
+  const [auditLoading, setAuditLoading] = useState(false);
+  const [issueFilter, setIssueFilter] = useState<string | null>(null);
 
   const sessionRef = useRef<string | null>(null);
   const pendingQueueRef = useRef<PendingAnalyzeJob[]>([]);
@@ -168,6 +172,33 @@ export function useOcrAnalyze(churchId: number | null) {
       progressTotalsRef.current = { total: 0, completed: 0 };
     }
   }, []);
+
+  const refreshAuditReport = useCallback(async () => {
+    if (!churchId || !sessionRef.current) {
+      setAuditReport(null);
+      return;
+    }
+    setAuditLoading(true);
+    try {
+      const data: any = await apiClient.get(
+        `/api/church/${churchId}/ocr/analyze/${sessionRef.current}/audit-report`,
+      );
+      setAuditReport(data?.report ?? null);
+    } catch {
+      setAuditReport(null);
+    } finally {
+      setAuditLoading(false);
+    }
+  }, [churchId]);
+
+  useEffect(() => {
+    if (!churchId || !sessionId || isAnalyzing) return;
+    if (completedItems.length === 0) {
+      setAuditReport(null);
+      return;
+    }
+    void refreshAuditReport();
+  }, [churchId, sessionId, isAnalyzing, completedItems.length, refreshAuditReport, previewVersion]);
 
   useEffect(() => {
     if (!churchId || restoredRef.current) return;
@@ -367,6 +398,8 @@ export function useOcrAnalyze(churchId: number | null) {
     persistSessionId(null);
     setItems([]);
     setSelectedIds(new Set());
+    setAuditReport(null);
+    setIssueFilter(null);
   }, [churchId, sessionId, persistSessionId]);
 
   const commitToUpload = useCallback(async (): Promise<{ jobIds: number[]; remainingCount: number }> => {
@@ -419,9 +452,15 @@ export function useOcrAnalyze(churchId: number | null) {
     }
   }, [churchId, sessionId, items, selectedIds, persistSessionId]);
 
+  const filteredItems = useMemo(() => {
+    if (!issueFilter) return items;
+    return items.filter((it) => it.qualityIssues?.includes(issueFilter));
+  }, [items, issueFilter]);
+
   return {
     sessionId,
-    items,
+    items: filteredItems,
+    allItems: items,
     completedItems,
     analyzingCount,
     pendingQueueCount,
@@ -435,6 +474,11 @@ export function useOcrAnalyze(churchId: number | null) {
     analyzeProgress,
     previewVersion,
     dragActive,
+    auditReport,
+    auditLoading,
+    issueFilter,
+    setIssueFilter,
+    refreshAuditReport,
     setDragActive,
     analyzeFiles,
     updateItem,

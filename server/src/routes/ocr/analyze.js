@@ -94,6 +94,53 @@ function createAnalyzeRouter(upload) {
     }
   });
 
+  router.get('/analyze/:sessionId/audit-report', async (req, res) => {
+    try {
+      const churchId = parseInt(req.params.churchId, 10);
+      const { getSessionAuditReport } = require('../../services/ocrAnalyzeAuditService');
+      const report = getSessionAuditReport(churchId, req.params.sessionId);
+      if (!report) return res.status(404).json({ error: 'Session not found' });
+      res.json({ success: true, report });
+    } catch (err) {
+      console.error('[OCR Analyze] audit-report failed:', err);
+      res.status(500).json({ error: 'Audit report failed', message: err.message });
+    }
+  });
+
+  router.post('/analyze/scan-directory', async (req, res) => {
+    try {
+      const churchId = parseInt(req.params.churchId, 10);
+      const rootPath = String(req.body?.rootPath || '').trim();
+      const recursive = req.body?.recursive !== false;
+      const maxFiles = parseInt(req.body?.maxFiles, 10) || 500;
+      const sessionId = String(req.body?.sessionId || '').trim() || null;
+
+      if (!churchId || !rootPath) {
+        return res.status(400).json({ error: 'churchId and rootPath are required' });
+      }
+
+      const { scanDirectoryAndAnalyze } = require('../../services/ocrAnalyzeAuditService');
+      const report = await scanDirectoryAndAnalyze(churchId, rootPath, {
+        recursive,
+        maxFiles,
+        sessionId,
+      });
+
+      console.log(`OCR_ANALYZE_AUDIT ${JSON.stringify({
+        churchId,
+        sessionId: report.sessionId,
+        rootPath: report.rootPath,
+        total: report.summary.totalFiles,
+        needsReview: report.summary.needsReview,
+      })}`);
+
+      res.json({ success: true, report });
+    } catch (err) {
+      console.error('[OCR Analyze] scan-directory failed:', err);
+      res.status(500).json({ error: 'Directory scan failed', message: err.message });
+    }
+  });
+
   router.get('/analyze/:sessionId/:fileId/preview', async (req, res) => {
     try {
       const churchId = parseInt(req.params.churchId, 10);
