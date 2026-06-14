@@ -39,6 +39,8 @@ import {
   type ColumnBands,
 } from '@/features/devel-tools/om-ocr/utils/recordHighlightBoxes';
 import { apiClient } from '@/shared/lib/axiosInstance';
+import { SNACKBAR_DURATION_LONG, useSnackbar } from '@/hooks/useSnackbar';
+import AppSnackbar from '@/shared/ui/AppSnackbar';
 import {
   Alert,
   Box,
@@ -444,6 +446,7 @@ const OcrReviewPage: React.FC = () => {
   const [uploadRecordLayoutMode, setUploadRecordLayoutMode] = useState('auto');
   const [imagePanelWidth, setImagePanelWidth] = useState(680);
   const uploadFileInputRef = useRef<HTMLInputElement>(null);
+  const { snackbar, showSnackbar, closeSnackbar } = useSnackbar();
   const uploadPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const prevSelectedReviewStatusRef = useRef<string | null>(null);
   const contentRowRef = useRef<HTMLDivElement>(null);
@@ -1414,24 +1417,7 @@ const OcrReviewPage: React.FC = () => {
       if (allDone) {
         setReviewStatus('ready_to_seed');
         setMapHint('All records confirmed — ready to seed.');
-
-        // Prompt
-        setTimeout(() => {
-          const continueWork = window.confirm("All records on this page are confirmed!\n\nContinue working on records?");
-          if (continueWork) {
-            // Find next job awaiting review
-            const nextJob = jobs.find((j) => {
-              const isSelf = Number(j.id) === selectedJobId;
-              const isAwaiting = j.review_status !== 'ready_to_seed' && j.review_status !== 'seeded';
-              return !isSelf && isAwaiting;
-            });
-            if (nextJob) {
-              navigate(`${reviewBase}/${nextJob.id}`);
-            } else {
-              alert("No more jobs awaiting review!");
-            }
-          }
-        }, 100);
+        showSnackbar('All records on this page are confirmed — ready to seed.', 'success');
       } else {
         let next = -1;
         for (let step = 1; step <= total; step++) {
@@ -3121,6 +3107,14 @@ const OcrReviewPage: React.FC = () => {
           </Button>
         </DialogActions>
       </Dialog>
+
+      <AppSnackbar
+        open={snackbar.open}
+        message={snackbar.message}
+        severity={snackbar.severity}
+        onClose={closeSnackbar}
+        autoHideDuration={SNACKBAR_DURATION_LONG}
+      />
     </Box>
   );
 };
