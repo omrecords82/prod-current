@@ -47,7 +47,6 @@ import {
   Chip,
   CircularProgress,
   Collapse,
-  Divider,
   FormControl,
   IconButton,
   InputLabel,
@@ -68,13 +67,6 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  ToggleButton,
-  ToggleButtonGroup,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableRow,
 } from '@mui/material';
 import {
   IconArrowLeft,
@@ -91,7 +83,6 @@ import {
   IconMaximize,
   IconRefresh,
   IconRestore,
-  IconRobot,
   IconZoomIn,
   IconZoomOut,
   IconTrash,
@@ -110,8 +101,6 @@ import {
   setOcrStudioChurchParam,
 } from '@/features/devel-tools/om-ocr/utils/ocrStudioChurch';
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
-
-type AgentView = 'agent1' | 'agent2' | 'compare';
 
 function formatExtractMethod(method: string | null): string {
   if (!method) return 'Unknown';
@@ -417,7 +406,6 @@ const OcrReviewPage: React.FC = () => {
   const [agent2Notes, setAgent2Notes] = useState<string | null>(null);
   const [agent2Status, setAgent2Status] = useState<string | null>(null);
   const [agent2Available, setAgent2Available] = useState(false);
-  const [agentView, setAgentView] = useState<AgentView>('agent1');
   const [llamaparsePreview, setLlamaparsePreview] = useState<string | null>(null);
   const [selectedRecordIndex, setSelectedRecordIndex] = useState(0);
   const [needsReviewFlag, setNeedsReviewFlag] = useState(false);
@@ -454,7 +442,7 @@ const OcrReviewPage: React.FC = () => {
   const [ocrLanguage, setOcrLanguage] = useState('en');
   const [uploadRecordType, setUploadRecordType] = useState('custom');
   const [uploadRecordLayoutMode, setUploadRecordLayoutMode] = useState('auto');
-  const [imagePanelWidth, setImagePanelWidth] = useState(560);
+  const [imagePanelWidth, setImagePanelWidth] = useState(680);
   const uploadFileInputRef = useRef<HTMLInputElement>(null);
   const uploadPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const prevSelectedReviewStatusRef = useRef<string | null>(null);
@@ -545,7 +533,6 @@ const OcrReviewPage: React.FC = () => {
   );
 
   const handleFieldChange = (fieldName: string, value: string) => {
-    if (editorReadOnly) return;
     const nextFields = { ...fields, [fieldName]: value };
     setFields(nextFields);
     
@@ -698,40 +685,6 @@ const OcrReviewPage: React.FC = () => {
     };
   }, [tableExtractionJson, imageDimensions, useRecordSnippet, reviewCropBbox]);
 
-  const fieldDiffs = useMemo(() => {
-    const norm = (s: string) => (s || '').trim().replace(/\s+/g, ' ').toLowerCase();
-    const r1 = agent1Snapshot[selectedRecordIndex] || {};
-    const r2 = agent2Records[selectedRecordIndex] || {};
-    const keys = new Set([...Object.keys(r1), ...Object.keys(r2)]);
-    return [...keys]
-      .filter((k) => (r1[k] || r2[k] || '').trim())
-      .sort()
-      .map((field) => ({
-        field,
-        agent1: r1[field] || '',
-        agent2: r2[field] || '',
-        match: norm(r1[field] || '') === norm(r2[field] || ''),
-      }));
-  }, [agent1Snapshot, agent2Records, selectedRecordIndex]);
-
-  const diffMatchCount = useMemo(
-    () => fieldDiffs.filter((d) => d.match).length,
-    [fieldDiffs],
-  );
-
-  const applyAgentValues = (source: 'agent1' | 'agent2') => {
-    const src = source === 'agent1' ? agent1Snapshot : agent2Records;
-    if (!src || !src.length) return;
-    const newRecords = src.map((r) => ({ ...r }));
-    setAllRecords(newRecords);
-    const nextIdx = Math.min(selectedRecordIndex, newRecords.length - 1);
-    const finalIdx = Math.max(0, nextIdx);
-    setSelectedRecordIndex(finalIdx);
-    setFields({ ...(newRecords[finalIdx] || {}) });
-    setConfirmedIndexes(new Set<number>());
-    setMapHint(`Applied all ${source === 'agent1' ? 'Agent 1' : 'Agent 2'} records to the editor.`);
-  };
-
   const hydrateExtractResponse = (data: any) => {
     setReviewStatus(data.review_status || 'uploaded');
     setOcrPreview(data.ocr_text_preview || null);
@@ -752,15 +705,17 @@ const OcrReviewPage: React.FC = () => {
       const normalizedA2 = normalizeExtractRecords(rtNorm, a2records.map((r) => ({ ...r })));
 
       setAgent1Snapshot(normalizedRecords.map((r) => ({ ...r })));
-      setAllRecords(normalizedRecords.map((r) => ({ ...r })));
       setAgent2Records(normalizedA2.map((r) => ({ ...r })));
-    setSelectedRecordIndex(Math.min(idx, Math.max(records.length - 1, 0)));
+      const primaryRecords = normalizedA2.length > 0 ? normalizedA2 : normalizedRecords;
+      setAllRecords(primaryRecords.map((r) => ({ ...r })));
+      const primaryIdx = Math.min(idx, Math.max(primaryRecords.length - 1, 0));
+      setSelectedRecordIndex(primaryIdx);
     setExtractMethod(extract?.method || null);
     setAgent2Method(agent2?.method || null);
     setNeedsReviewFlag(!!extract?.needs_review);
     setRefinementNotes(extract?.refinement_notes || null);
     setAgent2Notes(agent2?.refinement_notes || null);
-      setFields({ ...(normalizedRecords[idx] || extract?.fields || {}) });
+      setFields({ ...(primaryRecords[primaryIdx] || extract?.fields || {}) });
     setAgent2Available(!!agent2 || !!data.llamaparse_available);
     setConfirmedIndexes(new Set<number>(Array.isArray(extract?.confirmed_indexes) ? extract.confirmed_indexes : []));
     if (extract?.rules) {
@@ -1086,6 +1041,10 @@ const OcrReviewPage: React.FC = () => {
     if (churchId && selectedJobId) loadExtract(selectedJobId);
   }, [churchId, selectedJobId, loadExtract]);
 
+  useEffect(() => {
+    if (selectedJobId) setJobsCollapsed(true);
+  }, [selectedJobId]);
+
   const selectedJobReviewStatus = selectedJob?.review_status;
   useEffect(() => {
     prevSelectedReviewStatusRef.current = null;
@@ -1101,14 +1060,14 @@ const OcrReviewPage: React.FC = () => {
     }
   }, [churchId, selectedJobId, selectedJobReviewStatus, loadExtract]);
 
-  // Poll when Agent 2 is still running in the background (after Re-run Agent 1).
+  // Poll when LlamaParse extraction is still running in the background.
   useEffect(() => {
     if (!churchId || !selectedJobId || agent2Status !== 'running' || extractLoading) return;
     let cancelled = false;
     (async () => {
       const data = await pollUntilAgent2Ready(selectedJobId);
       if (!cancelled && data?.agent2_status === 'complete') {
-        setMapHint('Agent 2 (LlamaParse) finished — open Compare to review differences.');
+        setMapHint('LlamaParse extraction finished — review and confirm the fields.');
       }
     })();
     return () => { cancelled = true; };
@@ -1336,7 +1295,7 @@ const OcrReviewPage: React.FC = () => {
       setReviewStatus('agent_extracted');
       await loadJobs();
       if (data?.agent2_status === 'running') {
-        setMapHint('Agent 1 complete — Agent 2 (LlamaParse) is running in the background…');
+        setMapHint('LlamaParse extraction is running in the background…');
         await pollUntilAgent2Ready(selectedJobId);
       }
     } catch (err: any) {
@@ -1371,13 +1330,21 @@ const OcrReviewPage: React.FC = () => {
       const data = res?.data ?? res;
       const agent2 = data.agent2_extract;
       const a2records = recordsFromExtract(agent2);
-      setAgent2Records(a2records.map((r) => ({ ...r })));
+      const rtNorm = (agent2?.record_type && agent2.record_type !== 'custom')
+        ? agent2.record_type
+        : recordType;
+      const normalizedA2 = normalizeExtractRecords(rtNorm, a2records.map((r) => ({ ...r })));
+      setAgent2Records(normalizedA2.map((r) => ({ ...r })));
+      setAllRecords(normalizedA2.map((r) => ({ ...r })));
+      const idx = Math.min(selectedRecordIndex, Math.max(normalizedA2.length - 1, 0));
+      setSelectedRecordIndex(idx);
+      setFields({ ...(normalizedA2[idx] || {}) });
       setAgent2Method(agent2?.method || null);
       setAgent2Notes(agent2?.refinement_notes || null);
       setAgent2Status('complete');
       setAgent2Available(true);
       if (agent2?.record_type && agent2.record_type !== 'custom') setRecordType(agent2.record_type);
-      setMapHint('Agent 2 (LlamaParse) extraction complete — open Compare to see differences.');
+      setMapHint('LlamaParse extraction complete — review and confirm the fields.');
     } catch (err: any) {
       if (isTimeoutError(err)) {
         setMapHint('Agent 2 timed out — checking server…');
@@ -1399,13 +1366,6 @@ const OcrReviewPage: React.FC = () => {
       setExtractLoading(false);
     }
   };
-
-  const agent2DisplayFields = useMemo(
-    () => agent2Records[selectedRecordIndex] || agent2Records[0] || {},
-    [agent2Records, selectedRecordIndex],
-  );
-
-  const editorReadOnly = agentView === 'agent2';
 
   const confirmFields = async () => {
     if (!churchId || !selectedJobId) return;
@@ -1780,9 +1740,9 @@ const OcrReviewPage: React.FC = () => {
         ) : (
         <Box
           sx={{
-            width: { xs: '100%', md: '33.333%' },
-            minWidth: { md: 300 },
-            maxWidth: { md: 460 },
+            width: { xs: '100%', md: 280 },
+            minWidth: { md: 260 },
+            maxWidth: { md: 320 },
             maxHeight: { xs: '40vh', md: 'none' },
             height: { md: '100%' },
             flexShrink: 0,
@@ -2085,9 +2045,20 @@ const OcrReviewPage: React.FC = () => {
         </Box>
         )}
 
-        {/* Confirm panel + source image */}
+        {/* Source image + confirm panel */}
         <Box ref={contentRowRef} sx={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: { xs: 'column', lg: 'row' }, overflow: 'hidden' }}>
-          <Box sx={{ flex: 1, minWidth: 0, overflow: 'auto', p: 2 }}>
+          <Box
+            sx={{
+              flex: 1,
+              minWidth: 0,
+              order: { lg: 3 },
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden',
+              bgcolor: 'background.default',
+            }}
+          >
+          <Box sx={{ flex: 1, minWidth: 0, overflow: 'auto', px: { xs: 2, lg: 2.5 }, pt: 2, pb: 1 }}>
           {!selectedJobId ? (
             <OcrReviewDropZone
               dragActive={uploadDragActive}
@@ -2114,305 +2085,198 @@ const OcrReviewPage: React.FC = () => {
             />
           ) : (
             <Stack spacing={2}>
-              <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
-                <Typography variant="h6" fontWeight={700}>Job #{selectedJobId}</Typography>
-                <FormControl size="small" sx={{ minWidth: 140 }}>
-                  <Select
-                    value={reviewStatus}
-                    onChange={async (e) => {
-                      const nextStatus = e.target.value;
-                      try {
-                        await apiClient.patch(`/api/church/${churchId}/ocr/jobs/${selectedJobId}/review-status`, {
-                          review_status: nextStatus
-                        });
-                        setReviewStatus(nextStatus as PipelineStatus);
-                        setJobs((prev) =>
-                          prev.map((j) =>
-                            Number(j.id) === selectedJobId ? { ...j, review_status: nextStatus as PipelineStatus } : j
-                          )
-                        );
-                        setMapHint(`Review status updated to ${nextStatus}.`);
-                      } catch (err: any) {
-                        console.error("Failed to update status:", err);
-                        alert("Failed to update status: " + (err.response?.data?.error || err.message));
-                      }
-                    }}
-                    size="small"
-                    variant="outlined"
-                    sx={{
-                      height: 28,
-                      fontSize: '0.75rem',
-                      fontWeight: 600,
-                      '.MuiOutlinedInput-notchedOutline': {
-                        borderColor: 'divider',
-                      },
-                    }}
-                  >
-                    {Object.entries(STATUS_LABELS).map(([status, cfg]) => (
-                      <MenuItem key={status} value={status} sx={{ fontSize: '0.75rem' }}>
-                        {cfg.label}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-                <Select
-                  value={recordType}
-                  onChange={async (e) => {
-                    const nextType = e.target.value;
-                    setRecordType(nextType);
-                    try {
-                      await apiClient.post(`/api/church/${churchId}/ocr/jobs/${selectedJobId}/confirm-extract`, {
-                        record_type: nextType,
-                        records: allRecords.length ? allRecords : [fields],
-                        confirmed_indexes: Array.from(confirmedIndexes),
-                        finalize: false,
-                      });
-                      setJobs((prev) =>
-                        prev.map((j) =>
-                          Number(j.id) === selectedJobId ? { ...j, record_type: nextType } : j
-                        )
-                      );
-                      setMapHint(`Record type changed to ${nextType}.`);
-                    } catch (err: any) {
-                      console.error("Failed to update record type on backend:", err);
-                      setError(err?.response?.data?.error || "Failed to update record type");
-                    }
-                  }}
-                  size="small"
-                  variant="outlined"
-                  sx={{
-                    height: 24,
-                    fontSize: '0.75rem',
-                    textTransform: 'capitalize',
-                    '.MuiOutlinedInput-notchedOutline': {
-                      borderColor: 'divider',
-                    },
-                    '&:hover .MuiOutlinedInput-notchedOutline': {
-                      borderColor: 'primary.main',
-                    },
-                    '.MuiSelect-select': {
-                      py: 0,
-                      px: 1,
-                      display: 'flex',
-                      alignItems: 'center',
-                    }
-                  }}
-                >
-                  <MenuItem value="baptism" sx={{ fontSize: '0.75rem', textTransform: 'capitalize' }}>Baptism</MenuItem>
-                  <MenuItem value="marriage" sx={{ fontSize: '0.75rem', textTransform: 'capitalize' }}>Marriage</MenuItem>
-                  <MenuItem value="funeral" sx={{ fontSize: '0.75rem', textTransform: 'capitalize' }}>Funeral</MenuItem>
-                </Select>
-                {extractMethod && (
-                  <Chip
-                    label={formatExtractMethod(extractMethod)}
-                    size="small"
-                    color={extractMethod === 'assembler' ? 'success' : (extractMethod === 'llm' || extractMethod === 'llm_vision' || extractMethod === 'llamaparse_llm') ? 'primary' : 'default'}
-                    variant="outlined"
-                  />
-                )}
-                {agent2Method && (
-                  <Chip
-                    label={`Agent 2: ${formatExtractMethod(agent2Method)}`}
-                    size="small"
-                    color={agent2Method === 'llamaparse_llm' ? 'secondary' : 'default'}
-                    variant="outlined"
-                  />
-                )}
-              </Stack>
-
-              <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
-                <ToggleButtonGroup
-                  exclusive
-                  size="small"
-                  value={agentView}
-                  onChange={(_, v) => { if (v) setAgentView(v as AgentView); }}
-                >
-                  <ToggleButton value="agent1">
-                    Agent 1 · Vision/Table
-                  </ToggleButton>
-                  <ToggleButton value="agent2" disabled={!agent2Available && agent2Status !== 'running'}>
-                    Agent 2 · LlamaParse
-                  </ToggleButton>
-                  <ToggleButton value="compare" disabled={!agent2Records.length}>
-                    Compare
-                  </ToggleButton>
-                </ToggleButtonGroup>
-                {agent2Status && (
-                  <Chip
-                    size="small"
-                    label={`Agent 2: ${agent2Status}`}
-                    color={agent2Status === 'complete' ? 'success' : agent2Status === 'running' ? 'info' : 'default'}
-                    variant="outlined"
-                  />
-                )}
-                {!agent2Available && agent2Status !== 'complete' && (
-                  <Button size="small" variant="text" onClick={runAgent2Extract} disabled={extractLoading}>
-                    Run Agent 2
-                  </Button>
-                )}
-              </Stack>
-
-              {agentView === 'compare' && fieldDiffs.length > 0 && (
-                <Paper variant="outlined" sx={{ p: 2 }}>
-                  <Stack direction="row" spacing={1} alignItems="center" justifyContent="space-between" sx={{ mb: 1.5 }}>
-                    <Typography variant="subtitle2" fontWeight={700}>
-                      Agent comparison — record #{selectedRecordIndex + 1}
-                    </Typography>
-                    <Chip
+              <Paper
+                variant="outlined"
+                sx={{
+                  p: 1.5,
+                  borderRadius: 2,
+                  bgcolor: 'background.paper',
+                  position: 'sticky',
+                  top: 0,
+                  zIndex: 2,
+                }}
+              >
+                <Stack direction="row" spacing={1.5} alignItems="center" flexWrap="wrap" useFlexGap>
+                  <Typography variant="subtitle1" fontWeight={700} sx={{ mr: 0.5 }}>
+                    Job #{selectedJobId}
+                  </Typography>
+                  <Chip label={statusCfg.label} size="small" color={statusCfg.color} />
+                  <FormControl size="small" sx={{ minWidth: 130 }}>
+                    <Select
+                      value={reviewStatus}
+                      onChange={async (e) => {
+                        const nextStatus = e.target.value;
+                        try {
+                          await apiClient.patch(`/api/church/${churchId}/ocr/jobs/${selectedJobId}/review-status`, {
+                            review_status: nextStatus
+                          });
+                          setReviewStatus(nextStatus as PipelineStatus);
+                          setJobs((prev) =>
+                            prev.map((j) =>
+                              Number(j.id) === selectedJobId ? { ...j, review_status: nextStatus as PipelineStatus } : j
+                            )
+                          );
+                          setMapHint(`Review status updated to ${nextStatus}.`);
+                        } catch (err: any) {
+                          console.error("Failed to update status:", err);
+                          alert("Failed to update status: " + (err.response?.data?.error || err.message));
+                        }
+                      }}
                       size="small"
-                      label={`${diffMatchCount}/${fieldDiffs.length} fields match`}
-                      color={diffMatchCount === fieldDiffs.length ? 'success' : 'warning'}
-                    />
-                  </Stack>
-                  <Table size="small">
-                    <TableHead>
-                      <TableRow>
-                        <TableCell>Field</TableCell>
-                        <TableCell>Agent 1</TableCell>
-                        <TableCell>Agent 2</TableCell>
-                        <TableCell align="center">Match</TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {fieldDiffs.map((row) => (
-                        <TableRow
-                          key={row.field}
-                          sx={{ bgcolor: row.match ? 'transparent' : 'warning.light', opacity: row.match ? 1 : 0.95 }}
-                        >
-                          <TableCell sx={{ fontWeight: 600, textTransform: 'capitalize' }}>
-                            {row.field.replace(/_/g, ' ')}
-                          </TableCell>
-                          <TableCell sx={{ fontFamily: 'monospace', fontSize: '0.8rem' }}>{row.agent1 || '—'}</TableCell>
-                          <TableCell sx={{ fontFamily: 'monospace', fontSize: '0.8rem' }}>{row.agent2 || '—'}</TableCell>
-                          <TableCell align="center">{row.match ? '✓' : '≠'}</TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                  <Stack direction="row" spacing={1} sx={{ mt: 1.5 }}>
-                    <Button size="small" variant="outlined" onClick={() => applyAgentValues('agent1')}>
-                      Use Agent 1 in editor
-                    </Button>
-                    <Button size="small" variant="outlined" onClick={() => applyAgentValues('agent2')}>
-                      Use Agent 2 in editor
-                    </Button>
-                  </Stack>
-                </Paper>
-              )}
-
-              {agentView === 'compare' && !fieldDiffs.length && agent2Available && (
-                <Alert severity="info">
-                  No field differences to show yet — run Agent 2 or wait for the worker to finish LlamaParse extraction.
-                </Alert>
-              )}
-
-              {layoutClassification && (
-                <Paper variant="outlined" sx={{ p: 1.5, bgcolor: 'background.default', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 1.5 }}>
-                  <Stack direction="row" spacing={1} alignItems="center">
-                    <IconRobot size={20} color="#1976d2" />
-                    <Typography variant="body2">
-                      Detected Layout: <strong>{layoutClassification.detectedLayoutType.toUpperCase()}</strong> · {Math.round(layoutClassification.layoutConfidence * 100)}% confidence
-                    </Typography>
-                  </Stack>
-                  <FormControl size="small" sx={{ minWidth: 150 }}>
-                    <InputLabel id="layout-override-label">Change Layout</InputLabel>
-                    <Select
-                      labelId="layout-override-label"
-                      label="Change Layout"
-                      value={layoutClassification.detectedLayoutType}
-                      onChange={(e) => handleLayoutOverride(e.target.value as any)}
+                      variant="outlined"
+                      sx={{ height: 32, fontSize: '0.8rem' }}
                     >
-                      <MenuItem value="tabular">Tabular Ledger</MenuItem>
-                      <MenuItem value="form">Pre-printed Form</MenuItem>
-                      <MenuItem value="narrative">Narrative</MenuItem>
-                    </Select>
-                  </FormControl>
-                </Paper>
-              )}
-
-              {allRecords.length > 1 && (
-                <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
-                  <FormControl size="small" sx={{ minWidth: 320, flex: 1 }}>
-                    <InputLabel>Record on this page</InputLabel>
-                    <Select
-                      label="Record on this page"
-                      value={selectedRecordIndex}
-                      onChange={(e) => goToRecord(Number(e.target.value))}
-                    >
-                      {allRecords.map((rec, i) => (
-                        <MenuItem key={i} value={i}>
-                          {confirmedIndexes.has(i) ? '✓ ' : ''}
-                          #{rec.record_number || i + 1} — {recordDisplayName(recordType, rec) || `Record ${i + 1}`}
+                      {Object.entries(STATUS_LABELS).map(([status, cfg]) => (
+                        <MenuItem key={status} value={status} sx={{ fontSize: '0.8rem' }}>
+                          {cfg.label}
                         </MenuItem>
                       ))}
                     </Select>
                   </FormControl>
-                  <Chip
-                    size="small"
-                    color={confirmedIndexes.size >= allRecords.length ? 'success' : 'default'}
-                    label={`${confirmedIndexes.size}/${allRecords.length} confirmed`}
-                  />
-                </Stack>
-              )}
-
-              {currentRecordOutcomes.length > 0 && (
-                <Paper
-                  variant="outlined"
-                  sx={{
-                    p: 1.5,
-                    bgcolor: 'background.default',
-                    borderLeft: '4px solid',
-                    borderColor: ruleCounts.blockers > 0 ? 'error.main' : ruleCounts.warnings > 0 ? 'warning.main' : 'info.main'
-                  }}
-                >
-                  <Stack direction="row" spacing={2} alignItems="center" justifyContent="space-between" flexWrap="wrap">
-                    <Typography variant="subtitle2" fontWeight={700}>
-                      Rules Validation
-                    </Typography>
-                    <Stack direction="row" spacing={1}>
-                      <Chip
-                        label={`${ruleCounts.blockers} Blockers`}
-                        color={ruleCounts.blockers > 0 ? 'error' : 'default'}
-                        size="small"
-                        variant={ruleCounts.blockers > 0 ? 'filled' : 'outlined'}
-                      />
-                      <Chip
-                        label={`${ruleCounts.warnings} Warnings`}
-                        color={ruleCounts.warnings > 0 ? 'warning' : 'default'}
-                        size="small"
-                        variant={ruleCounts.warnings > 0 ? 'filled' : 'outlined'}
-                      />
-                      <Chip
-                        label={`${ruleCounts.suggestions} Suggestions`}
-                        color={ruleCounts.suggestions > 0 ? 'info' : 'default'}
-                        size="small"
-                        variant={ruleCounts.suggestions > 0 ? 'filled' : 'outlined'}
-                      />
-                    </Stack>
-                  </Stack>
-                  {ruleCounts.blockers > 0 && (
-                    <Typography variant="caption" color="error.main" sx={{ display: 'block', mt: 1, fontWeight: 600 }}>
-                      ⚠️ Seeding to tenant database is blocked. Please resolve the active blocker(s) by correcting the dates or fields.
-                    </Typography>
+                  <FormControl size="small" sx={{ minWidth: 110 }}>
+                    <InputLabel id="review-record-type-label">Type</InputLabel>
+                    <Select
+                      labelId="review-record-type-label"
+                      label="Type"
+                      value={recordType}
+                      onChange={async (e) => {
+                        const nextType = e.target.value;
+                        setRecordType(nextType);
+                        try {
+                          await apiClient.post(`/api/church/${churchId}/ocr/jobs/${selectedJobId}/confirm-extract`, {
+                            record_type: nextType,
+                            records: allRecords.length ? allRecords : [fields],
+                            confirmed_indexes: Array.from(confirmedIndexes),
+                            finalize: false,
+                          });
+                          setJobs((prev) =>
+                            prev.map((j) =>
+                              Number(j.id) === selectedJobId ? { ...j, record_type: nextType } : j
+                            )
+                          );
+                          setMapHint(`Record type changed to ${nextType}.`);
+                        } catch (err: any) {
+                          console.error("Failed to update record type on backend:", err);
+                          setError(err?.response?.data?.error || "Failed to update record type");
+                        }
+                      }}
+                      size="small"
+                      sx={{ height: 32, textTransform: 'capitalize', fontSize: '0.8rem' }}
+                    >
+                      <MenuItem value="baptism">Baptism</MenuItem>
+                      <MenuItem value="marriage">Marriage</MenuItem>
+                      <MenuItem value="funeral">Funeral</MenuItem>
+                    </Select>
+                  </FormControl>
+                  {agent2Method && (
+                    <Chip
+                      label={formatExtractMethod(agent2Method)}
+                      size="small"
+                      color="secondary"
+                      variant="outlined"
+                    />
                   )}
-                </Paper>
-              )}
+                  {agent2Status && (
+                    <Chip
+                      size="small"
+                      label={agent2Status === 'running' ? 'Extracting…' : agent2Status === 'complete' ? 'Extracted' : agent2Status}
+                      color={agent2Status === 'complete' ? 'success' : agent2Status === 'running' ? 'info' : 'default'}
+                    />
+                  )}
+                  <Box sx={{ flex: 1 }} />
+                  {!agent2Available && agent2Status !== 'complete' && (
+                    <Button size="small" variant="outlined" onClick={runAgent2Extract} disabled={extractLoading}>
+                      Run extraction
+                    </Button>
+                  )}
+                  <Button
+                    size="small"
+                    variant="text"
+                    startIcon={<IconRefresh size={16} />}
+                    onClick={runAgent2Extract}
+                    disabled={extractLoading}
+                    sx={{ textTransform: 'none' }}
+                  >
+                    Re-extract
+                  </Button>
+                </Stack>
 
-              {needsReviewFlag && (
-                <Alert severity="warning">
-                  This record may need manual review — some key fields could not be confidently mapped from the ledger layout.
+                {(allRecords.length > 1 || layoutClassification || currentRecordOutcomes.length > 0) && (
+                  <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap sx={{ mt: 1.25, pt: 1.25, borderTop: '1px solid', borderColor: 'divider' }}>
+                    {allRecords.length > 1 && (
+                      <>
+                        <FormControl size="small" sx={{ minWidth: 260, flex: 1 }}>
+                          <InputLabel id="review-record-index-label">Record on page</InputLabel>
+                          <Select
+                            labelId="review-record-index-label"
+                            label="Record on page"
+                            value={selectedRecordIndex}
+                            onChange={(e) => goToRecord(Number(e.target.value))}
+                            size="small"
+                          >
+                            {allRecords.map((rec, i) => (
+                              <MenuItem key={i} value={i}>
+                                {confirmedIndexes.has(i) ? '✓ ' : ''}
+                                #{rec.record_number || i + 1} — {recordDisplayName(recordType, rec) || `Record ${i + 1}`}
+                              </MenuItem>
+                            ))}
+                          </Select>
+                        </FormControl>
+                        <Chip
+                          size="small"
+                          color={confirmedIndexes.size >= allRecords.length ? 'success' : 'default'}
+                          label={`${confirmedIndexes.size}/${allRecords.length} confirmed`}
+                        />
+                      </>
+                    )}
+                    {layoutClassification && (
+                      <FormControl size="small" sx={{ minWidth: 150 }}>
+                        <InputLabel id="layout-override-label">Layout</InputLabel>
+                        <Select
+                          labelId="layout-override-label"
+                          label="Layout"
+                          value={layoutClassification.detectedLayoutType}
+                          onChange={(e) => handleLayoutOverride(e.target.value as any)}
+                          size="small"
+                        >
+                          <MenuItem value="tabular">Tabular Ledger</MenuItem>
+                          <MenuItem value="form">Pre-printed Form</MenuItem>
+                          <MenuItem value="narrative">Narrative</MenuItem>
+                        </Select>
+                      </FormControl>
+                    )}
+                    {currentRecordOutcomes.length > 0 && (
+                      <Stack direction="row" spacing={0.75}>
+                        {ruleCounts.blockers > 0 && (
+                          <Chip label={`${ruleCounts.blockers} blocker${ruleCounts.blockers > 1 ? 's' : ''}`} color="error" size="small" />
+                        )}
+                        {ruleCounts.warnings > 0 && (
+                          <Chip label={`${ruleCounts.warnings} warning${ruleCounts.warnings > 1 ? 's' : ''}`} color="warning" size="small" />
+                        )}
+                        {ruleCounts.suggestions > 0 && (
+                          <Chip label={`${ruleCounts.suggestions} suggestion${ruleCounts.suggestions > 1 ? 's' : ''}`} color="info" size="small" variant="outlined" />
+                        )}
+                      </Stack>
+                    )}
+                  </Stack>
+                )}
+              </Paper>
+
+              {ruleCounts.blockers > 0 && (
+                <Alert severity="error" sx={{ py: 0.75 }}>
+                  Seeding is blocked until blocker fields are corrected.
                 </Alert>
               )}
 
-              {extractMethod === 'heuristic' && (
-                <Alert severity="info">
-                  Field mapping used basic text patterns. Click <strong>Re-run Agent</strong> to retry structured assembly and AI cleanup.
+              {needsReviewFlag && (
+                <Alert severity="warning" sx={{ py: 0.75 }}>
+                  Some fields could not be confidently mapped — please verify against the source image.
                 </Alert>
               )}
 
               {error && <Alert severity="error" onClose={() => setError(null)}>{error}</Alert>}
 
-              {(refinementNotes || ocrPreview || extractMethod) && (
+              {(agent2Notes || llamaparsePreview || ocrPreview) && (
                 <Box>
                   <Button
                     size="small"
@@ -2421,33 +2285,23 @@ const OcrReviewPage: React.FC = () => {
                     endIcon={showDetailedInfo ? <IconChevronUp size={16} /> : <IconChevronDown size={16} />}
                     onClick={() => setShowDetailedInfo((v) => !v)}
                   >
-                    Detailed Information
+                    Extraction details
                   </Button>
                   <Collapse in={showDetailedInfo}>
                     <Stack spacing={1.5}>
-                      {extractMethod && (
-                        <Typography variant="caption" color="text.secondary">
-                          Agent 1 method: {formatExtractMethod(extractMethod)}
-                        </Typography>
-                      )}
                       {agent2Method && (
                         <Typography variant="caption" color="text.secondary">
-                          Agent 2 method: {formatExtractMethod(agent2Method)}
+                          Method: {formatExtractMethod(agent2Method)}
                         </Typography>
-                      )}
-                      {(extractMethod === 'llm' || extractMethod === 'llm_vision') && refinementNotes && (
-                        <Alert severity="info" sx={{ py: 0.5 }}>
-                          Agent 1: {refinementNotes}
-                        </Alert>
                       )}
                       {agent2Notes && (
                         <Alert severity="info" sx={{ py: 0.5 }}>
-                          Agent 2: {agent2Notes}
+                          {agent2Notes}
                         </Alert>
                       )}
                       {llamaparsePreview && (
                         <Paper variant="outlined" sx={{ p: 2, bgcolor: 'action.hover' }}>
-                          <Typography variant="caption" fontWeight={700} color="text.secondary">LlamaParse markdown preview</Typography>
+                          <Typography variant="caption" fontWeight={700} color="text.secondary">LlamaParse preview</Typography>
                           <Typography variant="body2" sx={{ mt: 0.5, fontFamily: 'monospace', whiteSpace: 'pre-wrap', fontSize: '0.75rem' }}>
                             {llamaparsePreview}
                           </Typography>
@@ -2467,37 +2321,24 @@ const OcrReviewPage: React.FC = () => {
               )}
 
               {extractLoading ? (
-                <Box sx={{ py: 4, textAlign: 'center' }}><CircularProgress /></Box>
+                <Box sx={{ py: 6, textAlign: 'center' }}><CircularProgress /></Box>
               ) : (
-                <>
-                  <Paper variant="outlined" sx={{ p: 2 }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-                      <IconRobot size={16} />
-                      <Typography variant="subtitle2" fontWeight={700}>
-                        {agentView === 'agent2'
-                          ? 'Agent 2 (LlamaParse) — reference output'
-                          : 'Agent-extracted fields — edit and confirm'}
-                      </Typography>
-                      {agentView === 'agent2' && (
-                        <Button size="small" variant="text" onClick={() => applyAgentValues('agent2')}>
-                          Copy to editor
-                        </Button>
-                      )}
-                    </Box>
-                    <Box
-                      sx={{
-                        display: 'grid',
-                        gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' },
-                        gap: 2,
-                      }}
-                    >
+                <Paper variant="outlined" sx={{ p: 2, borderRadius: 2 }}>
+                  <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 2 }}>
+                    Extracted fields
+                  </Typography>
+                  <Box
+                    sx={{
+                      display: 'grid',
+                      gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' },
+                      gap: 1.5,
+                    }}
+                  >
                       {fieldDefs.map((def) => {
                         const fieldColor = REVIEW_FIELD_COLORS[def.name];
                         const isFocused = focusedField === def.name;
                         const hasSnippetLink = fieldHighlightBoxes.some((b) => b.fieldKey === def.name);
-                        const fieldValue = editorReadOnly
-                          ? (agent2DisplayFields[def.name] || '')
-                          : (fields[def.name] || '');
+                        const fieldValue = fields[def.name] || '';
 
                         const fieldRules = currentRecordOutcomes.filter((o: any) => o.target_field === def.name);
                         const hasBlocker = fieldRules.some((o: any) => o.severity === 'blocker' && o.reviewer_decision === 'pending');
@@ -2519,9 +2360,8 @@ const OcrReviewPage: React.FC = () => {
                               label={def.label}
                               required={def.required}
                               value={fieldValue}
-                              onChange={editorReadOnly ? undefined : (e) => handleFieldChange(def.name, e.target.value)}
-                              onFocus={editorReadOnly ? undefined : () => setFocusedField(def.name)}
-                              disabled={editorReadOnly}
+                              onChange={(e) => handleFieldChange(def.name, e.target.value)}
+                              onFocus={() => setFocusedField(def.name)}
                               multiline={def.type === 'textarea'}
                               minRows={def.type === 'textarea' ? 2 : 1}
                               error={hasBlocker || hasWarningOrError}
@@ -2554,7 +2394,7 @@ const OcrReviewPage: React.FC = () => {
                               } : undefined}
                             />
 
-                            {!editorReadOnly && def.name === 'clergy' && !String(fieldValue || '').trim() && (
+                            {def.name === 'clergy' && !String(fieldValue || '').trim() && (
                               <Button
                                 size="small"
                                 variant="outlined"
@@ -2579,7 +2419,7 @@ const OcrReviewPage: React.FC = () => {
                               </Button>
                             )}
                             
-                            {!editorReadOnly && fieldRules.map((outcome: any) => {
+                            {fieldRules.map((outcome: any) => {
                               if (outcome.reviewer_decision !== 'pending') return null;
 
                               const handleAccept = async () => {
@@ -2729,59 +2569,54 @@ const OcrReviewPage: React.FC = () => {
                         );
                       })}
                     </Box>
-                  </Paper>
-
-                  <Divider />
-
-                  <Stack direction="row" spacing={1.5} flexWrap="wrap">
-                    <Button
-                      variant="outlined"
-                      startIcon={<IconRefresh size={18} />}
-                      onClick={runAgentExtract}
-                      disabled={extractLoading}
-                    >
-                      Re-run Agent 1
-                    </Button>
-                    <Button
-                      variant="outlined"
-                      startIcon={<IconRefresh size={18} />}
-                      onClick={runAgent2Extract}
-                      disabled={extractLoading}
-                    >
-                      Re-run Agent 2
-                    </Button>
-                    <Button
-                      variant="contained"
-                      color="primary"
-                      startIcon={<IconCheck size={18} />}
-                      onClick={confirmFields}
-                      disabled={confirmLoading || reviewStatus === 'seeded'}
-                    >
-                      {confirmLoading
-                        ? 'Confirming…'
-                        : allRecords.length > 1
-                          ? (confirmedIndexes.size + (confirmedIndexes.has(selectedRecordIndex) ? 0 : 1) >= allRecords.length
-                            ? 'Confirm Last Record'
-                            : 'Confirm Record & Next')
-                          : 'Confirm Fields'}
-                    </Button>
-                     <Button
-                      variant="contained"
-                      color="success"
-                      startIcon={<IconDatabase size={18} />}
-                      onClick={seedRecords}
-                      disabled={seedLoading || reviewStatus !== 'ready_to_seed' || !!rulesData?.has_blockers}
-                    >
-                      {seedLoading ? 'Seeding…' : 'Seed to Records'}
-                    </Button>
-                  </Stack>
-
-                  <Typography variant="caption" color="text.secondary">
-                    Flow: Upload → OCR → Agent 1 (Vision/Table) + Agent 2 (LlamaParse) → Compare → Confirm → Seed
-                  </Typography>
-                </>
+                </Paper>
               )}
             </Stack>
+          )}
+          </Box>
+
+          {selectedJobId && (
+            <Box
+              sx={{
+                flexShrink: 0,
+                px: { xs: 2, lg: 2.5 },
+                py: 1.5,
+                borderTop: '1px solid',
+                borderColor: 'divider',
+                bgcolor: 'background.paper',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 1.5,
+                flexWrap: 'wrap',
+                boxShadow: '0 -4px 12px rgba(0,0,0,0.04)',
+              }}
+            >
+              <Box sx={{ flex: 1 }} />
+              <Button
+                variant="contained"
+                color="primary"
+                startIcon={<IconCheck size={18} />}
+                onClick={confirmFields}
+                disabled={confirmLoading || reviewStatus === 'seeded' || extractLoading}
+              >
+                {confirmLoading
+                  ? 'Confirming…'
+                  : allRecords.length > 1
+                    ? (confirmedIndexes.size + (confirmedIndexes.has(selectedRecordIndex) ? 0 : 1) >= allRecords.length
+                      ? 'Confirm Last Record'
+                      : 'Confirm Record & Next')
+                    : 'Confirm Fields'}
+              </Button>
+              <Button
+                variant="contained"
+                color="success"
+                startIcon={<IconDatabase size={18} />}
+                onClick={seedRecords}
+                disabled={seedLoading || reviewStatus !== 'ready_to_seed' || !!rulesData?.has_blockers || extractLoading}
+              >
+                {seedLoading ? 'Seeding…' : 'Seed to Records'}
+              </Button>
+            </Box>
           )}
           </Box>
 
@@ -2790,6 +2625,7 @@ const OcrReviewPage: React.FC = () => {
               onMouseDown={startImagePanelResize}
               sx={{
                 display: { xs: 'none', lg: 'flex' },
+                order: { lg: 2 },
                 width: '7px',
                 flexShrink: 0,
                 cursor: 'col-resize',
@@ -2807,6 +2643,7 @@ const OcrReviewPage: React.FC = () => {
           {selectedJobId && jobImageUrl && (
             <Box
               sx={{
+                order: { lg: 1 },
                 width: { xs: '100%', lg: imagePanelWidth },
                 flexShrink: 0,
                 borderTop: { xs: '1px solid', lg: 'none' },
