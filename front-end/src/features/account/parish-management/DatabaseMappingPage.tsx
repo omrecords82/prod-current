@@ -379,12 +379,13 @@ const DatabaseMappingPage: React.FC = () => {
     markDirty();
   };
 
-  const handleSave = async () => {
+  const handleSaveAndApply = async () => {
     // Persist under this record type's key so other types keep their layouts.
     const ok = await patchSettings({ [selectedRecord]: { fields, defaultSort } } as Partial<MappingSettings>);
     if (ok) {
       setDirty(false);
-      showSnackbar('Configuration saved successfully', 'success');
+      showSnackbar('Configuration saved and applied', 'success');
+      navigate(`/portal/records?type=${selectedRecord}`);
     } else {
       showSnackbar(settingsError || 'Failed to save configuration', 'error');
     }
@@ -958,7 +959,7 @@ const DatabaseMappingPage: React.FC = () => {
           <Paper
             key={action.title}
             variant="outlined"
-            onClick={action.primary ? handleSave : undefined}
+            onClick={action.primary ? handleSaveAndApply : undefined}
             sx={{
               p: 2.5,
               borderRadius: 2,
@@ -1009,7 +1010,7 @@ const DatabaseMappingPage: React.FC = () => {
         sx={{ borderRadius: 1.5, fontFamily: "'Inter'", fontSize: '0.8125rem' }}
       >
         {dirty
-          ? 'You have unsaved changes. Click "Save Configuration" below to persist your settings.'
+          ? 'You have unsaved changes. Click "Save and Apply" below to persist your settings and return to your records.'
           : 'Your configuration is saved and up to date.'}
       </Alert>
     </Box>
@@ -1102,7 +1103,7 @@ const DatabaseMappingPage: React.FC = () => {
             variant="contained"
             startIcon={saving ? <CircularProgress size={16} color="inherit" /> : <SaveOutlinedIcon />}
             disabled={saving}
-            onClick={handleSave}
+            onClick={handleSaveAndApply}
             sx={{
               fontFamily: "'Inter'",
               fontSize: '0.8125rem',
@@ -1111,7 +1112,7 @@ const DatabaseMappingPage: React.FC = () => {
               '&:hover': { bgcolor: '#15803d' },
             }}
           >
-            {saving ? 'Saving...' : 'Save Configuration'}
+            {saving ? 'Saving...' : 'Save and Apply'}
           </Button>
         )}
       </Box>
