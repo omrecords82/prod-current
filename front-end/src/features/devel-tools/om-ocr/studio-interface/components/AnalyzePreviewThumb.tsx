@@ -3,12 +3,15 @@ import { Box, CircularProgress } from '@mui/material';
 import { IconPhoto } from '@tabler/icons-react';
 import { apiClient } from '@/shared/lib/axiosInstance';
 
+export type AnalyzePreviewVariant = 'optimized' | 'original';
+
 interface AnalyzePreviewThumbProps {
   churchId: number;
   sessionId: string;
   fileId: string;
   alt?: string;
   size?: number | 'fill';
+  variant?: AnalyzePreviewVariant;
   onClick?: () => void;
 }
 
@@ -18,6 +21,7 @@ export function AnalyzePreviewThumb({
   fileId,
   alt = '',
   size = 56,
+  variant = 'optimized',
   onClick,
 }: AnalyzePreviewThumbProps) {
   const [src, setSrc] = useState<string | null>(null);
@@ -31,13 +35,17 @@ export function AnalyzePreviewThumb({
     (async () => {
       setLoading(true);
       setFailed(false);
+      setSrc(null);
       try {
-        const res = await apiClient.get(
-          `/api/church/${churchId}/ocr/analyze/${sessionId}/${fileId}/preview`,
-          { params: { variant: 'optimized' }, responseType: 'blob', timeout: 60000 },
+        const blob = await apiClient.get<Blob>(
+          `/api/church/${churchId}/ocr/analyze/${sessionId}/${fileId}/preview?variant=${variant}`,
+          { responseType: 'blob', timeout: 60000 },
         );
         if (cancelled) return;
-        const blob = res?.data instanceof Blob ? res.data : new Blob([res?.data]);
+        if (!(blob instanceof Blob) || blob.size === 0) {
+          setFailed(true);
+          return;
+        }
         objectUrl = URL.createObjectURL(blob);
         setSrc(objectUrl);
       } catch {
@@ -51,7 +59,7 @@ export function AnalyzePreviewThumb({
       cancelled = true;
       if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
-  }, [churchId, sessionId, fileId]);
+  }, [churchId, sessionId, fileId, variant]);
 
   const dimensionSx = size === 'fill'
     ? { width: '100%', maxHeight: '70vh' }
@@ -94,7 +102,7 @@ export function AnalyzePreviewThumb({
       src={src}
       alt={alt}
       onClick={onClick}
-      sx={{ ...boxSx, objectFit: 'cover' }}
+      sx={{ ...boxSx, objectFit: 'contain', bgcolor: 'background.default' }}
     />
   );
 }

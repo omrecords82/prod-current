@@ -24,7 +24,6 @@ export interface AnalyzeFileResult {
 }
 
 export interface AnalyzeQueueItem extends AnalyzeFileResult {
-  /** User overrides */
   recordType: AnalyzeRecordType;
   recordLayoutMode: string;
   splitRegions: boolean;
@@ -78,16 +77,21 @@ function makePlaceholder(filename: string): AnalyzeQueueItem {
   };
 }
 
+type PendingAnalyzeJob = { file: File; placeholderId: string };
+
 export function useOcrAnalyze(churchId: number | null) {
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [items, setItems] = useState<AnalyzeQueueItem[]>([]);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isCommitting, setIsCommitting] = useState(false);
   const [dragActive, setDragActive] = useState(false);
   const [analyzeProgress, setAnalyzeProgress] = useState<AnalyzeProgress | null>(null);
+  const [pendingQueueCount, setPendingQueueCount] = useState(0);
+
   const sessionRef = useRef<string | null>(null);
-  const analyzeBusyRef = useRef(false);
+  const pendingQueueRef = useRef<PendingAnalyzeJob[]>([]);
+  const pumpingRef = useRef(false);
+  const progressTotalsRef = useRef({ total: 0, completed: 0 });
 
   const mapResult = (r: AnalyzeFileResult): AnalyzeQueueItem => ({
     ...r,
@@ -106,6 +110,8 @@ export function useOcrAnalyze(churchId: number | null) {
     [items],
   );
 
+  const isAnalyzing = analyzingCount > 0 || pendingQueueCount > 0;
+
   const selectableItems = useMemo(
     () => items.filter((it) => !it.analyzing && !it.error),
     [items],
@@ -118,6 +124,21 @@ export function useOcrAnalyze(churchId: number | null) {
 
   const allSelected = selectableItems.length > 0 && selectedCount === selectableItems.length;
   const someSelected = selectedCount > 0 && !allSelected;
+
+  const syncProgress = useCallback((currentName: string | null) => {
+    setAnalyzeProgress({
+      total: progressTotalsRef.current.total,
+      completed: progressTotalsRef.current.completed,
+      currentName,
+    });
+  }, []);
+
+  const clearProgressIfIdle = useCallback(() => {
+    if (pendingQueueRef.current.length === 0 && !pumpingRef.current) {
+      setAnalyzeProgress(null);
+      progressTotalsRef.current = { total: 0, completed: 0 };
+    }
+  }, []);
 
   const toggleSelection = useCallback((id: string) => {
     setSelectedIds((prev) => {
@@ -149,83 +170,84 @@ export function useOcrAnalyze(churchId: number | null) {
     formData.append('files', file);
     if (activeSessionId) formData.append('sessionId', activeSessionId);
 
-    const res: any = await apiClient.post(
+    const data: any = await apiClient.post(
       `/api/church/${churchId}/ocr/analyze`,
       formData,
       { timeout: 180000, headers: { 'Content-Type': 'multipart/form-data' } },
     );
-    const data = res?.data ?? res;
-    const result = (data.files || [])[0] as AnalyzeFileResult | undefined;
+    const result = (data?.files || [])[0] as AnalyzeFileResult | undefined;
     if (!result) throw new Error('No analyze result returned');
     return { sessionId: data.sessionId as string, result };
   }, [churchId]);
 
-  const analyzeFiles = useCallback(async (fileList: FileList | null) => {
-    if (!churchId || !fileList?.length) return;
-    if (analyzeBusyRef.current) {
-      throw new Error('Analysis already in progress — wait for the current batch to finish');
-    }
-    const files = Array.from(fileList).filter((f) => ACCEPTED_RE.test(f.name));
-    if (!files.length) return;
+  const pumpAnalyzeQueue = useCallback(async () => {
+    if (!churchId || pumpingRef.current) return;
+    pumpingRef.current = true;
 
-    analyzeBusyRef.current = true;
-    setIsAnalyzing(true);
-    setAnalyzeProgress({ total: files.length, completed: 0, currentName: files[0].name });
-
-    const placeholders = files.map((f) => makePlaceholder(f.name));
-    const placeholderIds = placeholders.map((p) => p.id);
-    setItems((prev) => [...prev, ...placeholders]);
-
-    let activeSessionId = sessionRef.current ?? sessionId;
-    const failures: string[] = [];
-
-    for (let i = 0; i < files.length; i += 1) {
-      const file = files[i];
-      const placeholderId = placeholderIds[i];
-      setAnalyzeProgress({ total: files.length, completed: i, currentName: file.name });
+    while (pendingQueueRef.current.length > 0) {
+      const job = pendingQueueRef.current[0];
+      syncProgress(job.file.name);
 
       try {
-        const { sessionId: newSessionId, result } = await analyzeSingleFile(file, activeSessionId);
-        activeSessionId = newSessionId;
+        const { sessionId: newSessionId, result } = await analyzeSingleFile(
+          job.file,
+          sessionRef.current,
+        );
         sessionRef.current = newSessionId;
         setSessionId(newSessionId);
 
         const mapped = mapResult(result);
-        setItems((prev) => prev.map((it) => (it.id === placeholderId ? mapped : it)));
+        setItems((prev) => prev.map((it) => (it.id === job.placeholderId ? mapped : it)));
         setSelectedIds((prev) => {
           const next = new Set(prev);
-          next.delete(placeholderId);
+          next.delete(job.placeholderId);
           next.add(mapped.id);
           return next;
         });
       } catch (err: any) {
-        const msg = err?.response?.data?.message || err?.message || 'Analyze failed';
-        failures.push(`${file.name}: ${msg}`);
+        const msg = err?.message || 'Analyze failed';
         setItems((prev) => prev.map((it) => (
-          it.id === placeholderId
+          it.id === job.placeholderId
             ? { ...it, analyzing: false, error: msg, needsReview: true }
             : it
         )));
       }
 
-      setAnalyzeProgress({
-        total: files.length,
-        completed: i + 1,
-        currentName: i + 1 < files.length ? files[i + 1].name : null,
-      });
+      pendingQueueRef.current.shift();
+      setPendingQueueCount(pendingQueueRef.current.length);
+      progressTotalsRef.current.completed += 1;
+      syncProgress(pendingQueueRef.current[0]?.file.name ?? null);
     }
 
-    setIsAnalyzing(false);
-    setAnalyzeProgress(null);
-    analyzeBusyRef.current = false;
+    pumpingRef.current = false;
+    clearProgressIfIdle();
+  }, [churchId, analyzeSingleFile, syncProgress, clearProgressIfIdle]);
 
-    if (failures.length === files.length) {
-      throw new Error(failures[0] || 'Analyze failed');
-    }
-    if (failures.length > 0) {
-      throw new Error(`${failures.length} file(s) failed to analyze`);
-    }
-  }, [churchId, sessionId, analyzeSingleFile]);
+  const analyzeFiles = useCallback((fileList: FileList | null) => {
+    if (!churchId || !fileList?.length) return;
+    const files = Array.from(fileList).filter((f) => ACCEPTED_RE.test(f.name));
+    if (!files.length) return;
+
+    const placeholders = files.map((f) => makePlaceholder(f.name));
+    const jobs: PendingAnalyzeJob[] = files.map((f, i) => ({
+      file: f,
+      placeholderId: placeholders[i].id,
+    }));
+
+    pendingQueueRef.current.push(...jobs);
+    setPendingQueueCount(pendingQueueRef.current.length);
+    progressTotalsRef.current.total += files.length;
+    syncProgress(jobs[0].file.name);
+
+    setItems((prev) => [...prev, ...placeholders]);
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      placeholders.forEach((p) => next.add(p.id));
+      return next;
+    });
+
+    void pumpAnalyzeQueue();
+  }, [churchId, pumpAnalyzeQueue, syncProgress]);
 
   const updateItem = useCallback((id: string, patch: Partial<AnalyzeQueueItem>) => {
     setItems((prev) => prev.map((it) => (it.id === id ? { ...it, ...patch } : it)));
@@ -241,6 +263,11 @@ export function useOcrAnalyze(churchId: number | null) {
   }, []);
 
   const clearAll = useCallback(async () => {
+    pendingQueueRef.current = [];
+    setPendingQueueCount(0);
+    progressTotalsRef.current = { total: 0, completed: 0 };
+    setAnalyzeProgress(null);
+
     if (churchId && sessionId) {
       try {
         await apiClient.delete(`/api/church/${churchId}/ocr/analyze/${sessionId}`);
@@ -252,7 +279,6 @@ export function useOcrAnalyze(churchId: number | null) {
     setSessionId(null);
     setItems([]);
     setSelectedIds(new Set());
-    setAnalyzeProgress(null);
   }, [churchId, sessionId]);
 
   const commitToUpload = useCallback(async (): Promise<{ jobIds: number[]; remainingCount: number }> => {
@@ -272,12 +298,11 @@ export function useOcrAnalyze(churchId: number | null) {
           splitRegions: it.splitRegions,
         })),
       };
-      const res: any = await apiClient.post(
+      const data: any = await apiClient.post(
         `/api/church/${churchId}/ocr/analyze/${sessionId}/commit`,
         payload,
         { timeout: 120000 },
       );
-      const data = res?.data ?? res;
       const jobs = data.jobs || [];
       const committedIds = new Set<string>((data.committedFileIds || toCommit.map((it) => it.id)) as string[]);
       const remainingCount = typeof data.remainingCount === 'number'
@@ -310,6 +335,7 @@ export function useOcrAnalyze(churchId: number | null) {
     items,
     completedItems,
     analyzingCount,
+    pendingQueueCount,
     selectedIds,
     selectedCount,
     allSelected,

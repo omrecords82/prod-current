@@ -23,6 +23,8 @@ import {
   TableCell,
   TableHead,
   TableRow,
+  ToggleButton,
+  ToggleButtonGroup,
   Tooltip,
   Typography,
 } from '@mui/material';
@@ -30,7 +32,7 @@ import { IconCloudUpload, IconScan, IconTrash, IconUpload, IconX } from '@tabler
 import { toast } from 'react-toastify';
 import OcrSetupGate from '@/features/devel-tools/om-ocr/components/OcrSetupGate';
 import { ocrStudioPathWithChurch } from '@/features/devel-tools/om-ocr/utils/ocrStudioChurch';
-import { AnalyzePreviewThumb } from '../components/AnalyzePreviewThumb';
+import { AnalyzePreviewThumb, type AnalyzePreviewVariant } from '../components/AnalyzePreviewThumb';
 import { OcrStudioHubPanel } from '../components/OcrStudioHubPanel';
 import { PageHeader } from '../components/PageHeader';
 import { useOcrStudioChurch } from '../hooks/useOcrStudioChurch';
@@ -76,11 +78,13 @@ export default function OcrStudioAnalyzePage() {
   const { churchId, churchLabel } = useOcrStudioChurch();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [previewItem, setPreviewItem] = useState<AnalyzeQueueItem | null>(null);
+  const [previewVariant, setPreviewVariant] = useState<AnalyzePreviewVariant>('optimized');
   const {
     sessionId,
     items,
     completedItems,
     analyzingCount,
+    pendingQueueCount,
     selectedIds,
     selectedCount,
     allSelected,
@@ -104,7 +108,7 @@ export default function OcrStudioAnalyzePage() {
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     setDragActive(false);
-    analyzeFiles(e.dataTransfer.files).catch((err) => toast.error(err.message));
+    analyzeFiles(e.dataTransfer.files);
   }, [analyzeFiles, setDragActive]);
 
   const goToMyUploads = useCallback(() => {
@@ -150,18 +154,17 @@ export default function OcrStudioAnalyzePage() {
           onDragEnter={(e) => { e.preventDefault(); setDragActive(true); }}
           onDragLeave={(e) => { e.preventDefault(); setDragActive(false); }}
           onDragOver={(e) => e.preventDefault()}
-          onDrop={isAnalyzing ? undefined : handleDrop}
-          onClick={isAnalyzing ? undefined : () => fileInputRef.current?.click()}
+          onDrop={handleDrop}
+          onClick={() => fileInputRef.current?.click()}
           sx={{
             p: 4,
             mb: 3,
             textAlign: 'center',
-            cursor: isAnalyzing ? 'default' : 'pointer',
+            cursor: 'pointer',
             borderStyle: 'dashed',
             borderWidth: 2,
             borderColor: dragActive ? 'primary.main' : 'divider',
             bgcolor: dragActive ? 'action.hover' : 'transparent',
-            opacity: isAnalyzing ? 0.85 : 1,
           }}
         >
           <input
@@ -170,23 +173,18 @@ export default function OcrStudioAnalyzePage() {
             accept={ANALYZE_ACCEPTED_TYPES}
             multiple
             hidden
-            disabled={isAnalyzing}
             onChange={(e) => {
-              analyzeFiles(e.target.files).catch((err) => toast.error(err.message));
+              analyzeFiles(e.target.files);
               e.target.value = '';
             }}
           />
-          {isAnalyzing ? (
-            <CircularProgress size={36} sx={{ mb: 1 }} />
-          ) : (
-            <IconCloudUpload size={40} style={{ opacity: 0.45 }} />
-          )}
+          <IconCloudUpload size={40} style={{ opacity: 0.45 }} />
           <Typography variant="body1" fontWeight={600} sx={{ mt: 1 }}>
-            {isAnalyzing ? 'Analyzing images…' : 'Drop mixed register images here'}
+            Drop mixed register images here
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            {isAnalyzing && analyzeProgress
-              ? `Processing ${analyzeProgress.completed + 1} of ${analyzeProgress.total}${analyzeProgress.currentName ? ` — ${analyzeProgress.currentName}` : ''}`
+            {isAnalyzing
+              ? 'Add more images anytime — analysis continues in the background'
               : 'Baptism, marriage, and funeral pages together · results appear as each file finishes'}
           </Typography>
         </Paper>
@@ -196,6 +194,7 @@ export default function OcrStudioAnalyzePage() {
             <Stack direction="row" justifyContent="space-between" sx={{ mb: 0.5 }}>
               <Typography variant="body2" color="text.secondary">
                 {analyzeProgress.completed} of {analyzeProgress.total} complete
+                {pendingQueueCount > 0 ? ` · ${pendingQueueCount} queued` : ''}
               </Typography>
               <Typography variant="body2" color="text.secondary">
                 {progressPct}%
@@ -209,7 +208,10 @@ export default function OcrStudioAnalyzePage() {
           <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
             <Chip icon={<IconScan size={14} />} label={`${completedItems.length} analyzed`} size="small" />
             {analyzingCount > 0 && (
-              <Chip label={`${analyzingCount} in progress`} size="small" color="info" variant="outlined" />
+              <Chip label={`${analyzingCount} analyzing`} size="small" color="info" variant="outlined" />
+            )}
+            {pendingQueueCount > 0 && (
+              <Chip label={`${pendingQueueCount} queued`} size="small" color="default" variant="outlined" />
             )}
             {selectedCount > 0 && (
               <Chip label={`${selectedCount} selected`} size="small" color="primary" variant="outlined" />
@@ -283,7 +285,10 @@ export default function OcrStudioAnalyzePage() {
                           fileId={item.id}
                           alt={item.originalFilename}
                           size={56}
-                          onClick={() => setPreviewItem(item)}
+                          onClick={() => {
+                            setPreviewVariant('optimized');
+                            setPreviewItem(item);
+                          }}
                         />
                       ) : (
                         <Box sx={{ width: 56, height: 56, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -445,21 +450,38 @@ export default function OcrStudioAnalyzePage() {
           maxWidth="md"
           fullWidth
         >
-          <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', pr: 1 }}>
-            <Typography variant="subtitle1" fontWeight={600} noWrap sx={{ flex: 1, mr: 1 }}>
+          <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', pr: 1, gap: 1 }}>
+            <Typography variant="subtitle1" fontWeight={600} noWrap sx={{ flex: 1 }}>
               {previewItem?.originalFilename}
             </Typography>
+            <ToggleButtonGroup
+              size="small"
+              exclusive
+              value={previewVariant}
+              onChange={(_, value: AnalyzePreviewVariant | null) => {
+                if (value) setPreviewVariant(value);
+              }}
+            >
+              <ToggleButton value="optimized" sx={{ textTransform: 'none', px: 1.5 }}>
+                Optimized
+              </ToggleButton>
+              <ToggleButton value="original" sx={{ textTransform: 'none', px: 1.5 }}>
+                Original
+              </ToggleButton>
+            </ToggleButtonGroup>
             <IconButton size="small" onClick={() => setPreviewItem(null)} aria-label="Close preview">
               <IconX size={18} />
             </IconButton>
           </DialogTitle>
-          <DialogContent sx={{ display: 'flex', justifyContent: 'center', pb: 3 }}>
+          <DialogContent sx={{ display: 'flex', justifyContent: 'center', pb: 3, minHeight: 320 }}>
             {previewItem && churchId && sessionId && (
               <AnalyzePreviewThumb
+                key={`${previewItem.id}-${previewVariant}`}
                 churchId={churchId}
                 sessionId={sessionId}
                 fileId={previewItem.id}
                 alt={previewItem.originalFilename}
+                variant={previewVariant}
                 size="fill"
               />
             )}
