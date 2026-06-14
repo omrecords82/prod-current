@@ -22,6 +22,9 @@ export interface AnalyzeFileResult {
   ocrConfidence: number;
   needsReview: boolean;
   manualRotationDegrees?: number;
+  qualityScore?: number;
+  qualityIssues?: string[];
+  autoFixesApplied?: string[];
 }
 
 export interface AnalyzeQueueItem extends AnalyzeFileResult {

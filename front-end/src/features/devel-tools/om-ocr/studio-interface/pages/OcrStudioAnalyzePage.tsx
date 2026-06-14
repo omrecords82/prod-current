@@ -71,6 +71,16 @@ function confidencePct(n: number): string {
   return `${Math.round(n * 100)}%`;
 }
 
+const QUALITY_ISSUE_LABELS: Record<string, string> = {
+  image_mostly_black: 'Mostly black',
+  low_ocr_confidence: 'Low OCR',
+  low_text_detected: 'Little text',
+  over_cropped: 'Over-cropped',
+  split_regions_suspect: 'Bad split regions',
+  orientation_uncertain: 'Orientation uncertain',
+  low_classification_confidence: 'Type uncertain',
+};
+
 export default function OcrStudioAnalyzePage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -384,7 +394,41 @@ export default function OcrStudioAnalyzePage() {
                           variant="outlined"
                           sx={{ fontSize: '0.65rem', height: 20 }}
                         />
+                        {item.qualityScore != null && (
+                          <Chip
+                            size="small"
+                            label={`QA ${confidencePct(item.qualityScore)}`}
+                            color={item.qualityScore >= 0.55 ? 'success' : 'warning'}
+                            variant="outlined"
+                            sx={{ fontSize: '0.65rem', height: 20 }}
+                          />
+                        )}
                       </Stack>
+                      )}
+                      {item.qualityIssues && item.qualityIssues.length > 0 && !item.analyzing && (
+                        <Stack direction="row" spacing={0.5} sx={{ mt: 0.5, flexWrap: 'wrap' }}>
+                          {item.qualityIssues.map((issue) => (
+                            <Chip
+                              key={issue}
+                              size="small"
+                              label={QUALITY_ISSUE_LABELS[issue] || issue}
+                              color="warning"
+                              variant="outlined"
+                              sx={{ fontSize: '0.6rem', height: 18 }}
+                            />
+                          ))}
+                          {item.autoFixesApplied && item.autoFixesApplied.length > 0 && (
+                            <Tooltip title={`Auto-fixes: ${item.autoFixesApplied.join(', ')}`}>
+                              <Chip
+                                size="small"
+                                label="Auto-fixed"
+                                color="info"
+                                variant="outlined"
+                                sx={{ fontSize: '0.6rem', height: 18 }}
+                              />
+                            </Tooltip>
+                          )}
+                        </Stack>
                       )}
                       {item.warnings.length > 0 && !item.analyzing && (
                         <Tooltip title={item.warnings.join(' ')}>

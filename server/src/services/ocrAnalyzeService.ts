@@ -19,6 +19,11 @@ import {
   type PixelBBox,
 } from '../ocr/preprocessing/multiRecordSplit';
 import { getOcrUploadDir, UPLOADS_ROOT } from '../utils/ocrPaths';
+import {
+  assessAnalyzeQuality,
+  type AnalyzeQualityIssue,
+  type OptimizePipelineOptions,
+} from './ocrAnalyzeQualityService';
 
 const { getAllLayouts } = require('./ocrLayoutCatalogService') as {
   getAllLayouts: () => Array<{
@@ -59,11 +64,17 @@ export interface AnalyzeFileResult {
   optimizationsApplied: string[];
   warnings: string[];
   ocrTextPreview: string;
+  ocrTextLength: number;
   ocrConfidence: number;
   imageWidth: number;
   imageHeight: number;
   needsReview: boolean;
   manualRotationDegrees?: number;
+  qualityScore?: number;
+  qualityIssues?: AnalyzeQualityIssue[];
+  autoFixesApplied?: string[];
+  originalImageWidth?: number;
+  originalImageHeight?: number;
 }
 
 export interface AnalyzeSessionManifest {
@@ -200,19 +211,30 @@ async function runTesseractOcr(imagePath: string): Promise<{
 async function optimizeImage(
   inputPath: string,
   outputPath: string,
+  opts: OptimizePipelineOptions = {},
 ): Promise<{ applied: string[]; warnings: string[]; width: number; height: number }> {
   const applied: string[] = [];
   const warnings: string[] = [];
   let buffer: Buffer = Buffer.from(fs.readFileSync(inputPath));
 
-  try {
-    const border = await detectAndRemoveBorder(buffer);
-    if (border.applied && border.croppedBuffer) {
-      buffer = Buffer.from(border.croppedBuffer);
-      applied.push('border_trim');
+  if (opts.preRotateDegrees) {
+    const deg = ((opts.preRotateDegrees % 360) + 360) % 360;
+    if (deg !== 0) {
+      buffer = await sharp(buffer).rotate(deg).toBuffer();
+      applied.push(`manual_rotate_${deg}`);
     }
-  } catch (e: any) {
-    warnings.push(`Border trim skipped: ${e.message}`);
+  }
+
+  if (!opts.skipBorderTrim) {
+    try {
+      const border = await detectAndRemoveBorder(buffer);
+      if (border.applied && border.croppedBuffer) {
+        buffer = Buffer.from(border.croppedBuffer);
+        applied.push('border_trim');
+      }
+    } catch (e: any) {
+      warnings.push(`Border trim skipped: ${e.message}`);
+    }
   }
 
   try {
@@ -233,7 +255,7 @@ async function optimizeImage(
 
   try {
     const deskew = await detectAndCorrectSkew(buffer);
-    if (deskew.applied && deskew.deskewedBuffer) {
+    if (!opts.skipDeskew && deskew.applied && deskew.deskewedBuffer) {
       buffer = Buffer.from(deskew.deskewedBuffer);
       applied.push('deskew');
     }
@@ -241,14 +263,16 @@ async function optimizeImage(
     warnings.push(`Deskew skipped: ${e.message}`);
   }
 
-  try {
-    const denoise = await gridPreserveDenoise(buffer);
-    if (denoise.applied && denoise.denoisedBuffer) {
-      buffer = Buffer.from(denoise.denoisedBuffer);
-      applied.push('denoise');
+  if (!opts.skipDenoise) {
+    try {
+      const denoise = await gridPreserveDenoise(buffer);
+      if (denoise.applied && denoise.denoisedBuffer) {
+        buffer = Buffer.from(denoise.denoisedBuffer);
+        applied.push('denoise');
+      }
+    } catch (e: any) {
+      warnings.push(`Denoise skipped: ${e.message}`);
     }
-  } catch (e: any) {
-    warnings.push(`Denoise skipped: ${e.message}`);
   }
 
   const meta = await sharp(buffer).metadata();
@@ -365,6 +389,7 @@ async function classifyOptimizedImage(
     optimizationsApplied,
     warnings,
     ocrTextPreview: ocr.text.slice(0, 400),
+    ocrTextLength: ocr.text.length,
     ocrConfidence: Math.round(ocr.confidence * 1000) / 1000,
     imageWidth: width,
     imageHeight: height,
@@ -383,6 +408,127 @@ function regionsToAnalyzeRegions(regions: PixelBBox[]): AnalyzeRegion[] {
   }));
 }
 
+function regionsFromAnalyze(regions: AnalyzeRegion[]): PixelBBox[] {
+  return regions.map((r) => ({ x: r.x, y: r.y, width: r.width, height: r.height }));
+}
+
+async function runAnalyzePipelineFromOriginal(
+  originalCopy: string,
+  optimizedPath: string,
+  fileId: string,
+  originalFilename: string,
+  manualRotationDegrees = 0,
+): Promise<AnalyzeFileResult> {
+  const origMeta = await sharp(originalCopy).metadata();
+  const originalWidth = origMeta.width || 0;
+  const originalHeight = origMeta.height || 0;
+
+  let pipelineOpts: OptimizePipelineOptions = {
+    preRotateDegrees: manualRotationDegrees || undefined,
+  };
+  const autoFixesApplied: string[] = [];
+  let lastResult: AnalyzeFileResult | null = null;
+
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    const { applied, warnings, width, height } = await optimizeImage(
+      originalCopy,
+      optimizedPath,
+      pipelineOpts,
+    );
+
+    const result = await classifyOptimizedImage(
+      optimizedPath,
+      fileId,
+      originalFilename,
+      applied,
+      warnings,
+      manualRotationDegrees,
+    );
+
+    if (autoFixesApplied.includes('disable_auto_split')) {
+      result.shouldSplit = false;
+    }
+
+    const report = await assessAnalyzeQuality({
+      originalPath: originalCopy,
+      optimizedPath,
+      originalWidth,
+      originalHeight,
+      optimizedWidth: width,
+      optimizedHeight: height,
+      ocrConfidence: result.ocrConfidence,
+      ocrTextLength: result.ocrTextLength,
+      recordTypeConfidence: result.recordTypeConfidence,
+      regions: regionsFromAnalyze(result.regions),
+      optimizationsApplied: applied,
+      manualRotationDegrees,
+    });
+
+    result.qualityScore = report.score;
+    result.qualityIssues = report.issues;
+    result.autoFixesApplied = [...autoFixesApplied];
+    result.originalImageWidth = originalWidth;
+    result.originalImageHeight = originalHeight;
+    result.imageWidth = width;
+    result.imageHeight = height;
+
+    if (!report.passed) {
+      result.needsReview = true;
+      const issueNote = `Quality check: ${report.issues.join(', ')}`;
+      if (!result.warnings.some((w) => w.startsWith('Quality check'))) {
+        result.warnings.unshift(issueNote);
+      }
+    }
+
+    if (autoFixesApplied.includes('disable_auto_split')) {
+      result.shouldSplit = false;
+      return result;
+    }
+
+    lastResult = result;
+
+    if (report.passed) {
+      return result;
+    }
+
+    const fix = report.autoFixesSuggested.find((f) => !autoFixesApplied.includes(f));
+    if (!fix || attempt >= 2) {
+      return result;
+    }
+
+    autoFixesApplied.push(fix);
+    if (autoFixesApplied.length) {
+      result.autoFixesApplied = [...autoFixesApplied];
+      result.warnings.unshift(`Auto-fix applied: ${fix}`);
+    }
+
+    if (fix === 'disable_auto_split') {
+      result.shouldSplit = false;
+      return result;
+    }
+
+    if (fix === 'rebuild_from_original_conservative' || fix === 'rebuild_from_original_skip_border') {
+      pipelineOpts = {
+        preRotateDegrees: manualRotationDegrees || undefined,
+        skipBorderTrim: true,
+        skipDeskew: true,
+        skipDenoise: true,
+      };
+      continue;
+    }
+
+    if (fix === 'retry_orientation_from_original') {
+      pipelineOpts = {
+        preRotateDegrees: manualRotationDegrees || undefined,
+        skipBorderTrim: true,
+        skipDeskew: true,
+      };
+    }
+  }
+
+  return lastResult!;
+}
+
 export async function analyzeImageFile(
   churchId: number,
   sessionId: string,
@@ -393,22 +539,17 @@ export async function analyzeImageFile(
   const fileDir = path.join(getAnalyzeSessionDir(churchId, sessionId), fileId);
   fs.mkdirSync(fileDir, { recursive: true });
 
-  const originalCopy = path.join(fileDir, 'original' + path.extname(originalFilename).toLowerCase() || '.jpg');
+  const originalCopy = path.join(fileDir, 'original' + (path.extname(originalFilename).toLowerCase() || '.jpg'));
   fs.copyFileSync(sourcePath, originalCopy);
 
   const optimizedPath = path.join(fileDir, 'optimized.jpg');
-  const { applied, warnings, width, height } = await optimizeImage(originalCopy, optimizedPath);
-
-  const result = await classifyOptimizedImage(
+  const result = await runAnalyzePipelineFromOriginal(
+    originalCopy,
     optimizedPath,
     fileId,
     originalFilename,
-    applied,
-    warnings,
     0,
   );
-  result.imageWidth = width;
-  result.imageHeight = height;
 
   fs.writeFileSync(path.join(fileDir, 'result.json'), JSON.stringify(result, null, 2));
   return result;
@@ -471,27 +612,21 @@ export async function rotateAnalyzeFile(
   }
   if (normalizedDegrees === 0) return existing;
 
+  const originalPath = getAnalyzePreviewPath(churchId, sessionId, fileId, 'original');
+  if (!originalPath) throw new Error('Original image not found');
+
+  const manualRotationDegrees = ((existing.manualRotationDegrees || 0) + normalizedDegrees) % 360;
   const optimizedPath = getAnalyzePreviewPath(churchId, sessionId, fileId, 'optimized');
   if (!optimizedPath) throw new Error('Optimized preview not found');
 
-  const rotated = await sharp(optimizedPath).rotate(normalizedDegrees).jpeg({ quality: 92 }).toBuffer();
-  fs.writeFileSync(optimizedPath, rotated);
-
-  const manualRotationDegrees = ((existing.manualRotationDegrees || 0) + normalizedDegrees) % 360;
-  const applied = [...(existing.optimizationsApplied || [])];
-  if (!applied.includes('manual_rotate')) applied.push('manual_rotate');
-
-  const warnings = [...(existing.warnings || [])].filter((w) => !w.startsWith('Manually rotated'));
-  warnings.unshift(`Manually rotated ${normalizedDegrees}°`);
-
-  const result = await classifyOptimizedImage(
+  const result = await runAnalyzePipelineFromOriginal(
+    originalPath,
     optimizedPath,
     fileId,
     existing.originalFilename,
-    applied,
-    warnings,
     manualRotationDegrees,
   );
+  result.warnings.unshift(`Manually rotated ${normalizedDegrees}° (rebuilt from original)`);
 
   manifest.files = manifest.files.map((f) => (f.id === fileId ? result : f));
   saveAnalyzeSession(manifest);
