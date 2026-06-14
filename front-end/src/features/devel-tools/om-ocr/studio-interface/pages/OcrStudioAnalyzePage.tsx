@@ -10,6 +10,7 @@ import {
   FormControl,
   IconButton,
   InputLabel,
+  LinearProgress,
   MenuItem,
   Paper,
   Select,
@@ -71,12 +72,15 @@ export default function OcrStudioAnalyzePage() {
   const {
     sessionId,
     items,
+    completedItems,
+    analyzingCount,
     selectedIds,
     selectedCount,
     allSelected,
     someSelected,
     isAnalyzing,
     isCommitting,
+    analyzeProgress,
     dragActive,
     setDragActive,
     analyzeFiles,
@@ -113,7 +117,10 @@ export default function OcrStudioAnalyzePage() {
     }
   }, [churchId, commitToUpload, navigate, toScreen]);
 
-  const needsReviewCount = items.filter((i) => i.needsReview).length;
+  const needsReviewCount = items.filter((i) => i.needsReview && !i.analyzing && !i.error).length;
+  const progressPct = analyzeProgress && analyzeProgress.total > 0
+    ? Math.round((analyzeProgress.completed / analyzeProgress.total) * 100)
+    : 0;
 
   return (
     <OcrSetupGate churchId={churchId}>
@@ -128,17 +135,18 @@ export default function OcrStudioAnalyzePage() {
           onDragEnter={(e) => { e.preventDefault(); setDragActive(true); }}
           onDragLeave={(e) => { e.preventDefault(); setDragActive(false); }}
           onDragOver={(e) => e.preventDefault()}
-          onDrop={handleDrop}
-          onClick={() => fileInputRef.current?.click()}
+          onDrop={isAnalyzing ? undefined : handleDrop}
+          onClick={isAnalyzing ? undefined : () => fileInputRef.current?.click()}
           sx={{
             p: 4,
             mb: 3,
             textAlign: 'center',
-            cursor: 'pointer',
+            cursor: isAnalyzing ? 'default' : 'pointer',
             borderStyle: 'dashed',
             borderWidth: 2,
             borderColor: dragActive ? 'primary.main' : 'divider',
             bgcolor: dragActive ? 'action.hover' : 'transparent',
+            opacity: isAnalyzing ? 0.85 : 1,
           }}
         >
           <input
@@ -147,6 +155,7 @@ export default function OcrStudioAnalyzePage() {
             accept={ANALYZE_ACCEPTED_TYPES}
             multiple
             hidden
+            disabled={isAnalyzing}
             onChange={(e) => {
               analyzeFiles(e.target.files).catch((err) => toast.error(err.message));
               e.target.value = '';
@@ -158,16 +167,35 @@ export default function OcrStudioAnalyzePage() {
             <IconCloudUpload size={40} style={{ opacity: 0.45 }} />
           )}
           <Typography variant="body1" fontWeight={600} sx={{ mt: 1 }}>
-            Drop mixed register images here
+            {isAnalyzing ? 'Analyzing images…' : 'Drop mixed register images here'}
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            Baptism, marriage, and funeral pages together · analyzed locally before upload
+            {isAnalyzing && analyzeProgress
+              ? `Processing ${analyzeProgress.completed + 1} of ${analyzeProgress.total}${analyzeProgress.currentName ? ` — ${analyzeProgress.currentName}` : ''}`
+              : 'Baptism, marriage, and funeral pages together · results appear as each file finishes'}
           </Typography>
         </Paper>
 
+        {isAnalyzing && analyzeProgress && (
+          <Box sx={{ mb: 3 }}>
+            <Stack direction="row" justifyContent="space-between" sx={{ mb: 0.5 }}>
+              <Typography variant="body2" color="text.secondary">
+                {analyzeProgress.completed} of {analyzeProgress.total} complete
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                {progressPct}%
+              </Typography>
+            </Stack>
+            <LinearProgress variant="determinate" value={progressPct} sx={{ height: 8, borderRadius: 1 }} />
+          </Box>
+        )}
+
         {items.length > 0 && (
           <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
-            <Chip icon={<IconScan size={14} />} label={`${items.length} analyzed`} size="small" />
+            <Chip icon={<IconScan size={14} />} label={`${completedItems.length} analyzed`} size="small" />
+            {analyzingCount > 0 && (
+              <Chip label={`${analyzingCount} in progress`} size="small" color="info" variant="outlined" />
+            )}
             {selectedCount > 0 && (
               <Chip label={`${selectedCount} selected`} size="small" color="primary" variant="outlined" />
             )}
@@ -220,15 +248,15 @@ export default function OcrStudioAnalyzePage() {
                   <TableRow
                     key={item.id}
                     hover
-                    selected={item.needsReview}
-                    sx={{ opacity: !item.analyzing && !selectedIds.has(item.id) ? 0.72 : 1 }}
+                    selected={item.needsReview && !item.analyzing}
+                    sx={{ opacity: !item.analyzing && !item.error && !selectedIds.has(item.id) ? 0.72 : 1 }}
                   >
                     <TableCell padding="checkbox">
                       <Checkbox
                         size="small"
                         checked={selectedIds.has(item.id)}
                         onChange={() => toggleSelection(item.id)}
-                        disabled={!!item.analyzing}
+                        disabled={!!item.analyzing || !!item.error}
                         inputProps={{ 'aria-label': `Select ${item.originalFilename}` }}
                       />
                     </TableCell>
@@ -257,6 +285,17 @@ export default function OcrStudioAnalyzePage() {
                       <Typography variant="body2" fontWeight={600} noWrap sx={{ maxWidth: 180 }}>
                         {item.originalFilename}
                       </Typography>
+                      {item.analyzing && (
+                        <Typography variant="caption" color="info.main" sx={{ display: 'block' }}>
+                          Analyzing…
+                        </Typography>
+                      )}
+                      {item.error && (
+                        <Typography variant="caption" color="error.main" sx={{ display: 'block' }}>
+                          {item.error}
+                        </Typography>
+                      )}
+                      {!item.analyzing && !item.error && (
                       <Stack direction="row" spacing={0.5} sx={{ mt: 0.5, flexWrap: 'wrap' }}>
                         <Chip
                           size="small"
@@ -271,7 +310,8 @@ export default function OcrStudioAnalyzePage() {
                           sx={{ fontSize: '0.65rem', height: 20 }}
                         />
                       </Stack>
-                      {item.warnings.length > 0 && (
+                      )}
+                      {item.warnings.length > 0 && !item.analyzing && (
                         <Tooltip title={item.warnings.join(' ')}>
                           <Typography variant="caption" color="warning.main" sx={{ display: 'block', mt: 0.25 }} noWrap>
                             {item.warnings[0]}
