@@ -8,6 +8,7 @@ export function ocrStudioBasePath(mode: OcrStudioBase): string {
 
 export const OCR_STUDIO_SCREEN_PATHS = {
   'command-center': '',
+  'analyze-intake': 'analyze',
   'upload-intake': 'upload',
   'batch-history': 'batch-history',
   'job-operations': 'jobs',

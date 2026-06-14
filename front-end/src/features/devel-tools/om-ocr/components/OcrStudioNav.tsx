@@ -44,6 +44,7 @@ const OcrStudioNav: React.FC = () => {
     if (isPortal) {
       return [
         { label: 'Hub', path: base, icon: <HomeIcon fontSize="small" /> },
+        { label: 'Analyze', path: `${base}/analyze`, icon: <AssessmentIcon fontSize="small" /> },
         { label: 'Upload', path: `${base}/upload`, icon: <UploadIcon fontSize="small" /> },
         { label: 'Review', path: `${base}/review`, icon: <AssessmentIcon fontSize="small" /> },
         { label: 'Settings', path: `${base}/settings`, icon: <SettingsIcon fontSize="small" /> },
@@ -51,6 +52,7 @@ const OcrStudioNav: React.FC = () => {
     }
     return [
       { label: 'Hub', path: base, icon: <HomeIcon fontSize="small" /> },
+      { label: 'Analyze', path: `${base}/analyze`, icon: <AssessmentIcon fontSize="small" /> },
       { label: 'Upload', path: `${base}/upload`, icon: <UploadIcon fontSize="small" /> },
       { label: 'Job History', path: `${base}/jobs`, icon: <HistoryIcon fontSize="small" />, superAdminOnly: true },
       { label: 'Record Headers', path: `${base}/record-fields`, icon: <TableRowsIcon fontSize="small" /> },

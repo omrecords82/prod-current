@@ -12,6 +12,7 @@ import type { OcrStudioBatch } from '../hooks/useOcrStudioBatches';
 import type { OcrStudioBase } from '../ocrStudioPaths';
 
 type Screen =
+  | 'analyze-intake'
   | 'upload-intake'
   | 'review-queue'
   | 'job-operations'
@@ -142,6 +143,7 @@ export function CommandCenter({
   const quickLaunch = useMemo(() => {
     type LaunchItem = { label: string; icon: typeof Upload; screen: Screen; desc: string };
     const items: LaunchItem[] = [
+      { label: 'Analyze Records', icon: Activity, screen: 'analyze-intake', desc: 'Classify mixed scans' },
       { label: 'Upload Images', icon: Upload, screen: 'upload-intake', desc: 'Add scanned pages' },
       { label: 'Review Queue', icon: Eye, screen: 'review-queue', desc: `${stats.review} pending` },
       { label: 'My Uploads', icon: History, screen: 'batch-history', desc: `${recentBatches.length} batches` },

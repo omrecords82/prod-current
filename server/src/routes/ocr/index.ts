@@ -88,5 +88,12 @@ export function mountOcrRoutes(app: any, upload: any) {
   const statsRouter = require('./stats');
   app.use('/api/church/:churchId/ocr', statsRouter);
 
-  console.log('✅ [OCR] All OCR routes mounted (admin + 8 church-scoped modules)');
+  // -------------------------------------------------------------------------
+  // 10. Pre-upload analyze (type / layout / optimize)
+  // -------------------------------------------------------------------------
+  const createAnalyzeRouter = require('./analyze');
+  const analyzeRouter = createAnalyzeRouter(upload);
+  app.use('/api/church/:churchId/ocr', analyzeRouter);
+
+  console.log('✅ [OCR] All OCR routes mounted (admin + 9 church-scoped modules)');
 }

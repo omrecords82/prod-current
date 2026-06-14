@@ -31,6 +31,7 @@ const OcrStudioUploadPage = Loadable(lazy(() => import('../features/devel-tools/
 const OcrStudioReviewQueuePage = Loadable(lazy(() => import('../features/devel-tools/om-ocr/studio-interface/pages/OcrStudioReviewQueuePage')));
 const OcrStudioReviewDetailPage = Loadable(lazy(() => import('../features/devel-tools/om-ocr/studio-interface/pages/OcrStudioReviewDetailPage')));
 const OcrStudioSettingsPage = Loadable(lazy(() => import('../features/devel-tools/om-ocr/studio-interface/pages/OcrStudioSettingsPage')));
+const OcrStudioAnalyzePage = Loadable(lazy(() => import('../features/devel-tools/om-ocr/studio-interface/pages/OcrStudioAnalyzePage')));
 
 const portalOcrShell = (
   <ProtectedRoute requiredRole={ROLE_STAFF}>
@@ -76,6 +77,7 @@ export const portalRoute = {
       element: portalOcrShell,
       children: [
         { index: true, element: <OcrStudioCommandCenterPage /> },
+        { path: 'analyze', element: <OcrStudioAnalyzePage /> },
         { path: 'upload', element: <OcrStudioUploadPage /> },
         { path: 'review', element: <OcrStudioReviewQueuePage /> },
         { path: 'review/:churchId', element: <OcrStudioReviewDetailPage /> },

@@ -42,6 +42,9 @@ const OcrStudioLayoutTemplatesPage = Loadable(
 const OcrStudioSettingsPage = Loadable(
   lazy(() => import('../features/devel-tools/om-ocr/studio-interface/pages/OcrStudioSettingsPage')),
 );
+const OcrStudioAnalyzePage = Loadable(
+  lazy(() => import('../features/devel-tools/om-ocr/studio-interface/pages/OcrStudioAnalyzePage')),
+);
 const OcrSetupWizardPage = Loadable(
   lazy(() => import('../features/devel-tools/om-ocr/pages/OcrSetupWizardPage')),
 );
@@ -61,6 +64,7 @@ export const ocrStudioRoutes = {
   element: ocrStudioShell,
   children: [
     { index: true, element: <OcrStudioCommandCenterPage /> },
+    { path: 'analyze', element: <OcrStudioAnalyzePage /> },
     { path: 'upload', element: <OcrStudioUploadPage /> },
     { path: 'batch-history', element: <OcrStudioBatchHistoryPage /> },
     { path: 'jobs', element: <ProtectedRoute requiredRole={ROLE_SUPER}><OcrStudioJobOperationsPage /></ProtectedRoute> },
