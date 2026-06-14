@@ -398,6 +398,17 @@ export interface AnalyzeCommitItem {
   language?: string;
 }
 
+async function ensureAnalyzeSourcePipelineEnum(platformPool: { query: (sql: string) => Promise<unknown> }): Promise<void> {
+  try {
+    await platformPool.query(`
+      ALTER TABLE ocr_jobs MODIFY COLUMN source_pipeline
+      ENUM('studio','uploader','worker','batch_import','analyze') NULL
+    `);
+  } catch {
+    /* enum may already include analyze */
+  }
+}
+
 export async function commitAnalyzeSession(
   churchId: number,
   sessionId: string,
@@ -426,6 +437,7 @@ export async function commitAnalyzeSession(
     await platformPool.query(`ALTER TABLE ocr_jobs ADD COLUMN IF NOT EXISTS classifier_confidence DECIMAL(5,4) NULL`);
     await platformPool.query(`ALTER TABLE ocr_jobs ADD COLUMN IF NOT EXISTS layout_classification_json TEXT NULL`);
     await platformPool.query(`ALTER TABLE ocr_jobs ADD COLUMN IF NOT EXISTS batch_id VARCHAR(64) NULL`);
+    await ensureAnalyzeSourcePipelineEnum(platformPool);
   } catch {
     /* columns may exist */
   }
