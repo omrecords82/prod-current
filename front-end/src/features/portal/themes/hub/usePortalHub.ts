@@ -310,7 +310,7 @@ export function usePortalHub(): PortalHubViewModel {
   ].filter(Boolean).join(' · ');
 
   const quickActions = useMemo(() => [
-    { icon: Upload, label: t('portal.upload_records'), description: 'Import historical sacrament books', onClick: () => navigate('/portal/upload') },
+    { icon: Upload, label: t('portal.upload_records'), description: 'Import historical sacrament books', onClick: () => navigate('/portal/ocr') },
     { icon: BookOpen, label: t('portal.certificates'), description: t('portal.generate_documents'), onClick: () => navigate('/portal/certificates') },
     { icon: Calendar, label: t('portal.sacramental_calendar'), description: t('portal.restriction_dates'), onClick: () => navigate('/portal/sacramental-restrictions') },
     { icon: ClipboardList, label: t('portal.interactive_reports'), description: t('portal.delegate_record_collection'), onClick: () => navigate('/apps/records/interactive-reports') },
@@ -354,7 +354,7 @@ export function usePortalHub(): PortalHubViewModel {
     highlightMatch,
     navigate,
     onSearchResultClick: (result) => navigate(`/portal/records/${result.type}`),
-    onUpload: () => navigate('/portal/upload'),
+    onUpload: () => navigate('/portal/ocr'),
     onAddBaptism: () => navigate('/portal/records/baptism/new'),
     onAddMarriage: () => navigate('/portal/records/marriage/new'),
     onAddFuneral: () => navigate('/portal/records/funeral/new'),

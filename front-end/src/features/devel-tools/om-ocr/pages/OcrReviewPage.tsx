@@ -470,7 +470,7 @@ const OcrReviewPage: React.FC = () => {
 
   const mapMode = focusedField !== null;
 
-  const backPath = isPortal ? '/portal/upload' : '/devel/ocr-studio/upload';
+  const backPath = isPortal ? '/portal/ocr/upload' : '/devel/ocr-studio/upload';
   const uploadPath = useMemo(
     () => (isPortal ? backPath : ocrStudioPathWithChurch(backPath, searchParams, churchId)),
     [isPortal, backPath, searchParams, churchId],

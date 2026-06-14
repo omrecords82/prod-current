@@ -1,6 +1,6 @@
 /**
  * UploadRecordsPage — Record Image Upload & Status Tracker
- * Route: /portal/upload, /apps/upload-records
+ * Route: /portal/ocr/upload, /apps/upload-records
  *
  * Two tabs:
  *   1. Upload — drag-and-drop image upload with live queue
@@ -65,16 +65,11 @@ import {
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
-import { usePortalTheme } from '@/features/portal/themes/PortalThemeContext';
-import { getPortalRecordsTheme } from '@/features/portal/themes/records/portalRecordsTheme';
-import UploadWorkflowPipeline from '@/features/portal/upload/UploadWorkflowPipeline';
 import {
   REVIEW_PIPELINE_STEPS,
   REVIEW_STATUS_CONFIG,
   type ReviewStatus,
 } from '@/features/portal/upload/uploadReviewConfig';
-import { Button as PortalButton } from '@/components/portal/ui';
-import UploadGuidelinesWizard from './UploadGuidelinesWizard';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -270,20 +265,12 @@ const jobDisplayName = (job: OcrJob) => (job.original_filename || job.filename |
 // Main Component
 // ─────────────────────────────────────────────────────────────────────────────
 
-interface UploadRecordsPageProps {
-  /** When true, renders inside portal theme shell (route: /portal/upload). */
-  portalVariant?: boolean;
-}
-
-const UploadRecordsPage: React.FC<UploadRecordsPageProps> = ({ portalVariant = false }) => {
+const UploadRecordsPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const isOcrStudioUpload = location.pathname.includes('/devel/ocr-studio') || location.pathname.startsWith('/portal/ocr/upload');
   const inShell = useInOcrStudioShell();
   const isPortalUpload = location.pathname.startsWith('/portal');
-  const isPortalMode = portalVariant || (isPortalUpload && !isOcrStudioUpload);
-  const { layoutTheme } = usePortalTheme();
-  const recordsTheme = getPortalRecordsTheme(layoutTheme);
   const { selectedChurchId: studioChurchId, searchParams: studioSearchParams } = useOcrChurchSelector();
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
@@ -423,10 +410,6 @@ const UploadRecordsPage: React.FC<UploadRecordsPageProps> = ({ portalVariant = f
   useEffect(() => {
     if (activeTab === 1) fetchHistory();
   }, [activeTab, fetchHistory]);
-
-  useEffect(() => {
-    if (isPortalMode && effectiveChurchId) fetchHistory();
-  }, [isPortalMode, effectiveChurchId, fetchHistory]);
 
   const syncQueueFromServer = useCallback(async () => {
     if (!effectiveChurchId) return;
@@ -665,102 +648,34 @@ const UploadRecordsPage: React.FC<UploadRecordsPageProps> = ({ portalVariant = f
     ));
   }, [effectiveChurchId, isPortalUpload, navigate, studioSearchParams]);
 
-  const handlePortalWorkflowFilter = useCallback((key: string) => {
-    setActiveTab(1);
-    setHistoryFilter(key);
-  }, []);
-
   // ═══════════════════════════════════════════════════════════════════════════
   // RENDER
   // ═══════════════════════════════════════════════════════════════════════════
 
-  const portalScopeClass = `rm-scope ${recordsTheme.recordsClass} portal-upload w-full min-w-0`;
-  const contentBoxSx = isPortalMode
-    ? { pt: 0, pb: 2, px: 0, maxWidth: '100%', width: '100%' }
-    : inShell
-      ? { pt: 0, pb: 2, px: 0, maxWidth: '100%', width: '100%' }
-      : {
-          py: 3,
-          px: { xs: 1.5, md: 3 },
-          ...(isOcrStudioUpload
-            ? { maxWidth: '100%', width: '100%' }
-            : { maxWidth: 1100, mx: 'auto' }),
-        };
-
-  const pageBody = (
-    <Box sx={contentBoxSx}>
+  return (
+    <OcrSetupGate churchId={effectiveChurchId}>
+    <Box
+      sx={{
+        ...(inShell
+          ? { pt: 0, pb: 2, px: 0, maxWidth: '100%', width: '100%' }
+          : {
+              py: 3,
+              px: { xs: 1.5, md: 3 },
+              ...(isOcrStudioUpload
+                ? { maxWidth: '100%', width: '100%' }
+                : { maxWidth: 1100, mx: 'auto' }),
+            }),
+      }}
+    >
       {isOcrStudioUpload && !inShell && <OcrStudioNav />}
-
-      {isPortalMode ? (
-        <div className="space-y-5">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-            <div>
-              <h1 className="text-xl font-semibold tracking-tight text-[var(--rm-fg)]">Upload Records</h1>
-              <p className="mt-1 text-sm text-[var(--rm-muted-fg)]">
-                Import scanned sacrament books, track OCR processing, and seed confirmed entries into church records.
-              </p>
-            </div>
-            {effectiveChurchId && (
-              <div className="flex shrink-0 flex-wrap gap-2">
-                <PortalButton
-                  variant="outline"
-                  size="sm"
-                  onClick={() => navigate(`/portal/ocr/review/${effectiveChurchId}`)}
-                >
-                  Open Review
-                </PortalButton>
-                <PortalButton
-                  variant="outline"
-                  size="sm"
-                  onClick={() => navigate(`/portal/ocr/settings?church=${effectiveChurchId}`)}
-                >
-                  OCR Settings
-                </PortalButton>
-              </div>
-            )}
-          </div>
-
-          {effectiveChurchId && (
-            <UploadWorkflowPipeline
-              counts={statusCounts}
-              activeFilter={activeTab === 1 ? historyFilter : 'all'}
-              onFilterChange={handlePortalWorkflowFilter}
-            />
-          )}
-
-          {effectiveChurchId && (
-            <div className="portal-upload-tabs w-fit">
-              <button
-                type="button"
-                className="portal-upload-tab"
-                data-active={activeTab === 0}
-                onClick={() => setActiveTab(0)}
-              >
-                Upload Images
-              </button>
-              <button
-                type="button"
-                className="portal-upload-tab"
-                data-active={activeTab === 1}
-                onClick={() => { setActiveTab(1); fetchHistory(); }}
-              >
-                My Uploads{history.length > 0 ? ` (${history.length})` : ''}
-              </button>
-            </div>
-          )}
-        </div>
-      ) : (
-        <>
-          <Box sx={{ mb: 3 }}>
-            <Typography variant="h5" fontWeight={700}>
-              Record Images
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              Upload scanned church records and track their processing status.
-            </Typography>
-          </Box>
-        </>
-      )}
+      <Box sx={{ mb: 3 }}>
+        <Typography variant="h5" fontWeight={700}>
+          Record Images
+        </Typography>
+        <Typography variant="body2" color="text.secondary">
+          Upload scanned church records and track their processing status.
+        </Typography>
+      </Box>
 
       {/* Admin church selector (portal / non-OCR-studio routes) */}
       {!isOcrStudioUpload && isAdmin && (
@@ -813,7 +728,7 @@ const UploadRecordsPage: React.FC<UploadRecordsPageProps> = ({ portalVariant = f
         </Paper>
       )}
 
-      {!isOcrStudioUpload && !isPortalMode && effectiveChurchId && (
+      {!isOcrStudioUpload && effectiveChurchId && (
         <Paper variant="outlined" sx={{ mb: 2.5 }}>
           <Tabs
             value={activeTab}
@@ -831,9 +746,7 @@ const UploadRecordsPage: React.FC<UploadRecordsPageProps> = ({ portalVariant = f
           {/* ════════════ TAB 0: UPLOAD ════════════ */}
           {activeTab === 0 && (
             <Box>
-              {isPortalMode && <UploadGuidelinesWizard />}
-
-              <Paper variant="outlined" sx={{ p: 2, mb: 2, display: 'flex', flexWrap: 'wrap', gap: 2, mt: isPortalMode ? 2 : 0 }}>
+              <Paper variant="outlined" sx={{ p: 2, mb: 2, display: 'flex', flexWrap: 'wrap', gap: 2 }}>
                 <FormControl size="small" sx={{ minWidth: 160 }}>
                   <InputLabel>Record Type</InputLabel>
                   <Select
@@ -869,7 +782,7 @@ const UploadRecordsPage: React.FC<UploadRecordsPageProps> = ({ portalVariant = f
                       size="small"
                       variant="text"
                       sx={{ p: 0, minWidth: 0, verticalAlign: 'baseline', textTransform: 'none' }}
-                      href={isPortalMode && effectiveChurchId
+                      href={isPortalUpload && effectiveChurchId
                         ? `/portal/ocr/settings?church=${effectiveChurchId}`
                         : `/devel/ocr-studio?church=${effectiveChurchId}`}
                     >
@@ -882,23 +795,17 @@ const UploadRecordsPage: React.FC<UploadRecordsPageProps> = ({ portalVariant = f
               {/* Drop zone */}
               <Paper
                 variant="outlined"
-                className={isPortalMode ? 'portal-upload-dropzone' : undefined}
-                data-active={isPortalMode && dragActive ? 'true' : undefined}
                 onDragEnter={handleDrag}
                 onDragLeave={handleDrag}
                 onDragOver={handleDrag}
                 onDrop={handleDrop}
                 sx={{
                   p: 4, mb: 2, textAlign: 'center', cursor: 'pointer',
-                  ...(isPortalMode
-                    ? { borderStyle: 'dashed', borderWidth: 2, bgcolor: 'transparent' }
-                    : {
-                        borderStyle: 'dashed', borderWidth: 2,
-                        borderColor: dragActive ? 'primary.main' : 'divider',
-                        bgcolor: dragActive ? alpha(theme.palette.primary.main, 0.04) : 'transparent',
-                        transition: 'all 0.2s',
-                        '&:hover': { borderColor: 'primary.light', bgcolor: alpha(theme.palette.primary.main, 0.02) },
-                      }),
+                  borderStyle: 'dashed', borderWidth: 2,
+                  borderColor: dragActive ? 'primary.main' : 'divider',
+                  bgcolor: dragActive ? alpha(theme.palette.primary.main, 0.04) : 'transparent',
+                  transition: 'all 0.2s',
+                  '&:hover': { borderColor: 'primary.light', bgcolor: alpha(theme.palette.primary.main, 0.02) },
                 }}
                 onClick={() => fileInputRef.current?.click()}
               >
@@ -1342,17 +1249,6 @@ const UploadRecordsPage: React.FC<UploadRecordsPageProps> = ({ portalVariant = f
         </>
       )}
     </Box>
-  );
-
-  return (
-    <OcrSetupGate churchId={effectiveChurchId}>
-      {isPortalMode ? (
-        <div className={portalScopeClass}>
-          <main className="space-y-5">{pageBody}</main>
-        </div>
-      ) : (
-        pageBody
-      )}
 
       <Dialog open={pendingSeedHistoryIds !== null} onClose={() => !seedingHistoryJobs && setPendingSeedHistoryIds(null)}>
         <DialogTitle>
