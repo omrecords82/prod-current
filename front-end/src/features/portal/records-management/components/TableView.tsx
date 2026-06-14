@@ -1,5 +1,5 @@
 import { agGridIconMap } from "@/ui/agGridIcons";
-import { Download, Eye, FileText, History, LayoutList, MoreHorizontal, Pencil, Table2, TableProperties, Users } from "@/ui/icons";
+import { Download, Eye, FileText, History, MoreHorizontal, Pencil } from "@/ui/icons";
 import { Menu, MenuItem } from "@mui/material";
 import type { ColDef, GridReadyEvent, ICellRendererParams } from "ag-grid-community";
 import { themeQuartz } from "ag-grid-community";
@@ -28,19 +28,6 @@ interface Props {
   onExport: () => void;
   onCertificate?: (r: AnyRecord) => void;
 }
-
-const GRID_PRESETS: { id: GridLayoutPreset; label: string; Icon: typeof LayoutList }[] = [
-  { id: "full", label: "Full details", Icon: LayoutList },
-  { id: "summary", label: "Summary", Icon: LayoutList },
-  { id: "clergy", label: "Clergy & dates", Icon: Users },
-  { id: "compact", label: "Compact", Icon: LayoutList },
-];
-
-const TABLE_STYLES: { id: TableDisplayStyle; label: string; Icon: typeof LayoutList }[] = [
-  { id: "default", label: "Standard", Icon: LayoutList },
-  { id: "registry", label: "Registry", Icon: TableProperties },
-  { id: "ledger", label: "Ledger", Icon: Table2 },
-];
 
 function tableStyleStorageKey() {
   return "rm-table-display-style";
@@ -473,72 +460,33 @@ export function TableView({ records, recordType, fieldConfig, mappingFields, row
 
   const radiusClass = standard ? "rounded-none" : "rounded-xl";
 
-  const styleBtnClass = (active: boolean) =>
-    `inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-all ${
-      active
-        ? "text-white bg-[var(--rm-accent)] shadow-sm"
-        : "text-[var(--rm-muted-fg)] border border-[var(--rm-border)] bg-[var(--rm-card)] hover:bg-[var(--rm-muted)] hover:text-[var(--rm-fg)]"
-    }`;
-
   return (
     <div
       className={`rm-ag-grid rm-ag-theme-${recordsTheme.id} rm-table-style-${tableStyle}${tightColumns ? " rm-ag-tight-columns" : ""} border border-[var(--rm-border)] bg-[var(--rm-card)] ${radiusClass} overflow-hidden shadow-sm w-full min-w-0`}
       style={{ borderRadius: standard ? 0 : recordsTheme.table.radius, fontFamily: recordsTheme.table.fontFamily }}
     >
-      <div className="flex flex-col gap-2 px-3 py-2.5 border-b border-[var(--rm-border)] bg-[var(--rm-muted)]/60">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex flex-wrap items-center gap-1.5">
-            <span className="text-xs font-medium uppercase tracking-wide text-[var(--rm-muted-fg)] mr-1">Grid layout</span>
-            {GRID_PRESETS.map(({ id, label, Icon }) => (
-              <button
-                key={id}
-                type="button"
-                onClick={() => setGridPreset(id)}
-                className={styleBtnClass(gridPreset === id)}
-              >
-                <Icon className="w-3.5 h-3.5" />
-                {label}
-              </button>
-            ))}
-          </div>
-          <p className="text-xs text-[var(--rm-muted-fg)] hidden sm:block">
-            Column filters below headers · Click a row to open the record
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex flex-wrap items-center gap-1.5">
-            <span className="text-xs font-medium uppercase tracking-wide text-[var(--rm-muted-fg)] mr-1">Table style</span>
-            {TABLE_STYLES.map(({ id, label, Icon }) => (
-              <button
-                key={id}
-                type="button"
-                onClick={() => setTableStyle(id)}
-                className={styleBtnClass(tableStyle === id)}
-              >
-                <Icon className="w-3.5 h-3.5" />
-                {label}
-              </button>
-            ))}
-          </div>
-          <label className="inline-flex items-center gap-2 cursor-pointer select-none">
-            <span className="text-xs font-medium text-[var(--rm-muted-fg)]">Tight columns</span>
-            <button
-              type="button"
-              role="switch"
-              aria-checked={tightColumns}
-              onClick={() => setTightColumns((v) => !v)}
-              className={`relative inline-flex h-5 w-9 shrink-0 rounded-full transition-colors ${
-                tightColumns ? "bg-[var(--rm-accent)]" : "bg-[var(--rm-border)]"
+      <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 border-b border-[var(--rm-border)] bg-[var(--rm-muted)]/60">
+        <p className="text-xs text-[var(--rm-muted-fg)]">
+          Column filters below headers · Click a row to open the record
+        </p>
+        <label className="inline-flex items-center gap-2 cursor-pointer select-none shrink-0">
+          <span className="text-xs font-medium text-[var(--rm-muted-fg)]">Tight columns</span>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={tightColumns}
+            onClick={() => setTightColumns((v) => !v)}
+            className={`relative inline-flex h-5 w-9 shrink-0 rounded-full transition-colors ${
+              tightColumns ? "bg-[var(--rm-accent)]" : "bg-[var(--rm-border)]"
+            }`}
+          >
+            <span
+              className={`absolute top-0.5 left-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${
+                tightColumns ? "translate-x-4" : "translate-x-0"
               }`}
-            >
-              <span
-                className={`absolute top-0.5 left-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${
-                  tightColumns ? "translate-x-4" : "translate-x-0"
-                }`}
-              />
-            </button>
-          </label>
-        </div>
+            />
+          </button>
+        </label>
       </div>
 
       <div style={{ height: gridHeight, width: "100%", minWidth: 0 }} className="rm-ag-grid-host">

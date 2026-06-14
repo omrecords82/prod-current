@@ -274,7 +274,6 @@ const RecordsManagement: React.FC = () => {
   }, [records, priest]);
 
   const drawerRecord = drawerIdx !== null ? filtered[drawerIdx] ?? null : null;
-  const shown = view === "table" ? Math.min(filtered.length, 10) : view === "cards" ? Math.min(filtered.length, 3) : filtered.length;
 
   function openRecord(r: AnyRecord) {
     const i = filtered.findIndex((x) => x.id === r.id);
@@ -314,26 +313,14 @@ const RecordsManagement: React.FC = () => {
           searchLoading={searchLoading}
           setDebouncedSearch={setDebouncedSearch}
           searchDebounceRef={searchDebounceRef}
-          priest={priest}
-          onPriest={setPriest}
           recordType={recordType}
           onRecordType={(t) => { setRecordType(t); setDrawerIdx(null); setSearch(""); setDebouncedSearch(""); setUseDefaultSort(true); }}
-          totalShown={shown}
-          totalAll={totalRecords}
           onAdd={() => setAddOpen(true)}
-          onClear={() => { setSearch(""); setDebouncedSearch(""); setPriest("All priests"); setDrawerIdx(null); setToast("Selection cleared"); }}
           onMore={(a: ToolbarMore) => {
             if (a === "standard") { setStandardTable((s) => !s); setToast(standardTable ? "Switched to enhanced table" : "Switched to standard table"); return; }
             setMoreAction(a);
           }}
           standardTable={standardTable}
-          clergyList={clergyList}
-          sortField={sortField}
-          sortDir={sortDir}
-          onSort={(field: string, dir: "asc" | "desc") => { setUseDefaultSort(false); setSortField(field); setSortDir(dir); }}
-          useDefaultSort={useDefaultSort}
-          onToggleDefaultSort={() => setUseDefaultSort((v) => !v)}
-          defaultSortLabel={effectiveDefaultSort}
         />
 
         {loading ? (
