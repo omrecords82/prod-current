@@ -209,3 +209,123 @@ html.dark .rm-scope select,
 .rm-scope .rm-ag-grid .ag-root-wrapper {
   min-width: 0;
 }
+
+/* ── Table display styles (Registry / Ledger) ─────────────────── */
+
+.rm-scope .rm-table-style-registry .ag-header {
+  border-bottom: 2px solid var(--rm-accent);
+}
+.rm-scope .rm-table-style-registry .ag-header-cell {
+  border-right: 1px solid rgba(255, 255, 255, 0.18);
+}
+.rm-scope .rm-table-style-registry .ag-header-cell:last-child {
+  border-right: none;
+}
+.rm-scope .rm-table-style-registry .ag-cell {
+  border-right: 1px solid var(--rm-border);
+}
+.rm-scope .rm-table-style-registry .ag-row {
+  border-bottom: 1px solid var(--rm-border);
+}
+.rm-scope .rm-table-style-registry .ag-row-odd {
+  background-color: var(--rm-muted);
+}
+.rm-scope .rm-table-style-registry .ag-floating-filter {
+  background: var(--rm-muted);
+  border-bottom: 1px solid var(--rm-border);
+}
+.rm-scope .rm-table-style-registry .ag-floating-filter-body input {
+  font-size: 11px;
+}
+
+.rm-scope .rm-table-style-ledger .ag-header {
+  border-bottom: 2px solid var(--rm-accent);
+  background: var(--rm-muted) !important;
+}
+.rm-scope .rm-table-style-ledger .ag-header-cell-text {
+  color: var(--rm-fg) !important;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+.rm-scope .rm-table-style-ledger .ag-row {
+  border-bottom: 1px solid var(--rm-border);
+}
+.rm-scope .rm-table-style-ledger .ag-cell {
+  border-right: none;
+}
+.rm-scope .rm-table-style-ledger .ag-floating-filter {
+  background: var(--rm-card);
+  border-bottom: 1px solid var(--rm-border);
+}
+
+/* Tight column spacing — reduces horizontal padding between cells */
+.rm-scope .rm-ag-tight-columns .ag-cell,
+.rm-scope .rm-ag-tight-columns .ag-header-cell,
+.rm-scope .rm-ag-tight-columns .ag-floating-filter-body {
+  padding-left: 6px !important;
+  padding-right: 6px !important;
+}
+.rm-scope .rm-ag-tight-columns .ag-header-cell-label {
+  font-size: 11px;
+}
+.rm-scope .rm-ag-tight-columns .ag-cell-value {
+  font-size: 12px;
+}
+
+/* Portal theme refinements — Registry */
+.rm-scope.rm-records-art-deco .rm-table-style-registry .ag-header-cell-text,
+.rm-scope.rm-records-paper .rm-table-style-registry .ag-header-cell-text {
+  font-family: Georgia, 'Times New Roman', serif;
+  letter-spacing: 0.04em;
+}
+.rm-scope.rm-records-art-deco .rm-table-style-registry .ag-row-odd {
+  background-color: rgba(201, 162, 39, 0.06);
+}
+.rm-scope.rm-records-paper .rm-table-style-registry .ag-row-odd {
+  background-color: #f7f3eb;
+}
+.rm-scope.rm-records-neo-gothic .rm-table-style-registry .ag-header-cell {
+  border-right-color: rgba(129, 140, 248, 0.25);
+}
+.rm-scope.rm-records-neo-gothic .rm-table-style-registry .ag-row-odd {
+  background-color: rgba(129, 140, 248, 0.06);
+}
+.rm-scope.rm-records-bento .rm-table-style-registry .ag-header {
+  border-radius: 0;
+}
+.rm-scope.rm-records-bento .rm-table-style-registry .ag-row-odd {
+  background-color: rgba(14, 165, 233, 0.05);
+}
+.rm-scope.rm-records-glass .rm-table-style-registry .ag-header {
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+.rm-scope.rm-records-glass .rm-table-style-registry .ag-row-odd {
+  background-color: rgba(255, 255, 255, 0.04);
+}
+.rm-scope.rm-records-modern .rm-table-style-registry .ag-row-odd {
+  background-color: rgba(37, 99, 235, 0.04);
+}
+
+/* Portal theme refinements — Ledger */
+.rm-scope.rm-records-art-deco .rm-table-style-ledger .ag-header-cell-text,
+.rm-scope.rm-records-paper .rm-table-style-ledger .ag-header-cell-text {
+  font-family: Georgia, 'Times New Roman', serif;
+}
+.rm-scope.rm-records-art-deco .rm-table-style-ledger .ag-header {
+  border-bottom-color: var(--rm-accent);
+}
+.rm-scope.rm-records-neo-gothic .rm-table-style-ledger .ag-header {
+  background: rgba(20, 20, 32, 0.95) !important;
+}
+.rm-scope.rm-records-glass .rm-table-style-ledger .ag-header {
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  background: rgba(255, 255, 255, 0.06) !important;
+}
+.rm-scope.rm-records-bento .rm-table-style-ledger .ag-header {
+  border-bottom-width: 3px;
+}
+.rm-scope.rm-records-modern .rm-table-style-ledger .ag-header {
+  border-bottom-color: var(--rm-accent);
+}

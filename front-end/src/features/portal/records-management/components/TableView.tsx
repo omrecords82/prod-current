@@ -1,5 +1,5 @@
 import { agGridIconMap } from "@/ui/agGridIcons";
-import { Download, Eye, FileText, History, LayoutList, MoreHorizontal, Pencil, Users } from "@/ui/icons";
+import { Download, Eye, FileText, History, LayoutList, MoreHorizontal, Pencil, Table2, TableProperties, Users } from "@/ui/icons";
 import { Menu, MenuItem } from "@mui/material";
 import type { ColDef, GridReadyEvent, ICellRendererParams } from "ag-grid-community";
 import { themeQuartz } from "ag-grid-community";
@@ -7,7 +7,7 @@ import { AgGridReact } from "ag-grid-react";
 import React, { createElement, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { PortalRecordsThemeStyle } from "@/features/portal/themes/records/portalRecordsTheme";
 import { useRecordsThemeColors } from "../useRecordsThemeColors";
-import type { AnyRecord, Density, GridLayoutPreset, RecordType } from "../types";
+import type { AnyRecord, Density, GridLayoutPreset, RecordType, TableDisplayStyle } from "../types";
 import { ROW_NUMBER_COLUMN, STATUS_COLUMN } from "@/features/account/parish-management/recordFieldMapping";
 import { StatusBadge } from "./StatusBadge";
 
@@ -35,6 +35,25 @@ const GRID_PRESETS: { id: GridLayoutPreset; label: string; Icon: typeof LayoutLi
   { id: "clergy", label: "Clergy & dates", Icon: Users },
   { id: "compact", label: "Compact", Icon: LayoutList },
 ];
+
+const TABLE_STYLES: { id: TableDisplayStyle; label: string; Icon: typeof LayoutList }[] = [
+  { id: "default", label: "Standard", Icon: LayoutList },
+  { id: "registry", label: "Registry", Icon: TableProperties },
+  { id: "ledger", label: "Ledger", Icon: Table2 },
+];
+
+function tableStyleStorageKey() {
+  return "rm-table-display-style";
+}
+
+function tightColumnsStorageKey() {
+  return "rm-ag-tight-columns";
+}
+
+function colMinWidth(isDate: boolean, tight: boolean): number {
+  if (tight) return isDate ? 96 : 84;
+  return isDate ? 130 : 120;
+}
 
 type ColDefSpec = { field: string; headerName: string; valueGetter?: (r: any) => string; rawField?: string };
 
@@ -154,6 +173,19 @@ export function TableView({ records, recordType, fieldConfig, mappingFields, row
     } catch { /* ignore */ }
     return "full";
   });
+  const [tableStyle, setTableStyle] = useState<TableDisplayStyle>(() => {
+    try {
+      const saved = localStorage.getItem(tableStyleStorageKey());
+      if (saved === "default" || saved === "registry" || saved === "ledger") return saved;
+    } catch { /* ignore */ }
+    return "default";
+  });
+  const [tightColumns, setTightColumns] = useState(() => {
+    try {
+      return localStorage.getItem(tightColumnsStorageKey()) === "1";
+    } catch { /* ignore */ }
+    return false;
+  });
 
   useEffect(() => {
     try {
@@ -170,6 +202,18 @@ export function TableView({ records, recordType, fieldConfig, mappingFields, row
   }, [gridPreset, recordType]);
 
   useEffect(() => {
+    try {
+      localStorage.setItem(tableStyleStorageKey(), tableStyle);
+    } catch { /* ignore */ }
+  }, [tableStyle]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(tightColumnsStorageKey(), tightColumns ? "1" : "0");
+    } catch { /* ignore */ }
+  }, [tightColumns]);
+
+  useEffect(() => {
     const observer = new MutationObserver(() => {
       setIsDark(document.documentElement.classList.contains("dark"));
     });
@@ -181,10 +225,24 @@ export function TableView({ records, recordType, fieldConfig, mappingFields, row
   const headerHeight = 40;
   const floatingFiltersHeight = 34;
 
-  const filledHeader = recordsTheme.table.headerMode === 'filled';
-  const headerBg = filledHeader ? surface.accentDark : surface.headerBg;
-  const headerFg = filledHeader ? '#ffffff' : surface.accentDark;
+  const filledHeader = recordsTheme.table.headerMode === 'filled' || tableStyle === 'registry';
+  const ledgerStyle = tableStyle === 'ledger';
+  const headerBg = tableStyle === 'registry'
+    ? surface.accentDark
+    : ledgerStyle
+      ? surface.surfaceAlt
+      : filledHeader
+        ? surface.accentDark
+        : surface.headerBg;
+  const headerFg = tableStyle === 'registry' || (filledHeader && !ledgerStyle)
+    ? '#ffffff'
+    : ledgerStyle
+      ? surface.foreground
+      : surface.accentDark;
   const accent = surface.accent;
+  const padScale = tightColumns ? 0.55 : 1.1;
+  const cellFontSize = tightColumns ? 12 : 13;
+  const headerFontSize = tightColumns ? 11 : 12;
 
   const gridTheme = useMemo(() => themeQuartz.withParams(isDark ? {
     headerBackgroundColor: headerBg,
@@ -192,14 +250,14 @@ export function TableView({ records, recordType, fieldConfig, mappingFields, row
     headerFontWeight: 600,
     foregroundColor: surface.foreground,
     backgroundColor: surface.surfaceAlt,
-    oddRowBackgroundColor: surface.surface,
+    oddRowBackgroundColor: tableStyle === 'registry' ? surface.surface : surface.surface,
     rowHoverColor: `${accent}30`,
     selectedRowBackgroundColor: `${accent}22`,
     borderColor: surface.border,
-    fontSize: 13,
-    headerFontSize: 12,
-    cellHorizontalPaddingScale: 1.1,
-    rowBorder: { color: surface.border, style: "solid", width: 1 },
+    fontSize: cellFontSize,
+    headerFontSize,
+    cellHorizontalPaddingScale: padScale,
+    rowBorder: { color: surface.border, style: "solid", width: tableStyle === 'ledger' ? 1 : 1 },
     wrapperBorder: false,
   } : {
     headerBackgroundColor: headerBg,
@@ -207,16 +265,16 @@ export function TableView({ records, recordType, fieldConfig, mappingFields, row
     headerFontWeight: 600,
     foregroundColor: surface.foreground,
     backgroundColor: surface.surface,
-    oddRowBackgroundColor: surface.surfaceAlt,
+    oddRowBackgroundColor: tableStyle === 'registry' ? surface.surfaceAlt : surface.surfaceAlt,
     rowHoverColor: `${accent}14`,
     selectedRowBackgroundColor: `${accent}18`,
     borderColor: surface.border,
-    fontSize: 13,
-    headerFontSize: 12,
-    cellHorizontalPaddingScale: 1.1,
+    fontSize: cellFontSize,
+    headerFontSize,
+    cellHorizontalPaddingScale: padScale,
     rowBorder: { color: surface.border, style: "solid", width: 1 },
     wrapperBorder: false,
-  }), [isDark, surface, headerBg, headerFg, accent]);
+  }), [isDark, surface, headerBg, headerFg, accent, padScale, cellFontSize, headerFontSize, tableStyle]);
 
   const statusRenderer = useCallback((params: ICellRendererParams) => {
     if (!params.data) return null;
@@ -258,8 +316,8 @@ export function TableView({ records, recordType, fieldConfig, mappingFields, row
               headerName: d.displayName,
               hide: !show,
               flex: 0,
-              minWidth: 72,
-              maxWidth: 96,
+              minWidth: tightColumns ? 52 : 72,
+              maxWidth: tightColumns ? 72 : 96,
               sortable: false,
               filter: false,
               floatingFilter: false,
@@ -280,9 +338,9 @@ export function TableView({ records, recordType, fieldConfig, mappingFields, row
               headerName: d.displayName,
               field: "status",
               hide: !show,
-              flex: show ? 1 : 0,
-              minWidth: 118,
-              maxWidth: 140,
+              flex: show && !tightColumns ? 1 : 0,
+              minWidth: tightColumns ? 96 : 118,
+              maxWidth: tightColumns ? 120 : 140,
               sortable: d.sortable,
               filter: "agTextColumnFilter",
               floatingFilter: true,
@@ -297,8 +355,8 @@ export function TableView({ records, recordType, fieldConfig, mappingFields, row
             headerName: d.displayName,
             field: d.column,
             hide: !show,
-            flex: show ? 1 : 0,
-            minWidth: isDate ? 130 : 120,
+            flex: show && !tightColumns ? 1 : 0,
+            minWidth: colMinWidth(isDate, tightColumns),
             sortable: d.sortable,
             ...textFilter,
             pinned: pinFirst && idx === 0 && show ? ("left" as const) : undefined,
@@ -317,8 +375,8 @@ export function TableView({ records, recordType, fieldConfig, mappingFields, row
         cols.push({
           headerName: "Status",
           field: "status",
-          minWidth: 118,
-          maxWidth: 140,
+          minWidth: tightColumns ? 96 : 118,
+          maxWidth: tightColumns ? 120 : 140,
           sortable: true,
           filter: "agTextColumnFilter",
           floatingFilter: true,
@@ -335,8 +393,8 @@ export function TableView({ records, recordType, fieldConfig, mappingFields, row
             field: d.field,
             headerName: d.headerName,
             hide: !show,
-            flex: show ? 1 : 0,
-            minWidth: d.rawField ? 130 : 120,
+            flex: show && !tightColumns ? 1 : 0,
+            minWidth: colMinWidth(Boolean(d.rawField), tightColumns),
             sortable: true,
             ...textFilter,
             pinned: pinFirst && idx === 0 && show ? ("left" as const) : undefined,
@@ -346,8 +404,8 @@ export function TableView({ records, recordType, fieldConfig, mappingFields, row
       cols.push({
         headerName: "Status",
         field: "status",
-        minWidth: 118,
-        maxWidth: 140,
+        minWidth: tightColumns ? 96 : 118,
+        maxWidth: tightColumns ? 120 : 140,
         sortable: true,
         filter: "agTextColumnFilter",
         floatingFilter: true,
@@ -360,8 +418,8 @@ export function TableView({ records, recordType, fieldConfig, mappingFields, row
       headerName: "",
       colId: "actions",
       field: "id",
-      minWidth: 52,
-      maxWidth: 52,
+      minWidth: tightColumns ? 40 : 52,
+      maxWidth: tightColumns ? 40 : 52,
       sortable: false,
       filter: false,
       floatingFilter: false,
@@ -371,7 +429,7 @@ export function TableView({ records, recordType, fieldConfig, mappingFields, row
     });
 
     return cols;
-  }, [recordType, fieldConfig, mappingFields, rowNumberBase, visibleCols, statusRenderer, actionsRenderer, gridPreset, presetKeys]);
+  }, [recordType, fieldConfig, mappingFields, rowNumberBase, visibleCols, statusRenderer, actionsRenderer, gridPreset, presetKeys, tightColumns]);
 
   const defaultColDef = useMemo((): ColDef => ({
     resizable: true,
@@ -398,50 +456,89 @@ export function TableView({ records, recordType, fieldConfig, mappingFields, row
   }), []);
 
   const onGridReady = useCallback((e: GridReadyEvent) => {
-    if (gridPreset === "summary" || gridPreset === "compact") {
+    if (gridPreset === "summary" || gridPreset === "compact" || tightColumns) {
       window.setTimeout(() => e.api.sizeColumnsToFit(), 0);
     }
-  }, [gridPreset]);
+  }, [gridPreset, tightColumns]);
 
   useEffect(() => {
     const api = gridRef.current?.api;
     if (!api) return;
-    if (gridPreset === "summary" || gridPreset === "compact") {
+    if (gridPreset === "summary" || gridPreset === "compact" || tightColumns) {
       api.sizeColumnsToFit();
     }
-  }, [gridPreset, columnDefs]);
+  }, [gridPreset, columnDefs, tightColumns]);
 
   const gridHeight = density === "comfortable" ? "min(70vh, 640px)" : density === "compact" ? "min(60vh, 520px)" : "min(65vh, 580px)";
 
   const radiusClass = standard ? "rounded-none" : "rounded-xl";
 
+  const styleBtnClass = (active: boolean) =>
+    `inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-all ${
+      active
+        ? "text-white bg-[var(--rm-accent)] shadow-sm"
+        : "text-[var(--rm-muted-fg)] border border-[var(--rm-border)] bg-[var(--rm-card)] hover:bg-[var(--rm-muted)] hover:text-[var(--rm-fg)]"
+    }`;
+
   return (
     <div
-      className={`rm-ag-grid rm-ag-theme-${recordsTheme.id} border border-[var(--rm-border)] bg-[var(--rm-card)] ${radiusClass} overflow-hidden shadow-sm w-full min-w-0`}
+      className={`rm-ag-grid rm-ag-theme-${recordsTheme.id} rm-table-style-${tableStyle}${tightColumns ? " rm-ag-tight-columns" : ""} border border-[var(--rm-border)] bg-[var(--rm-card)] ${radiusClass} overflow-hidden shadow-sm w-full min-w-0`}
       style={{ borderRadius: standard ? 0 : recordsTheme.table.radius, fontFamily: recordsTheme.table.fontFamily }}
     >
-      <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-2.5 border-b border-[var(--rm-border)] bg-[var(--rm-muted)]/60">
-        <div className="flex flex-wrap items-center gap-1.5">
-          <span className="text-xs font-medium uppercase tracking-wide text-[var(--rm-muted-fg)] mr-1">Grid layout</span>
-          {GRID_PRESETS.map(({ id, label, Icon }) => (
+      <div className="flex flex-col gap-2 px-3 py-2.5 border-b border-[var(--rm-border)] bg-[var(--rm-muted)]/60">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="text-xs font-medium uppercase tracking-wide text-[var(--rm-muted-fg)] mr-1">Grid layout</span>
+            {GRID_PRESETS.map(({ id, label, Icon }) => (
+              <button
+                key={id}
+                type="button"
+                onClick={() => setGridPreset(id)}
+                className={styleBtnClass(gridPreset === id)}
+              >
+                <Icon className="w-3.5 h-3.5" />
+                {label}
+              </button>
+            ))}
+          </div>
+          <p className="text-xs text-[var(--rm-muted-fg)] hidden sm:block">
+            Column filters below headers · Click a row to open the record
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="text-xs font-medium uppercase tracking-wide text-[var(--rm-muted-fg)] mr-1">Table style</span>
+            {TABLE_STYLES.map(({ id, label, Icon }) => (
+              <button
+                key={id}
+                type="button"
+                onClick={() => setTableStyle(id)}
+                className={styleBtnClass(tableStyle === id)}
+              >
+                <Icon className="w-3.5 h-3.5" />
+                {label}
+              </button>
+            ))}
+          </div>
+          <label className="inline-flex items-center gap-2 cursor-pointer select-none">
+            <span className="text-xs font-medium text-[var(--rm-muted-fg)]">Tight columns</span>
             <button
-              key={id}
               type="button"
-              onClick={() => setGridPreset(id)}
-              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-all ${
-                gridPreset === id
-                  ? "text-white bg-[var(--rm-accent)] shadow-sm"
-                  : "text-[var(--rm-muted-fg)] border border-[var(--rm-border)] bg-[var(--rm-card)] hover:bg-[var(--rm-muted)] hover:text-[var(--rm-fg)]"
+              role="switch"
+              aria-checked={tightColumns}
+              onClick={() => setTightColumns((v) => !v)}
+              className={`relative inline-flex h-5 w-9 shrink-0 rounded-full transition-colors ${
+                tightColumns ? "bg-[var(--rm-accent)]" : "bg-[var(--rm-border)]"
               }`}
             >
-              <Icon className="w-3.5 h-3.5" />
-              {label}
+              <span
+                className={`absolute top-0.5 left-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${
+                  tightColumns ? "translate-x-4" : "translate-x-0"
+                }`}
+              />
             </button>
-          ))}
+          </label>
         </div>
-        <p className="text-xs text-[var(--rm-muted-fg)]">
-          Column filters below headers · Click a row to open the record
-        </p>
       </div>
 
       <div style={{ height: gridHeight, width: "100%", minWidth: 0 }} className="rm-ag-grid-host">

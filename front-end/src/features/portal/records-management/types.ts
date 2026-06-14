@@ -5,6 +5,9 @@ export type Density = "compact" | "default" | "comfortable";
 /** AG Grid column layout presets inside the Table view */
 export type GridLayoutPreset = "full" | "summary" | "clergy" | "compact";
 
+/** Visual table chrome — independent of column presets; styled per portal theme. */
+export type TableDisplayStyle = "default" | "registry" | "ledger";
+
 export interface BaptismRecord {
   id: string;
   type: "baptism";
