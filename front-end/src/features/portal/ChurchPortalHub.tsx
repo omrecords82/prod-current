@@ -14,15 +14,27 @@
 
 import { metricsAPI } from '@/api/metrics.api';
 import { apiClient } from '@/api/utils/axiosInstance';
+import {
+  Button,
+  Card,
+  CardContent,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  Input,
+  Skeleton,
+} from '@/components/portal/ui';
 import { useAuth } from '@/context/AuthContext';
 import { useChurch } from '@/context/ChurchContext';
 import RecordPipelineStatus, { type PipelineStageCounts } from './RecordPipelineStatus';
-import { Skeleton } from '@mui/material';
 import {
   BookOpen,
   Calendar,
   ChevronDown,
-  ChevronRight,
   ClipboardList,
   Cross,
   Droplets,
@@ -143,60 +155,51 @@ function RecordCard({ title, count, icon: Icon, iconColor, records, loading, onV
 }) {
   const { t } = useLanguage();
   return (
-    <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm overflow-hidden">
-      {/* Header */}
-      <div className="px-5 pt-5 pb-4">
-        <div className="flex items-center justify-between mb-4">
+    <Card className="gap-0 overflow-hidden py-0">
+      <CardHeader className="pb-4">
+        <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${iconColor}`}>
+            <div className={`flex size-9 items-center justify-center rounded-lg ${iconColor}`}>
               <Icon size={18} />
             </div>
-            <h3 className="font-['Inter'] font-semibold text-[15px] text-gray-900 dark:text-white">{title}</h3>
+            <CardTitle className="text-[15px]">{title}</CardTitle>
           </div>
-          <span className="font-['Inter'] text-2xl font-semibold text-gray-900 dark:text-white">
+          <span className="text-2xl font-semibold text-foreground">
             {count.toLocaleString()}
           </span>
         </div>
 
-        {/* Recent records */}
         {loading ? (
-          <div className="space-y-2">{[0, 1, 2].map(i => <Skeleton key={i} height={20} />)}</div>
+          <div className="space-y-2">
+            {[0, 1, 2].map((i) => <Skeleton key={i} className="h-5 w-full" />)}
+          </div>
         ) : records.length === 0 ? (
-          <p className="font-['Inter'] text-[13px] text-gray-400 dark:text-gray-500 text-center py-3">
+          <p className="py-3 text-center text-[13px] text-muted-foreground">
             {t('common.no_records_yet')}
           </p>
         ) : (
           <div className="space-y-2">
             {records.map((rec) => (
               <div key={rec.id} className="flex items-center justify-between py-1">
-                <span className="font-['Inter'] text-[13px] text-gray-700 dark:text-gray-300 truncate">
-                  {rec.label}
-                </span>
-                <span className="font-['Inter'] text-[12px] text-gray-400 dark:text-gray-500 ml-3 whitespace-nowrap">
+                <span className="truncate text-[13px] text-foreground">{rec.label}</span>
+                <span className="ml-3 whitespace-nowrap text-[12px] text-muted-foreground">
                   {formatDate(rec.date)}
                 </span>
               </div>
             ))}
           </div>
         )}
-      </div>
+      </CardHeader>
 
-      {/* Actions */}
-      <div className="border-t border-gray-100 dark:border-gray-700 px-5 py-3 flex items-center gap-2">
-        <button
-          onClick={onViewAll}
-          className="flex items-center gap-1.5 px-3 py-1.5 text-[13px] font-['Inter'] font-medium text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors"
-        >
+      <CardFooter className="gap-2 border-t border-border py-3">
+        <Button variant="ghost" size="sm" onClick={onViewAll}>
           <Eye size={14} /> {t('common.view_all')}
-        </button>
-        <button
-          onClick={onAddNew}
-          className="flex items-center gap-1.5 px-3 py-1.5 text-[13px] font-['Inter'] font-medium text-gray-900 dark:text-white bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors ml-auto"
-        >
+        </Button>
+        <Button variant="secondary" size="sm" className="ml-auto" onClick={onAddNew}>
           <Plus size={14} /> {t('common.add_new')}
-        </button>
-      </div>
-    </div>
+        </Button>
+      </CardFooter>
+    </Card>
   );
 }
 
@@ -207,14 +210,15 @@ function ToolItem({ icon: Icon, label, description, onClick }: {
 }) {
   return (
     <button
+      type="button"
       onClick={onClick}
-      className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-4 text-left hover:border-gray-300 dark:hover:border-gray-600 hover:shadow-sm transition-all group"
+      className="group rounded-xl border border-border bg-card p-4 text-left shadow-sm transition-all hover:border-primary/30 hover:shadow-md"
     >
-      <div className="w-9 h-9 bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center justify-center mb-3 group-hover:bg-gray-200 dark:group-hover:bg-gray-600 transition-colors">
-        <Icon className="text-gray-600 dark:text-gray-300" size={18} />
+      <div className="mb-3 flex size-9 items-center justify-center rounded-lg bg-muted transition-colors group-hover:bg-accent">
+        <Icon className="text-muted-foreground group-hover:text-accent-foreground" size={18} />
       </div>
-      <p className="font-['Inter'] font-medium text-[14px] text-gray-900 dark:text-white mb-0.5">{label}</p>
-      <p className="font-['Inter'] text-[12px] text-gray-500 dark:text-gray-400">{description}</p>
+      <p className="mb-0.5 text-sm font-medium text-foreground">{label}</p>
+      <p className="text-xs text-muted-foreground">{description}</p>
     </button>
   );
 }
@@ -319,21 +323,6 @@ const ChurchPortalHub: React.FC = () => {
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
-  const [addRecordOpen, setAddRecordOpen] = useState(false);
-  const addRecordRef = useRef<HTMLDivElement>(null);
-
-  // Close dropdown on outside click
-  useEffect(() => {
-    if (!addRecordOpen) return;
-    const handleClick = (e: MouseEvent) => {
-      if (addRecordRef.current && !addRecordRef.current.contains(e.target as Node)) {
-        setAddRecordOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClick);
-    return () => document.removeEventListener('mousedown', handleClick);
-  }, [addRecordOpen]);
-
   // Debounce search
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(searchTerm), 300);
@@ -556,74 +545,49 @@ const ChurchPortalHub: React.FC = () => {
      Render
      ══════════════════════════════════════════════════════════ */
   return (
-    <div className="min-h-[60vh] max-w-[1200px] mx-auto">
+    <div className="mx-auto min-h-[60vh] max-w-[1200px]">
 
       {/* ═══ Section 1: Welcome Bar ═══ */}
       <section className="mb-8">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
           <div>
-            {/* Greeting: was text-[17px] font-semibold which the user
-                described as "way too large". Down to 14px / medium so
-                it reads as a quiet header rather than a hero title. */}
-            <h1 className="font-['Inter'] text-[14px] font-medium text-gray-900 dark:text-white mb-0.5">
-              {greeting}
-            </h1>
-            {/* Replace the bare church name with a rector-tenure
-                subtitle when the current user has clergy records in
-                this parish. Falls back to the church name only when
-                tenure data isn't available (lay user, no records, etc). */}
+            <h1 className="mb-0.5 text-sm font-medium text-foreground">{greeting}</h1>
             {churchName && (
-              <p className="font-['Inter'] text-[14px] font-medium text-gray-700 dark:text-gray-200 mb-0.5">
+              <p className="mb-0.5 text-sm font-medium text-foreground">
                 {rectorYears != null
                   ? `Rector at ${churchName} for ${rectorYears} ${rectorYears === 1 ? 'year' : 'years'}`
                   : churchName}
               </p>
             )}
-            <div className="flex items-center gap-2 text-[12px] font-['Inter'] text-gray-400 dark:text-gray-500">
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <span>{todayFormatted}</span>
               <span>&middot;</span>
               <span>{roleLabel}</span>
             </div>
           </div>
 
-          {/* Quick action buttons */}
-          <div className="flex items-center gap-2 flex-wrap">
-            <button
-              onClick={() => navigate('/portal/upload')}
-              className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg font-['Inter'] text-[13px] font-medium text-gray-700 dark:text-gray-200 hover:border-gray-300 dark:hover:border-gray-600 transition-colors shadow-sm"
-            >
+          <div className="flex flex-wrap items-center gap-2">
+            <Button variant="outline" size="sm" onClick={() => navigate('/portal/upload')}>
               <Upload size={15} /> {t('portal.upload_records')}
-            </button>
-            <div ref={addRecordRef} className="relative">
-              <button
-                onClick={() => setAddRecordOpen((p) => !p)}
-                className="flex items-center gap-2 px-4 py-2 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-lg font-['Inter'] text-[13px] font-medium hover:bg-gray-800 dark:hover:bg-gray-100 transition-colors shadow-sm"
-              >
-                <Plus size={15} /> {t('portal.add_record')} <ChevronDown size={14} className={`transition-transform ${addRecordOpen ? 'rotate-180' : ''}`} />
-              </button>
-              {addRecordOpen && (
-                <div className="absolute right-0 top-full mt-1 w-52 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-50 overflow-hidden">
-                  <button
-                    onClick={() => { navigate('/portal/records/baptism/new'); setAddRecordOpen(false); }}
-                    className="flex items-center gap-3 w-full px-4 py-2.5 text-left font-['Inter'] text-[13px] text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-                  >
-                    <Users size={15} className="text-blue-600 dark:text-blue-400" /> {t('portal.baptism_record')}
-                  </button>
-                  <button
-                    onClick={() => { navigate('/portal/records/marriage/new'); setAddRecordOpen(false); }}
-                    className="flex items-center gap-3 w-full px-4 py-2.5 text-left font-['Inter'] text-[13px] text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-                  >
-                    <Heart size={15} className="text-rose-600 dark:text-rose-400" /> {t('portal.marriage_record')}
-                  </button>
-                  <button
-                    onClick={() => { navigate('/portal/records/funeral/new'); setAddRecordOpen(false); }}
-                    className="flex items-center gap-3 w-full px-4 py-2.5 text-left font-['Inter'] text-[13px] text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-                  >
-                    <Cross size={15} className="text-violet-600 dark:text-violet-400" /> {t('portal.funeral_record')}
-                  </button>
-                </div>
-              )}
-            </div>
+            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button size="sm">
+                  <Plus size={15} /> {t('portal.add_record')} <ChevronDown size={14} />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-52">
+                <DropdownMenuItem onClick={() => navigate('/portal/records/baptism/new')}>
+                  <Users size={15} className="text-blue-600 dark:text-blue-400" /> {t('portal.baptism_record')}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate('/portal/records/marriage/new')}>
+                  <Heart size={15} className="text-rose-600 dark:text-rose-400" /> {t('portal.marriage_record')}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate('/portal/records/funeral/new')}>
+                  <Cross size={15} className="text-violet-600 dark:text-violet-400" /> {t('portal.funeral_record')}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
       </section>
@@ -632,66 +596,67 @@ const ChurchPortalHub: React.FC = () => {
       <section className="mb-8">
         <div className="relative">
           <div className="relative">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 pointer-events-none" size={18} />
-            <input
+            <Search className="pointer-events-none absolute left-4 top-1/2 size-[18px] -translate-y-1/2 text-muted-foreground" />
+            <Input
               ref={searchInputRef}
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder={t('portal.search_placeholder')}
-              className="w-full pl-11 pr-10 py-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl font-['Inter'] text-[14px] text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:border-gray-400 dark:focus:border-gray-500 focus:ring-1 focus:ring-gray-400 dark:focus:ring-gray-500 shadow-sm transition-colors"
+              className="h-11 rounded-xl pl-11 pr-10"
             />
             {searchTerm && (
               <button
+                type="button"
                 onClick={() => { setSearchTerm(''); searchInputRef.current?.focus(); }}
-                className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-muted-foreground transition-colors hover:text-foreground"
               >
                 <X size={16} />
               </button>
             )}
           </div>
 
-          {/* Search results dropdown */}
           {debouncedSearch.trim() && (
-            <div className="mt-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg overflow-hidden">
+            <Card className="mt-2 gap-0 overflow-hidden py-0 shadow-lg">
               {searchLoading ? (
-                <div className="p-5 space-y-3">
-                  {[0, 1, 2].map((i) => <Skeleton key={i} height={36} />)}
-                </div>
+                <CardContent className="space-y-3 py-5">
+                  {[0, 1, 2].map((i) => <Skeleton key={i} className="h-9 w-full" />)}
+                </CardContent>
               ) : searchResults.length === 0 ? (
-                <div className="text-center py-8">
-                  <p className="font-['Inter'] text-[13px] text-gray-400 dark:text-gray-500">
+                <CardContent className="py-8 text-center">
+                  <p className="text-[13px] text-muted-foreground">
                     No records found for &ldquo;{debouncedSearch}&rdquo;
                   </p>
-                </div>
+                </CardContent>
               ) : (
                 <>
-                  <div className="px-4 py-2.5 border-b border-gray-100 dark:border-gray-700">
-                    <p className="font-['Inter'] text-[12px] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  <div className="border-b border-border px-4 py-2.5">
+                    <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
                       {searchResults.length} result{searchResults.length !== 1 ? 's' : ''} found
                     </p>
                   </div>
-                  <div className="divide-y divide-gray-100 dark:divide-gray-700 max-h-[360px] overflow-y-auto">
+                  <div className="max-h-[360px] divide-y divide-border overflow-y-auto">
                     {searchResults.map((result) => {
                       const Icon = typeIcons[result.type];
                       return (
                         <button
                           key={`${result.type}-${result.id}`}
+                          type="button"
                           onClick={() => handleResultClick(result)}
-                          className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors text-left"
+                          className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-accent"
                         >
-                          <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${typeColors[result.type]}`}>
+                          <div className={`flex size-8 shrink-0 items-center justify-center rounded-lg ${typeColors[result.type]}`}>
                             <Icon size={15} />
                           </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="font-['Inter'] text-[13px] font-medium text-gray-900 dark:text-white truncate">
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-[13px] font-medium text-foreground">
                               {highlightMatch(result.label, debouncedSearch)}
                             </p>
-                            <p className="font-['Inter'] text-[12px] text-gray-500 dark:text-gray-400">
+                            <p className="text-[12px] text-muted-foreground">
                               {typeLabels[result.type]} {result.sub && `\u00b7 ${result.sub}`}
                             </p>
                           </div>
-                          <span className="font-['Inter'] text-[12px] text-gray-400 dark:text-gray-500 whitespace-nowrap">
+                          <span className="whitespace-nowrap text-[12px] text-muted-foreground">
                             {formatDate(result.date)}
                           </span>
                         </button>
@@ -700,7 +665,7 @@ const ChurchPortalHub: React.FC = () => {
                   </div>
                 </>
               )}
-            </div>
+            </Card>
           )}
         </div>
       </section>
@@ -708,23 +673,22 @@ const ChurchPortalHub: React.FC = () => {
       {/* ═══ CASE 1: Onboarding ═══ */}
       {dashboardState === 'onboarding' && (
         <section className="mb-8">
-          <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-10 text-center shadow-sm">
-            <div className="w-14 h-14 bg-gray-100 dark:bg-gray-700 rounded-2xl flex items-center justify-center mx-auto mb-5">
-              <Upload className="text-gray-500 dark:text-gray-400" size={28} />
-            </div>
-            <h2 className="font-['Inter'] text-xl font-semibold text-gray-900 dark:text-white mb-2">
-              {t('portal.upload_historical')}
-            </h2>
-            <p className="font-['Inter'] text-[14px] text-gray-500 dark:text-gray-400 max-w-md mx-auto mb-6">
-              {t('portal.upload_historical_desc')}
-            </p>
-            <button
-              onClick={() => navigate('/portal/upload')}
-              className="inline-flex items-center gap-2 px-6 py-3 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-lg font-['Inter'] text-[14px] font-medium hover:bg-gray-800 dark:hover:bg-gray-100 transition-colors shadow-sm"
-            >
-              <Upload size={18} /> {t('portal.upload_records')}
-            </button>
-          </div>
+          <Card className="py-10 text-center">
+            <CardContent className="flex flex-col items-center">
+              <div className="mx-auto mb-5 flex size-14 items-center justify-center rounded-2xl bg-muted">
+                <Upload className="text-muted-foreground" size={28} />
+              </div>
+              <h2 className="mb-2 text-xl font-semibold text-foreground">
+                {t('portal.upload_historical')}
+              </h2>
+              <p className="mx-auto mb-6 max-w-md text-sm text-muted-foreground">
+                {t('portal.upload_historical_desc')}
+              </p>
+              <Button onClick={() => navigate('/portal/upload')}>
+                <Upload size={18} /> {t('portal.upload_records')}
+              </Button>
+            </CardContent>
+          </Card>
         </section>
       )}
 
@@ -748,7 +712,7 @@ const ChurchPortalHub: React.FC = () => {
           {/* ── Section 3: Parish Records ── */}
           {totalRecords > 0 && (
             <section className="mb-8">
-              <h2 className="font-['Inter'] font-semibold text-[17px] text-gray-900 dark:text-white mb-4">
+              <h2 className="mb-4 text-[17px] font-semibold text-foreground">
                 {t('portal.parish_records')}
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -788,55 +752,51 @@ const ChurchPortalHub: React.FC = () => {
 
           {/* ── Section 4: Recent Activity ── */}
           <section className="mb-8">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="font-['Inter'] font-semibold text-[17px] text-gray-900 dark:text-white">
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-[17px] font-semibold text-foreground">
                 {t('portal.recent_activity')}
               </h2>
               <div className="flex items-center gap-1">
                 {(['all', 'baptism', 'marriage', 'funeral'] as const).map((f) => (
-                  <button
+                  <Button
                     key={f}
+                    variant={activityFilter === f ? 'default' : 'ghost'}
+                    size="sm"
+                    className="h-7 px-2.5 text-xs"
                     onClick={() => setActivityFilter(f)}
-                    className={`px-2.5 py-1 rounded-md font-['Inter'] text-[12px] font-medium transition-colors ${
-                      activityFilter === f
-                        ? 'bg-gray-900 dark:bg-white text-white dark:text-gray-900'
-                        : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
-                    }`}
                   >
                     {f === 'all' ? t('portal.all') : f === 'baptism' ? t('portal.baptisms') : f === 'marriage' ? t('portal.marriages') : t('portal.funerals')}
-                  </button>
+                  </Button>
                 ))}
               </div>
             </div>
-            <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm overflow-hidden">
+            <Card className="gap-0 overflow-hidden py-0">
               {recordsLoading ? (
-                <div className="p-5 space-y-3">
-                  {[0, 1, 2].map((i) => <Skeleton key={i} height={40} />)}
-                </div>
+                <CardContent className="space-y-3 py-5">
+                  {[0, 1, 2].map((i) => <Skeleton key={i} className="h-10 w-full" />)}
+                </CardContent>
               ) : allActivity.length === 0 ? (
-                <div className="text-center py-10">
-                  <p className="font-['Inter'] text-[13px] text-gray-400 dark:text-gray-500">
+                <CardContent className="py-10 text-center">
+                  <p className="text-[13px] text-muted-foreground">
                     {t('portal.no_recent_activity')}
                   </p>
-                </div>
+                </CardContent>
               ) : (
-                <div className="divide-y divide-gray-100 dark:divide-gray-700">
+                <div className="divide-y divide-border">
                   {allActivity.map((rec) => {
                     const Icon = typeIcons[rec.type];
                     return (
                       <div key={`${rec.type}-${rec.id}`} className="flex items-center gap-4 px-5 py-3.5">
-                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${typeColors[rec.type]}`}>
+                        <div className={`flex size-8 shrink-0 items-center justify-center rounded-lg ${typeColors[rec.type]}`}>
                           <Icon size={15} />
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="font-['Inter'] text-[13px] font-medium text-gray-900 dark:text-white truncate">
-                            {rec.label}
-                          </p>
-                          <p className="font-['Inter'] text-[12px] text-gray-500 dark:text-gray-400">
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-[13px] font-medium text-foreground">{rec.label}</p>
+                          <p className="text-[12px] text-muted-foreground">
                             {typeLabels[rec.type]} {rec.sub && `\u00b7 ${rec.sub}`}
                           </p>
                         </div>
-                        <span className="font-['Inter'] text-[12px] text-gray-400 dark:text-gray-500 whitespace-nowrap">
+                        <span className="whitespace-nowrap text-[12px] text-muted-foreground">
                           {formatRelativeTime(rec.date)}
                         </span>
                       </div>
@@ -844,12 +804,12 @@ const ChurchPortalHub: React.FC = () => {
                   })}
                 </div>
               )}
-            </div>
+            </Card>
           </section>
 
           {/* ── Section 5: Tools ── */}
           <section className="mb-8">
-            <h2 className="font-['Inter'] font-semibold text-[17px] text-gray-900 dark:text-white mb-4">
+            <h2 className="mb-4 text-[17px] font-semibold text-foreground">
               {t('portal.tools')}
             </h2>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-3">

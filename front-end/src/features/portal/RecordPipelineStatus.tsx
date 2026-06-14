@@ -1,11 +1,8 @@
 /**
  * RecordPipelineStatus — Horizontal progress pipeline for record batches
- *
- * Shows lifecycle stages: Uploaded → Processing → Review → Ready
- * Users see simplified view (no "Admin Review" stage).
- * Admins/super_admins see full pipeline.
  */
 
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/portal/ui';
 import { CheckCircle2, Circle, Loader2 } from '@/ui/icons';
 import { useLanguage } from '@/context/LanguageContext';
 import React from 'react';
@@ -47,83 +44,71 @@ const RecordPipelineStatus: React.FC<RecordPipelineStatusProps> = ({ counts, isA
       ];
 
   return (
-    <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6 shadow-sm">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h3 className="font-['Inter'] font-semibold text-[15px] text-gray-900 dark:text-white">
-            {t('portal.pipeline_title')}
-          </h3>
-          <p className="font-['Inter'] text-[13px] text-gray-500 dark:text-gray-400 mt-0.5">
-            {t('portal.pipeline_subtitle')}
-          </p>
-        </div>
-      </div>
+    <Card className="gap-0">
+      <CardHeader className="pb-4">
+        <CardTitle className="text-[15px]">{t('portal.pipeline_title')}</CardTitle>
+        <p className="text-sm text-muted-foreground">{t('portal.pipeline_subtitle')}</p>
+      </CardHeader>
+      <CardContent className="pt-0">
+        <div className="flex items-center gap-0">
+          {stages.map((stage, idx) => {
+            const isLast = idx === stages.length - 1;
+            const isComplete = stage.key === 'approved' && stage.count > 0;
+            const isActive = stage.active && !isComplete;
 
-      {/* Pipeline stages */}
-      <div className="flex items-center gap-0">
-        {stages.map((stage, idx) => {
-          const isLast = idx === stages.length - 1;
-          const isComplete = stage.key === 'approved' && stage.count > 0;
-          const isActive = stage.active && !isComplete;
+            return (
+              <React.Fragment key={stage.key}>
+                <div className="flex-1 text-center">
+                  <div className="mb-3 flex justify-center">
+                    <div
+                      className={`flex size-10 items-center justify-center rounded-full transition-colors ${
+                        isComplete
+                          ? 'bg-emerald-100 dark:bg-emerald-900/30'
+                          : isActive
+                            ? 'bg-accent'
+                            : 'bg-muted'
+                      }`}
+                    >
+                      {isComplete ? (
+                        <CheckCircle2 className="text-emerald-600 dark:text-emerald-400" size={20} />
+                      ) : isActive ? (
+                        <Loader2 className="animate-spin text-primary" size={20} />
+                      ) : (
+                        <Circle className="text-muted-foreground" size={20} />
+                      )}
+                    </div>
+                  </div>
 
-          return (
-            <React.Fragment key={stage.key}>
-              <div className="flex-1 text-center">
-                {/* Icon */}
-                <div className="flex justify-center mb-3">
-                  <div
-                    className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${
+                  <p
+                    className={`mb-1 text-2xl font-semibold ${
                       isComplete
-                        ? 'bg-emerald-100 dark:bg-emerald-900/30'
+                        ? 'text-emerald-600 dark:text-emerald-400'
                         : isActive
-                          ? 'bg-blue-100 dark:bg-blue-900/30'
-                          : 'bg-gray-100 dark:bg-gray-700'
+                          ? 'text-primary'
+                          : 'text-muted-foreground'
                     }`}
                   >
-                    {isComplete ? (
-                      <CheckCircle2 className="text-emerald-600 dark:text-emerald-400" size={20} />
-                    ) : isActive ? (
-                      <Loader2 className="text-blue-600 dark:text-blue-400 animate-spin" size={20} />
-                    ) : (
-                      <Circle className="text-gray-400 dark:text-gray-500" size={20} />
-                    )}
-                  </div>
+                    {stage.count}
+                  </p>
+
+                  <p
+                    className={`text-[13px] font-medium ${
+                      isComplete || isActive ? 'text-foreground' : 'text-muted-foreground'
+                    }`}
+                  >
+                    {stage.label}
+                  </p>
                 </div>
 
-                {/* Count */}
-                <p
-                  className={`font-['Inter'] text-2xl font-semibold mb-1 ${
-                    isComplete
-                      ? 'text-emerald-600 dark:text-emerald-400'
-                      : isActive
-                        ? 'text-blue-600 dark:text-blue-400'
-                        : 'text-gray-400 dark:text-gray-500'
-                  }`}
-                >
-                  {stage.count}
-                </p>
-
-                {/* Label */}
-                <p
-                  className={`font-['Inter'] text-[13px] font-medium ${
-                    isComplete || isActive
-                      ? 'text-gray-900 dark:text-white'
-                      : 'text-gray-400 dark:text-gray-500'
-                  }`}
-                >
-                  {stage.label}
-                </p>
-              </div>
-
-              {/* Connector line */}
-              {!isLast && (
-                <div className="flex-shrink-0 w-12 h-px bg-gray-200 dark:bg-gray-700 mt-[-24px]" />
-              )}
-            </React.Fragment>
-          );
-        })}
-      </div>
-    </div>
+                {!isLast && (
+                  <div className="mt-[-24px] h-px w-12 shrink-0 bg-border" />
+                )}
+              </React.Fragment>
+            );
+          })}
+        </div>
+      </CardContent>
+    </Card>
   );
 };
 
