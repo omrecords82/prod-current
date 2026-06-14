@@ -33,6 +33,13 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom';
 import apiClient from '@/api/utils/axiosInstance';
 import { useChurch } from '@/context/ChurchContext';
+import {
+  EXCLUDED_DB_COLUMNS,
+  ROW_NUMBER_COLUMN,
+  STATUS_COLUMN,
+  VIRTUAL_MAPPING_FIELDS,
+  type MappingFieldDef,
+} from './recordFieldMapping';
 import { useParishSettings } from './useParishSettings';
 
 const BASE = '/account/parish-management/database-mapping';
@@ -65,14 +72,7 @@ const recordTypes: RecordType[] = [
 
 // ── Field mapping data ──────────────────────────────────────────
 
-interface FieldDef {
-  column: string;
-  displayName: string;
-  group: string;
-  visible: boolean;
-  sortable: boolean;
-  searchWeight: number;
-}
+type FieldDef = MappingFieldDef;
 
 // ── Field metadata (labels / grouping / sensible defaults) ───────
 // The set of columns shown is driven by the LIVE database schema (fetched
@@ -126,11 +126,6 @@ const FIELD_META: Record<string, Record<string, FieldMeta>> = {
   },
 };
 
-// Internal/system columns — never shown as mappable record fields.
-const EXCLUDED_COLUMNS = new Set([
-  'id', 'source_scan_id', 'church_id', 'ocr_confidence',
-  'verified_by', 'verified_at', 'created_at', 'updated_at', 'deleted_at',
-]);
 
 interface ColumnInfo {
   name: string;
@@ -149,8 +144,8 @@ function humanize(col: string): string {
 /** Build the field list for a record type from its REAL columns. */
 function buildFieldsFromColumns(recordType: string, columns: ColumnInfo[]): FieldDef[] {
   const meta = FIELD_META[recordType] || {};
-  return columns
-    .filter((c) => !EXCLUDED_COLUMNS.has(c.name.toLowerCase()))
+  const dbFields = columns
+    .filter((c) => !EXCLUDED_DB_COLUMNS.has(c.name.toLowerCase()))
     .map((c) => {
       const m = meta[c.name] || {};
       return {
@@ -162,6 +157,7 @@ function buildFieldsFromColumns(recordType: string, columns: ColumnInfo[]): Fiel
         searchWeight: m.searchWeight ?? 5,
       };
     });
+  return [...VIRTUAL_MAPPING_FIELDS, ...dbFields];
 }
 
 /**
@@ -209,6 +205,10 @@ const SAMPLE_AGES = ['72', '85', '64', '91', '78'];
 const SAMPLE_NOTES = ['—', 'Convert', '—', 'Transferred', '—'];
 
 function samplePreviewValue(field: FieldDef, row: number): string {
+  if (field.column === ROW_NUMBER_COLUMN) return String(row + 1);
+  if (field.column === STATUS_COLUMN) {
+    return ['Recorded', 'Verified', 'Pending'][row % 3];
+  }
   const c = field.column.toLowerCase();
   const i = row % PREVIEW_ROW_COUNT;
   if (c.includes('age')) return SAMPLE_AGES[i];

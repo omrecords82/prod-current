@@ -8,12 +8,15 @@ import React, { createElement, useCallback, useEffect, useMemo, useRef, useState
 import type { PortalRecordsThemeStyle } from "@/features/portal/themes/records/portalRecordsTheme";
 import { useRecordsThemeColors } from "../useRecordsThemeColors";
 import type { AnyRecord, Density, GridLayoutPreset, RecordType } from "../types";
+import { ROW_NUMBER_COLUMN, STATUS_COLUMN } from "@/features/account/parish-management/recordFieldMapping";
 import { StatusBadge } from "./StatusBadge";
 
 interface Props {
   records: AnyRecord[];
   recordType: RecordType;
   fieldConfig?: { column: string; displayName: string; sortable: boolean }[];
+  mappingFields?: { column: string; visible?: boolean }[];
+  rowNumberBase?: number;
   highlight?: string;
   density: Density;
   standard: boolean;
@@ -65,19 +68,19 @@ const COL_DEFS: Record<RecordType, ColDefSpec[]> = {
 /** Keys used to decide if a column appears in a layout preset (colId, field, or header label). */
 const PRESET_KEYS: Record<RecordType, Record<Exclude<GridLayoutPreset, "full">, string[]>> = {
   baptism: {
-    summary: ["first_name", "last_name", "name", "Name", "birth_date", "Date of Birth", "reception_date", "Baptism Date", "baptismDate", "dob", "status", "Status"],
-    clergy: ["clergy", "Clergy", "priest", "reception_date", "Baptism Date", "baptismDate", "first_name", "last_name", "name", "Name", "status", "Status"],
-    compact: ["first_name", "last_name", "name", "Name", "reception_date", "Baptism Date", "baptismDate", "clergy", "Clergy", "status", "Status"],
+    summary: ["__row_number__", "Row #", "first_name", "last_name", "name", "Name", "birth_date", "Date of Birth", "reception_date", "Baptism Date", "baptismDate", "dob", "status", "Status"],
+    clergy: ["__row_number__", "Row #", "clergy", "Clergy", "priest", "reception_date", "Baptism Date", "baptismDate", "first_name", "last_name", "name", "Name", "status", "Status"],
+    compact: ["__row_number__", "Row #", "first_name", "last_name", "name", "Name", "reception_date", "Baptism Date", "baptismDate", "clergy", "Clergy", "status", "Status"],
   },
   marriage: {
-    summary: ["fname_bride", "lname_bride", "Bride", "bride", "fname_groom", "lname_groom", "Groom", "groom", "mdate", "Marriage Date", "marriageDate", "status", "Status"],
-    clergy: ["clergy", "Celebrant", "celebrant", "mdate", "Marriage Date", "marriageDate", "Bride", "bride", "Groom", "groom", "status", "Status"],
-    compact: ["Bride", "bride", "Groom", "groom", "Marriage Date", "marriageDate", "Celebrant", "celebrant", "status", "Status"],
+    summary: ["__row_number__", "Row #", "fname_bride", "lname_bride", "Bride", "bride", "fname_groom", "lname_groom", "Groom", "groom", "mdate", "Marriage Date", "marriageDate", "status", "Status"],
+    clergy: ["__row_number__", "Row #", "clergy", "Celebrant", "celebrant", "mdate", "Marriage Date", "marriageDate", "Bride", "bride", "Groom", "groom", "status", "Status"],
+    compact: ["__row_number__", "Row #", "Bride", "bride", "Groom", "groom", "Marriage Date", "marriageDate", "Celebrant", "celebrant", "status", "Status"],
   },
   funeral: {
-    summary: ["name", "Name", "lastname", "deceased_date", "Date of Death", "dod", "burial_date", "Funeral Date", "funeralDate", "status", "Status"],
-    clergy: ["clergy", "Clergy", "deceased_date", "burial_date", "Funeral Date", "funeralDate", "name", "Name", "status", "Status"],
-    compact: ["name", "Name", "Funeral Date", "funeralDate", "burial_date", "clergy", "Clergy", "status", "Status"],
+    summary: ["__row_number__", "Row #", "name", "Name", "lastname", "deceased_date", "Date of Death", "dod", "burial_date", "Funeral Date", "funeralDate", "status", "Status"],
+    clergy: ["__row_number__", "Row #", "clergy", "Clergy", "deceased_date", "burial_date", "Funeral Date", "funeralDate", "name", "Name", "status", "Status"],
+    compact: ["__row_number__", "Row #", "name", "Name", "Funeral Date", "funeralDate", "burial_date", "clergy", "Clergy", "status", "Status"],
   },
 };
 
@@ -138,7 +141,7 @@ function presetStorageKey(recordType: RecordType) {
   return `rm-ag-preset-${recordType}`;
 }
 
-export function TableView({ records, recordType, fieldConfig, highlight, density, standard, visibleCols, recordsTheme, onOpen, onEdit, onAudit, onExport, onCertificate }: Props) {
+export function TableView({ records, recordType, fieldConfig, mappingFields, rowNumberBase = 0, highlight, density, standard, visibleCols, recordsTheme, onOpen, onEdit, onAudit, onExport, onCertificate }: Props) {
   const surface = useRecordsThemeColors(recordsTheme, recordsTheme.recordsClass);
   const gridRef = useRef<AgGridReact<AnyRecord>>(null);
   const [menuAnchor, setMenuAnchor] = useState<null | HTMLElement>(null);
@@ -246,8 +249,49 @@ export function TableView({ records, recordType, fieldConfig, highlight, density
       cols = fieldConfig
         .filter((d) => visibleCols[d.displayName] ?? true)
         .map((d, idx) => {
+          const preset = gridPreset as Exclude<GridLayoutPreset, "full">;
+          const show = columnInPreset(presetKeys[preset] ?? [], d.column, d.column, d.displayName, gridPreset);
+
+          if (d.column === ROW_NUMBER_COLUMN) {
+            return {
+              colId: ROW_NUMBER_COLUMN,
+              headerName: d.displayName,
+              hide: !show,
+              flex: 0,
+              minWidth: 72,
+              maxWidth: 96,
+              sortable: false,
+              filter: false,
+              floatingFilter: false,
+              pinned: pinFirst && idx === 0 && show ? ("left" as const) : undefined,
+              valueGetter: (p: any) => {
+                const api = p.api;
+                const pageSize = api?.paginationGetPageSize?.() ?? 25;
+                const currentPage = api?.paginationGetCurrentPage?.() ?? 0;
+                const rowIdx = p.node?.rowIndex ?? 0;
+                return String(rowNumberBase + currentPage * pageSize + rowIdx + 1);
+              },
+            } as ColDef;
+          }
+
+          if (d.column === STATUS_COLUMN) {
+            return {
+              colId: STATUS_COLUMN,
+              headerName: d.displayName,
+              field: "status",
+              hide: !show,
+              flex: show ? 1 : 0,
+              minWidth: 118,
+              maxWidth: 140,
+              sortable: d.sortable,
+              filter: "agTextColumnFilter",
+              floatingFilter: true,
+              cellRenderer: statusRenderer,
+              pinned: pinFirst && idx === 0 && show ? ("left" as const) : undefined,
+            } as ColDef;
+          }
+
           const isDate = dateCols.includes(d.column);
-          const show = columnInPreset(presetKeys[gridPreset as Exclude<GridLayoutPreset, "full">] ?? [], d.column, d.column, d.displayName, gridPreset);
           return {
             colId: d.column,
             headerName: d.displayName,
@@ -265,6 +309,22 @@ export function TableView({ records, recordType, fieldConfig, highlight, density
             ...(isDate ? { comparator: makeRawDateComparator(d.column) } : {}),
           } as ColDef;
         });
+
+      // Pre-virtual-column mappings had no status field — keep a single status column.
+      const statusMapping = mappingFields?.find((f) => f.column === STATUS_COLUMN);
+      const statusShownViaConfig = fieldConfig.some((d) => d.column === STATUS_COLUMN);
+      if (!statusShownViaConfig && statusMapping === undefined) {
+        cols.push({
+          headerName: "Status",
+          field: "status",
+          minWidth: 118,
+          maxWidth: 140,
+          sortable: true,
+          filter: "agTextColumnFilter",
+          floatingFilter: true,
+          cellRenderer: statusRenderer,
+        });
+      }
     } else {
       const defs = COL_DEFS[recordType];
       cols = defs
@@ -283,19 +343,18 @@ export function TableView({ records, recordType, fieldConfig, highlight, density
             ...(d.rawField ? { comparator: makeDateComparator(d.rawField) } : {}),
           } as ColDef;
         });
+      cols.push({
+        headerName: "Status",
+        field: "status",
+        minWidth: 118,
+        maxWidth: 140,
+        sortable: true,
+        filter: "agTextColumnFilter",
+        floatingFilter: true,
+        cellRenderer: statusRenderer,
+        pinned: undefined,
+      });
     }
-
-    cols.push({
-      headerName: "Status",
-      field: "status",
-      minWidth: 118,
-      maxWidth: 140,
-      sortable: true,
-      filter: "agTextColumnFilter",
-      floatingFilter: true,
-      cellRenderer: statusRenderer,
-      pinned: undefined,
-    });
 
     cols.push({
       headerName: "",
@@ -312,7 +371,7 @@ export function TableView({ records, recordType, fieldConfig, highlight, density
     });
 
     return cols;
-  }, [recordType, fieldConfig, visibleCols, statusRenderer, actionsRenderer, gridPreset, presetKeys]);
+  }, [recordType, fieldConfig, mappingFields, rowNumberBase, visibleCols, statusRenderer, actionsRenderer, gridPreset, presetKeys]);
 
   const defaultColDef = useMemo((): ColDef => ({
     resizable: true,

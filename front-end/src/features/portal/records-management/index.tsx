@@ -2,6 +2,7 @@ import { metricsAPI } from "@/api/metrics.api";
 import { apiClient } from "@/api/utils/axiosInstance";
 import { useChurch } from "@/context/ChurchContext";
 import { useParishSettings } from "@/features/account/parish-management/useParishSettings";
+import { withVirtualMappingFields } from "@/features/account/parish-management/recordFieldMapping";
 import { usePortalTheme } from "@/features/portal/themes/PortalThemeContext";
 import { getPortalRecordsTheme } from "@/features/portal/themes/records/portalRecordsTheme";
 import { Alert, Box, CircularProgress, Snackbar } from "@mui/material";
@@ -175,14 +176,18 @@ const RecordsManagement: React.FC = () => {
   // default sort) saved by the Database Mapping wizard.
   const { data: mappingSettings } = useParishSettings<MappingSettings>('mapping');
   const typeMapping = mappingForType(mappingSettings, recordType);
+  const resolvedMappingFields = useMemo(
+    () => withVirtualMappingFields(typeMapping?.fields || []),
+    [typeMapping?.fields],
+  );
 
   // Columns the user marked visible in the wizard for this record type. When
   // present, these drive the records table; otherwise it falls back to defaults.
   const fieldConfig = useMemo(
-    () => (typeMapping?.fields || [])
+    () => resolvedMappingFields
       .filter((f) => f.visible)
       .map((f) => ({ column: f.column, displayName: f.displayName, sortable: f.sortable !== false })),
-    [typeMapping],
+    [resolvedMappingFields],
   );
 
   // Default sort: the configured type's default if set, else the type's date.
@@ -342,6 +347,8 @@ const RecordsManagement: React.FC = () => {
                 records={filtered}
                 recordType={recordType}
                 fieldConfig={fieldConfig}
+                mappingFields={resolvedMappingFields.length > 0 ? resolvedMappingFields : undefined}
+                rowNumberBase={page * rowsPerPage}
                 highlight={debouncedSearch || search}
                 density={density}
                 standard={standardTable}
