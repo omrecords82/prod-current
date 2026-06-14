@@ -4,6 +4,7 @@ import {
   Alert,
   Box,
   Button,
+  Checkbox,
   Chip,
   CircularProgress,
   FormControl,
@@ -70,6 +71,10 @@ export default function OcrStudioAnalyzePage() {
   const {
     sessionId,
     items,
+    selectedIds,
+    selectedCount,
+    allSelected,
+    someSelected,
     isAnalyzing,
     isCommitting,
     dragActive,
@@ -79,6 +84,10 @@ export default function OcrStudioAnalyzePage() {
     removeItem,
     clearAll,
     commitToUpload,
+    toggleSelection,
+    selectAll,
+    selectNone,
+    toggleSelectAll,
   } = useOcrAnalyze(churchId);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
@@ -88,11 +97,17 @@ export default function OcrStudioAnalyzePage() {
   }, [analyzeFiles, setDragActive]);
 
   const handleCommit = useCallback(async () => {
-    if (!churchId) return;
+    if (!churchId || selectedCount === 0) return;
     try {
-      const jobIds = await commitToUpload();
-      toast.success(`Submitted ${jobIds.length} image(s) to OCR processing`);
-      navigate(toScreen('upload-intake'));
+      const { jobIds, remainingCount } = await commitToUpload();
+      toast.success(
+        remainingCount > 0
+          ? `Submitted ${jobIds.length} image(s) to OCR — ${remainingCount} still in analyze queue`
+          : `Submitted ${jobIds.length} image(s) to OCR processing`,
+      );
+      if (remainingCount === 0) {
+        navigate(toScreen('upload-intake'));
+      }
     } catch (err: any) {
       toast.error(err?.response?.data?.message || err?.message || 'Upload failed');
     }
@@ -153,9 +168,18 @@ export default function OcrStudioAnalyzePage() {
         {items.length > 0 && (
           <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
             <Chip icon={<IconScan size={14} />} label={`${items.length} analyzed`} size="small" />
+            {selectedCount > 0 && (
+              <Chip label={`${selectedCount} selected`} size="small" color="primary" variant="outlined" />
+            )}
             {needsReviewCount > 0 && (
               <Chip label={`${needsReviewCount} need review`} size="small" color="warning" variant="outlined" />
             )}
+            <Button size="small" onClick={selectAll} disabled={allSelected || isAnalyzing} sx={{ textTransform: 'none' }}>
+              Select all
+            </Button>
+            <Button size="small" onClick={selectNone} disabled={selectedCount === 0} sx={{ textTransform: 'none' }}>
+              Select none
+            </Button>
             {sessionId && (
               <Typography variant="caption" color="text.secondary" sx={{ ml: 'auto' }}>
                 Session {sessionId.slice(0, 12)}…
@@ -172,6 +196,16 @@ export default function OcrStudioAnalyzePage() {
             <Table size="small" stickyHeader>
               <TableHead>
                 <TableRow>
+                  <TableCell padding="checkbox" sx={{ width: 48 }}>
+                    <Checkbox
+                      size="small"
+                      checked={allSelected}
+                      indeterminate={someSelected}
+                      onChange={toggleSelectAll}
+                      disabled={isAnalyzing || items.every((i) => i.analyzing)}
+                      inputProps={{ 'aria-label': 'Select all analyzed images' }}
+                    />
+                  </TableCell>
                   <TableCell sx={{ width: 72 }}>Preview</TableCell>
                   <TableCell>File</TableCell>
                   <TableCell>Record type</TableCell>
@@ -183,7 +217,21 @@ export default function OcrStudioAnalyzePage() {
               </TableHead>
               <TableBody>
                 {items.map((item) => (
-                  <TableRow key={item.id} hover selected={item.needsReview}>
+                  <TableRow
+                    key={item.id}
+                    hover
+                    selected={item.needsReview}
+                    sx={{ opacity: !item.analyzing && !selectedIds.has(item.id) ? 0.72 : 1 }}
+                  >
+                    <TableCell padding="checkbox">
+                      <Checkbox
+                        size="small"
+                        checked={selectedIds.has(item.id)}
+                        onChange={() => toggleSelection(item.id)}
+                        disabled={!!item.analyzing}
+                        inputProps={{ 'aria-label': `Select ${item.originalFilename}` }}
+                      />
+                    </TableCell>
                     <TableCell>
                       {churchId && sessionId && !item.analyzing ? (
                         <Box
@@ -312,18 +360,24 @@ export default function OcrStudioAnalyzePage() {
         )}
 
         {items.length > 0 && (
-          <Stack direction="row" spacing={2} alignItems="center">
+          <Stack direction="row" spacing={2} alignItems="center" flexWrap="wrap" useFlexGap>
             <Button
               variant="contained"
               startIcon={isCommitting ? <CircularProgress size={18} color="inherit" /> : <IconUpload size={18} />}
-              disabled={isCommitting || isAnalyzing}
+              disabled={isCommitting || isAnalyzing || selectedCount === 0}
               onClick={handleCommit}
               sx={{ textTransform: 'none' }}
             >
-              {isCommitting ? 'Uploading…' : `Upload ${items.length} optimized image(s)`}
+              {isCommitting
+                ? 'Uploading…'
+                : selectedCount === items.length
+                  ? `Upload all ${selectedCount} optimized image(s)`
+                  : `Upload ${selectedCount} selected image(s)`}
             </Button>
             <Typography variant="body2" color="text.secondary">
-              Jobs enter the normal OCR pipeline with pre-classified type and layout.
+              {selectedCount === 0
+                ? 'Select images to send to the OCR pipeline.'
+                : 'Unselected images stay in this analyze session until you upload or clear them.'}
             </Typography>
           </Stack>
         )}

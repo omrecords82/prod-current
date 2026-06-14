@@ -103,10 +103,29 @@ function createAnalyzeRouter(upload) {
         return res.status(400).json({ error: 'items array is required' });
       }
       const uploadedBy = req.session?.user?.id || req.user?.id || null;
-      const { commitAnalyzeSession, deleteAnalyzeSession } = require('../../services/ocrAnalyzeService');
-      const { jobs } = await commitAnalyzeSession(churchId, req.params.sessionId, items, uploadedBy);
-      deleteAnalyzeSession(churchId, req.params.sessionId);
-      res.json({ success: true, jobs, message: `Created ${jobs.length} OCR job(s)` });
+      const {
+        commitAnalyzeSession,
+        removeFilesFromAnalyzeSession,
+      } = require('../../services/ocrAnalyzeService');
+      const { jobs, committedFileIds } = await commitAnalyzeSession(
+        churchId,
+        req.params.sessionId,
+        items,
+        uploadedBy,
+      );
+      const { remainingCount, sessionDeleted } = removeFilesFromAnalyzeSession(
+        churchId,
+        req.params.sessionId,
+        committedFileIds,
+      );
+      res.json({
+        success: true,
+        jobs,
+        committedFileIds,
+        remainingCount,
+        sessionDeleted,
+        message: `Created ${jobs.length} OCR job(s)`,
+      });
     } catch (err) {
       console.error('[OCR Analyze] commit failed:', err);
       res.status(500).json({ error: 'Commit failed', message: err.message });

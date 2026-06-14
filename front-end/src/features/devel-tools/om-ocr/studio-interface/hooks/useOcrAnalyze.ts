@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { apiClient } from '@/shared/lib/axiosInstance';
 
 export type AnalyzeRecordType = 'baptism' | 'marriage' | 'funeral' | 'custom';
@@ -50,6 +50,7 @@ export function analyzePreviewUrl(
 export function useOcrAnalyze(churchId: number | null) {
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [items, setItems] = useState<AnalyzeQueueItem[]>([]);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isCommitting, setIsCommitting] = useState(false);
   const [dragActive, setDragActive] = useState(false);
@@ -60,6 +61,41 @@ export function useOcrAnalyze(churchId: number | null) {
     recordLayoutMode: r.shouldSplit ? 'multi_record_split' : 'auto',
     splitRegions: r.shouldSplit,
   });
+
+  const selectableItems = useMemo(
+    () => items.filter((it) => !it.analyzing),
+    [items],
+  );
+
+  const selectedCount = useMemo(
+    () => selectableItems.filter((it) => selectedIds.has(it.id)).length,
+    [selectableItems, selectedIds],
+  );
+
+  const allSelected = selectableItems.length > 0 && selectedCount === selectableItems.length;
+  const someSelected = selectedCount > 0 && !allSelected;
+
+  const toggleSelection = useCallback((id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
+
+  const selectAll = useCallback(() => {
+    setSelectedIds(new Set(selectableItems.map((it) => it.id)));
+  }, [selectableItems]);
+
+  const selectNone = useCallback(() => {
+    setSelectedIds(new Set());
+  }, []);
+
+  const toggleSelectAll = useCallback(() => {
+    if (allSelected) selectNone();
+    else selectAll();
+  }, [allSelected, selectAll, selectNone]);
 
   const analyzeFiles = useCallback(async (fileList: FileList | null) => {
     if (!churchId || !fileList?.length) return;
@@ -110,6 +146,11 @@ export function useOcrAnalyze(churchId: number | null) {
         const withoutPlaceholders = prev.filter((p) => !placeholders.some((pl) => pl.id === p.id && p.analyzing));
         return [...withoutPlaceholders, ...results.map(mapResult)];
       });
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        results.forEach((r) => next.add(r.id));
+        return next;
+      });
     } catch (err: any) {
       const msg = err?.response?.data?.message || err?.message || 'Analyze failed';
       setItems((prev) => prev.filter((p) => !placeholders.some((pl) => pl.id === p.id && p.analyzing)));
@@ -125,6 +166,11 @@ export function useOcrAnalyze(churchId: number | null) {
 
   const removeItem = useCallback((id: string) => {
     setItems((prev) => prev.filter((it) => it.id !== id));
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      next.delete(id);
+      return next;
+    });
   }, []);
 
   const clearAll = useCallback(async () => {
@@ -137,14 +183,20 @@ export function useOcrAnalyze(churchId: number | null) {
     }
     setSessionId(null);
     setItems([]);
+    setSelectedIds(new Set());
   }, [churchId, sessionId]);
 
-  const commitToUpload = useCallback(async (): Promise<number[]> => {
-    if (!churchId || !sessionId || items.length === 0) return [];
+  const commitToUpload = useCallback(async (): Promise<{ jobIds: number[]; remainingCount: number }> => {
+    if (!churchId || !sessionId) return { jobIds: [], remainingCount: 0 };
+    const toCommit = items.filter((it) => !it.analyzing && selectedIds.has(it.id));
+    if (toCommit.length === 0) {
+      throw new Error('Select at least one image to upload');
+    }
+
     setIsCommitting(true);
     try {
       const payload = {
-        items: items.map((it) => ({
+        items: toCommit.map((it) => ({
           fileId: it.id,
           recordType: it.recordType,
           recordLayoutMode: it.recordLayoutMode,
@@ -158,17 +210,38 @@ export function useOcrAnalyze(churchId: number | null) {
       );
       const data = res?.data ?? res;
       const jobs = data.jobs || [];
-      setSessionId(null);
-      setItems([]);
-      return jobs.map((j: { id: number }) => j.id);
+      const committedIds = new Set<string>((data.committedFileIds || toCommit.map((it) => it.id)) as string[]);
+      const remainingCount = typeof data.remainingCount === 'number'
+        ? data.remainingCount
+        : items.length - committedIds.size;
+
+      setItems((prev) => prev.filter((it) => !committedIds.has(it.id)));
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        committedIds.forEach((id) => next.delete(id));
+        return next;
+      });
+
+      if (data.sessionDeleted) {
+        setSessionId(null);
+      }
+
+      return {
+        jobIds: jobs.map((j: { id: number }) => j.id),
+        remainingCount,
+      };
     } finally {
       setIsCommitting(false);
     }
-  }, [churchId, sessionId, items]);
+  }, [churchId, sessionId, items, selectedIds]);
 
   return {
     sessionId,
     items,
+    selectedIds,
+    selectedCount,
+    allSelected,
+    someSelected,
     isAnalyzing,
     isCommitting,
     dragActive,
@@ -178,5 +251,9 @@ export function useOcrAnalyze(churchId: number | null) {
     removeItem,
     clearAll,
     commitToUpload,
+    toggleSelection,
+    selectAll,
+    selectNone,
+    toggleSelectAll,
   };
 }

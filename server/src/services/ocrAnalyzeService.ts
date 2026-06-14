@@ -403,7 +403,7 @@ export async function commitAnalyzeSession(
   sessionId: string,
   items: AnalyzeCommitItem[],
   uploadedBy: number | null,
-): Promise<{ jobs: Array<{ id: number; filename: string }> }> {
+): Promise<{ jobs: Array<{ id: number; filename: string }>; committedFileIds: string[] }> {
   const manifest = loadAnalyzeSession(churchId, sessionId);
   if (!manifest) throw new Error('Analyze session not found');
 
@@ -571,7 +571,36 @@ export async function commitAnalyzeSession(
     }
   }
 
-  return { jobs: createdJobs };
+  return { jobs: createdJobs, committedFileIds: items.map((i) => i.fileId) };
+}
+
+export function removeFilesFromAnalyzeSession(
+  churchId: number,
+  sessionId: string,
+  fileIds: string[],
+): { remainingCount: number; sessionDeleted: boolean } {
+  const manifest = loadAnalyzeSession(churchId, sessionId);
+  if (!manifest) return { remainingCount: 0, sessionDeleted: true };
+
+  const removeSet = new Set(fileIds);
+  const sessionDir = getAnalyzeSessionDir(churchId, sessionId);
+
+  for (const fileId of fileIds) {
+    const fileDir = path.join(sessionDir, fileId);
+    if (fs.existsSync(fileDir)) {
+      fs.rmSync(fileDir, { recursive: true, force: true });
+    }
+  }
+
+  manifest.files = manifest.files.filter((f) => !removeSet.has(f.id));
+
+  if (manifest.files.length === 0) {
+    deleteAnalyzeSession(churchId, sessionId);
+    return { remainingCount: 0, sessionDeleted: true };
+  }
+
+  saveAnalyzeSession(manifest);
+  return { remainingCount: manifest.files.length, sessionDeleted: false };
 }
 
 export function deleteAnalyzeSession(churchId: number, sessionId: string): void {
