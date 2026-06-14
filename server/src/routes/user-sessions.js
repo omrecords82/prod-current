@@ -26,7 +26,7 @@ const hashToken = (token) => crypto.createHash('sha256').update(token).digest('h
 
 /**
  * GET /api/user/sessions
- * Returns the authenticated user's sessions (active + recently revoked/expired).
+ * Returns the authenticated user's active sessions only.
  * Marks which session is the current one based on refresh_token cookie.
  */
 router.get('/', requireAuth, async (req, res) => {
@@ -43,7 +43,7 @@ router.get('/', requireAuth, async (req, res) => {
       || req.body?.refresh_token;
     const currentTokenHash = refreshToken ? hashToken(String(refreshToken)) : null;
 
-    // Fetch sessions: active first, then recently expired/revoked (last 30 days)
+    // Active sessions only — revoked/expired rows are kept for audit but not listed here.
     const [rows] = await getAppPool().query(`
       SELECT
         id,
@@ -53,20 +53,12 @@ router.get('/', requireAuth, async (req, res) => {
         revoked_at,
         ip_address,
         user_agent,
-        CASE
-          WHEN revoked_at IS NOT NULL THEN 'revoked'
-          WHEN expires_at <= NOW() THEN 'expired'
-          ELSE 'active'
-        END AS status
+        'active' AS status
       FROM refresh_tokens
       WHERE user_id = ?
-        AND created_at > DATE_SUB(NOW(), INTERVAL 30 DAY)
-      ORDER BY
-        CASE
-          WHEN revoked_at IS NULL AND expires_at > NOW() THEN 0
-          ELSE 1
-        END,
-        created_at DESC
+        AND revoked_at IS NULL
+        AND expires_at > NOW()
+      ORDER BY created_at DESC
       LIMIT 50
     `, [userId]);
 

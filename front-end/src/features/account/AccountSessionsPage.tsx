@@ -177,8 +177,7 @@ const AccountSessionsPage: React.FC = () => {
   // ── Derived data ──
 
   const currentSession = sessions.find((s) => s.is_current);
-  const otherSessions = sessions.filter((s) => !s.is_current);
-  const activeOtherSessions = otherSessions.filter((s) => s.status === 'active');
+  const otherSessions = sessions.filter((s) => !s.is_current && s.status === 'active');
 
   // ── Revoke single session ──
 
@@ -210,7 +209,7 @@ const AccountSessionsPage: React.FC = () => {
     setConfirmDialog({
       open: true,
       title: t('account.sign_out_all_title'),
-      message: `This will revoke ${activeOtherSessions.length} other active session(s). Those devices will need to log in again. Your current session will not be affected.`,
+      message: `This will revoke ${otherSessions.length} other active session(s). Those devices will need to log in again. Your current session will not be affected.`,
       onConfirm: async () => {
         setConfirmDialog((d) => ({ ...d, open: false }));
         setRevoking('all');
@@ -226,7 +225,7 @@ const AccountSessionsPage: React.FC = () => {
         }
       },
     });
-  }, [activeOtherSessions.length, fetchSessions]);
+  }, [otherSessions.length, fetchSessions]);
 
   // ── Loading state ──
 
@@ -291,16 +290,16 @@ const AccountSessionsPage: React.FC = () => {
               <Typography variant="subtitle1" fontWeight={600}>
                 {t('account.other_sessions')}
               </Typography>
-              {activeOtherSessions.length > 0 && (
+              {otherSessions.length > 0 && (
                 <Chip
-                  label={`${activeOtherSessions.length} ${t('account.active')}`}
+                  label={`${otherSessions.length} ${t('account.active')}`}
                   size="small"
                   color="default"
                   variant="outlined"
                 />
               )}
             </Box>
-            {activeOtherSessions.length > 1 && (
+            {otherSessions.length > 1 && (
               <Button
                 variant="outlined"
                 color="error"
@@ -333,29 +332,19 @@ const AccountSessionsPage: React.FC = () => {
                   alignItems="center"
                   justifyContent="space-between"
                   py={2}
-                  sx={{ opacity: session.status !== 'active' ? 0.6 : 1 }}
                 >
                   <SessionDetails session={session} />
                   <Box sx={{ ml: 2, flexShrink: 0 }}>
-                    {session.status === 'active' ? (
-                      <Button
-                        variant="outlined"
-                        color="error"
-                        size="small"
-                        onClick={() => handleRevokeSingle(session)}
-                        disabled={revoking !== null}
-                        startIcon={revoking === session.id ? <CircularProgress size={16} /> : <LogoutIcon />}
-                      >
-                        {revoking === session.id ? t('account.revoking') : t('account.revoke')}
-                      </Button>
-                    ) : (
-                      <Chip
-                        label={session.status === 'revoked' ? t('account.revoked') : t('account.expired')}
-                        size="small"
-                        color={session.status === 'revoked' ? 'error' : 'default'}
-                        variant="outlined"
-                      />
-                    )}
+                    <Button
+                      variant="outlined"
+                      color="error"
+                      size="small"
+                      onClick={() => handleRevokeSingle(session)}
+                      disabled={revoking !== null}
+                      startIcon={revoking === session.id ? <CircularProgress size={16} /> : <LogoutIcon />}
+                    >
+                      {revoking === session.id ? t('account.revoking') : t('account.revoke')}
+                    </Button>
                   </Box>
                 </Box>
               ))}
