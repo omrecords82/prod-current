@@ -3,6 +3,7 @@ import { apiClient } from '@/api/utils/axiosInstance';
 import { useAuth } from '@/context/AuthContext';
 import { useChurch } from '@/context/ChurchContext';
 import { useLanguage } from '@/context/LanguageContext';
+import { getPortalUserDisplayName } from '@/features/portal/themes/portalUserDisplay';
 import type { PipelineStageCounts } from '@/features/portal/RecordPipelineStatus';
 import {
   BookOpen,
@@ -60,9 +61,13 @@ export function usePortalHub(): PortalHubViewModel {
   const role = user?.role || '';
   const isAdmin = ADMIN_ROLES.has(role);
 
-  const greeting = user?.first_name
-    ? `${t('portal.welcome_back').replace('{name}', user.first_name)}`
-    : t('portal.welcome');
+  const greeting = (() => {
+    const name = getPortalUserDisplayName(user);
+    if (name !== 'User') {
+      return t('portal.welcome_back').replace('{name}', name.split(' ')[0]);
+    }
+    return t('portal.welcome');
+  })();
   const roleLabel = ROLE_LABELS[role] || role;
   const todayFormatted = getTodayFormatted();
 

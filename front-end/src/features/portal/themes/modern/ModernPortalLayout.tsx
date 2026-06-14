@@ -12,6 +12,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useChurch } from '@/context/ChurchContext';
 import { useLanguage } from '@/context/LanguageContext';
 import { churchApi } from '@/features/account/accountApi';
+import { getPortalUserDisplayName, getPortalUserInitials } from '@/features/portal/themes/portalUserDisplay';
 import { CustomizerContext } from '@/context/CustomizerContext';
 import Customizer from '@/layouts/full/shared/customizer/Customizer';
 import { BrandLogo } from '@/layouts/full/shared/logo/Logo';
@@ -62,11 +63,8 @@ const PortalHeader: React.FC = () => {
 
   const churchName = churchMetadata?.church_name_display || churchMetadata?.church_name || '';
   const logoUrl = churchMetadata?.logo_url || null;
-  const displayName = user?.nick
-    || (user?.first_name ? `${user.first_name.split(' ')[0]}. ${user.last_name || ''}`.trim() : 'User');
-  const initials = user
-    ? `${(user.first_name || '')[0] || ''}${(user.last_name || '')[0] || ''}`.toUpperCase() || '?'
-    : '?';
+  const displayName = getPortalUserDisplayName(user);
+  const initials = getPortalUserInitials(user);
 
   useEffect(() => {
     let cancelled = false;
@@ -171,16 +169,19 @@ const PortalHeader: React.FC = () => {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">
-              <DropdownMenuItem onClick={() => navigate('/account/profile')}>
+              <DropdownMenuItem onSelect={() => navigate('/account/profile')}>
                 <User className="size-4" />
                 My Profile
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => navigate('/account/parish-management')}>
+              <DropdownMenuItem onSelect={() => navigate('/account/parish-management')}>
                 <Settings className="size-4" />
                 Settings
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem variant="destructive" onClick={() => { void handleLogout(); }}>
+              <DropdownMenuItem
+                variant="destructive"
+                onSelect={() => { void handleLogout(); }}
+              >
                 <LogOut className="size-4" />
                 Sign Out
               </DropdownMenuItem>
