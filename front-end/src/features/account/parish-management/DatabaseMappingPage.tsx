@@ -164,6 +164,21 @@ function buildFieldsFromColumns(recordType: string, columns: ColumnInfo[]): Fiel
     });
 }
 
+/** Fallback columns from FIELD_META when live schema introspection is unavailable. */
+function metaFallbackColumns(recordType: string): ColumnInfo[] {
+  const meta = FIELD_META[recordType] || {};
+  return Object.keys(meta).map((name) => ({ name }));
+}
+
+function buildFieldList(
+  recordType: string,
+  columns: ColumnInfo[],
+  saved?: FieldDef[],
+): FieldDef[] {
+  const effective = columns.length > 0 ? columns : metaFallbackColumns(recordType);
+  return mergeSavedFields(buildFieldsFromColumns(recordType, effective), saved);
+}
+
 /**
  * Overlay a saved configuration onto the schema-derived field list. Real
  * columns are the source of truth for *which* fields exist; the saved config
@@ -285,6 +300,7 @@ const DatabaseMappingPage: React.FC = () => {
   const [dirty, setDirty] = useState(false);
   const [columnsLoading, setColumnsLoading] = useState(true);
   const [columnsError, setColumnsError] = useState<string | null>(null);
+  const [columnsWarning, setColumnsWarning] = useState<string | null>(null);
   const { snackbar, showSnackbar, closeSnackbar } = useSnackbar();
 
   // Cache live columns per record type, plus a one-shot guard so the saved
@@ -301,13 +317,45 @@ const DatabaseMappingPage: React.FC = () => {
   const fetchColumns = useCallback(async (type: string): Promise<ColumnInfo[]> => {
     if (columnsCache.current[type]) return columnsCache.current[type];
     if (!churchId) return [];
-    const res = await apiClient.get<{ columns: ColumnInfo[] }>(
-      `/api/parish-settings/${churchId}/record-columns/${type}`,
-    );
-    const cols = ((res as any)?.columns ?? []) as ColumnInfo[];
-    columnsCache.current[type] = cols;
-    return cols;
+    try {
+      const res = await apiClient.get<{ columns: ColumnInfo[] }>(
+        `/api/parish-settings/${churchId}/record-columns/${type}`,
+      );
+      const cols = ((res as any)?.columns ?? []) as ColumnInfo[];
+      columnsCache.current[type] = cols;
+      return cols;
+    } catch (err) {
+      delete columnsCache.current[type];
+      throw err;
+    }
   }, [churchId]);
+
+  const loadFieldsForType = useCallback(async (type: string) => {
+    const saved = savedMappingForType(savedSettings, type);
+    let warning: string | null = null;
+    let cols: ColumnInfo[] = [];
+
+    try {
+      cols = await fetchColumns(type);
+      if (!cols.length) {
+        cols = metaFallbackColumns(type);
+        warning = `Live database columns were empty for ${type} records. Showing default field list.`;
+      }
+    } catch (err: any) {
+      cols = metaFallbackColumns(type);
+      warning = err?.message || 'Could not load live database columns. Showing default field list.';
+    }
+
+    const merged = buildFieldList(type, cols, saved?.fields);
+    const validCols = new Set(merged.map((f) => f.column));
+    return {
+      merged,
+      warning,
+      defaultSort: saved?.defaultSort && validCols.has(saved.defaultSort)
+        ? saved.defaultSort
+        : firstSortableColumn(merged),
+    };
+  }, [fetchColumns, savedSettings]);
 
   // First load: discover the live columns for the saved (or default) record
   // type, build the field list from the real schema, and overlay any saved
@@ -319,21 +367,18 @@ const DatabaseMappingPage: React.FC = () => {
     (async () => {
       setColumnsLoading(true);
       setColumnsError(null);
+      setColumnsWarning(null);
       try {
-        const type = savedSettings?.config?.selectedRecord || 'baptism';
-        const saved = savedMappingForType(savedSettings, type);
-        const cols = await fetchColumns(type);
+        const type = savedSettings?.baptism?.fields?.length
+          ? 'baptism'
+          : savedSettings?.config?.selectedRecord || 'baptism';
+        const { merged, warning, defaultSort: nextSort } = await loadFieldsForType(type);
         if (cancelled) return;
-        const merged = mergeSavedFields(buildFieldsFromColumns(type, cols), saved?.fields);
-        const validCols = new Set(merged.map((f) => f.column));
         lastInitializedChurchIdRef.current = churchId;
         setSelectedRecord(type);
         setFields(merged);
-        setDefaultSort(
-          saved?.defaultSort && validCols.has(saved.defaultSort)
-            ? saved.defaultSort
-            : firstSortableColumn(merged),
-        );
+        setDefaultSort(nextSort);
+        if (warning) setColumnsWarning(warning);
       } catch (err: any) {
         if (!cancelled) setColumnsError(err?.message || 'Failed to load database columns');
       } finally {
@@ -341,7 +386,7 @@ const DatabaseMappingPage: React.FC = () => {
       }
     })();
     return () => { cancelled = true; };
-  }, [settingsLoading, savedSettings, churchId, fetchColumns]);
+  }, [settingsLoading, savedSettings, churchId, loadFieldsForType]);
 
   const goTo = (idx: number) => {
     if (idx === 0) navigate(BASE);
@@ -354,25 +399,23 @@ const DatabaseMappingPage: React.FC = () => {
   // field list. If the saved config is for the newly selected type, its
   // customizations are reapplied; otherwise the schema defaults are used.
   const handleSelectRecord = useCallback(async (newType: string) => {
-    if (newType === selectedRecord) return;
+    if (newType === selectedRecord && fields.length > 0) return;
     setSelectedRecord(newType);
     setColumnsLoading(true);
     setColumnsError(null);
+    setColumnsWarning(null);
     try {
-      const cols = await fetchColumns(newType);
-      const saved = savedMappingForType(savedSettings, newType);
-      const base = buildFieldsFromColumns(newType, cols);
-      const merged = mergeSavedFields(base, saved?.fields);
-      const validCols = new Set(merged.map((f) => f.column));
+      const { merged, warning, defaultSort: nextSort } = await loadFieldsForType(newType);
       setFields(merged);
-      setDefaultSort(saved?.defaultSort && validCols.has(saved.defaultSort) ? saved.defaultSort : firstSortableColumn(merged));
+      setDefaultSort(nextSort);
+      if (warning) setColumnsWarning(warning);
       markDirty();
     } catch (err: any) {
       setColumnsError(err?.message || 'Failed to load database columns');
     } finally {
       setColumnsLoading(false);
     }
-  }, [selectedRecord, savedSettings, fetchColumns, markDirty]);
+  }, [selectedRecord, fields.length, loadFieldsForType, markDirty]);
 
   const updateField = (column: string, key: keyof FieldDef, value: any) => {
     setFields((prev) => prev.map((f) => (f.column === column ? { ...f, [key]: value } : f)));
@@ -1048,6 +1091,11 @@ const DatabaseMappingPage: React.FC = () => {
       {columnsError && (
         <Alert severity="error" sx={{ mb: 2, borderRadius: 1.5, fontFamily: "'Inter'", fontSize: '0.75rem' }}>
           {columnsError}
+        </Alert>
+      )}
+      {columnsWarning && !columnsError && (
+        <Alert severity="warning" sx={{ mb: 2, borderRadius: 1.5, fontFamily: "'Inter'", fontSize: '0.75rem' }}>
+          {columnsWarning}
         </Alert>
       )}
 
