@@ -18,9 +18,6 @@ import {
   Button,
   Card,
   CardContent,
-  CardFooter,
-  CardHeader,
-  CardTitle,
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -28,6 +25,10 @@ import {
   Input,
   Skeleton,
 } from '@/components/portal/ui';
+import { PortalPageHeader } from '@/features/portal/themes/components/PortalPageHeader';
+import { PortalQuickActionList } from '@/features/portal/themes/modern/components/PortalQuickActionList';
+import { PortalSection } from '@/features/portal/themes/modern/components/PortalSection';
+import { PortalStatTile } from '@/features/portal/themes/modern/components/PortalStatTile';
 import { useAuth } from '@/context/AuthContext';
 import { useChurch } from '@/context/ChurchContext';
 import RecordPipelineStatus, { type PipelineStageCounts } from './RecordPipelineStatus';
@@ -143,85 +144,8 @@ function highlightMatch(text: string, query: string): React.ReactNode {
 }
 
 /* ══════════════════════════════════════════════════════════
-   Sub-Components — Enterprise SaaS style
+   Main Dashboard Component
    ══════════════════════════════════════════════════════════ */
-
-/* ── RecordCard (Parish Records section) ── */
-
-function RecordCard({ title, count, icon: Icon, iconColor, records, loading, onViewAll, onAddNew }: {
-  title: string; count: number; icon: React.ElementType;
-  iconColor: string; records: RecentRecord[]; loading: boolean;
-  onViewAll: () => void; onAddNew: () => void;
-}) {
-  const { t } = useLanguage();
-  return (
-    <Card className="gap-0 overflow-hidden py-0">
-      <CardHeader className="pb-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className={`flex size-9 items-center justify-center rounded-lg ${iconColor}`}>
-              <Icon size={18} />
-            </div>
-            <CardTitle className="text-[15px]">{title}</CardTitle>
-          </div>
-          <span className="text-2xl font-semibold text-foreground">
-            {count.toLocaleString()}
-          </span>
-        </div>
-
-        {loading ? (
-          <div className="space-y-2">
-            {[0, 1, 2].map((i) => <Skeleton key={i} className="h-5 w-full" />)}
-          </div>
-        ) : records.length === 0 ? (
-          <p className="py-3 text-center text-[13px] text-muted-foreground">
-            {t('common.no_records_yet')}
-          </p>
-        ) : (
-          <div className="space-y-2">
-            {records.map((rec) => (
-              <div key={rec.id} className="flex items-center justify-between py-1">
-                <span className="truncate text-[13px] text-foreground">{rec.label}</span>
-                <span className="ml-3 whitespace-nowrap text-[12px] text-muted-foreground">
-                  {formatDate(rec.date)}
-                </span>
-              </div>
-            ))}
-          </div>
-        )}
-      </CardHeader>
-
-      <CardFooter className="gap-2 border-t border-border py-3">
-        <Button variant="ghost" size="sm" onClick={onViewAll}>
-          <Eye size={14} /> {t('common.view_all')}
-        </Button>
-        <Button variant="secondary" size="sm" className="ml-auto" onClick={onAddNew}>
-          <Plus size={14} /> {t('common.add_new')}
-        </Button>
-      </CardFooter>
-    </Card>
-  );
-}
-
-/* ── ToolItem (Bottom tools grid) ── */
-
-function ToolItem({ icon: Icon, label, description, onClick }: {
-  icon: React.ElementType; label: string; description: string; onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="group rounded-xl border border-border bg-card p-4 text-left shadow-sm transition-all hover:border-primary/30 hover:shadow-md"
-    >
-      <div className="mb-3 flex size-9 items-center justify-center rounded-lg bg-muted transition-colors group-hover:bg-accent">
-        <Icon className="text-muted-foreground group-hover:text-accent-foreground" size={18} />
-      </div>
-      <p className="mb-0.5 text-sm font-medium text-foreground">{label}</p>
-      <p className="text-xs text-muted-foreground">{description}</p>
-    </button>
-  );
-}
 
 /**
  * Format a clergy name for display in Recent Activity / search results.
@@ -541,32 +465,78 @@ const ChurchPortalHub: React.FC = () => {
     baptism: Users, marriage: Heart, funeral: Cross,
   };
 
+  const pageSubtitle = [
+    churchName,
+    rectorYears != null ? `${rectorYears} ${rectorYears === 1 ? 'year' : 'years'} as rector` : null,
+    todayFormatted,
+    roleLabel,
+  ].filter(Boolean).join(' · ');
+
+  const quickActions = [
+    {
+      icon: Upload,
+      label: t('portal.upload_records'),
+      description: 'Import historical sacrament books',
+      onClick: () => navigate('/portal/upload'),
+    },
+    {
+      icon: BookOpen,
+      label: t('portal.certificates'),
+      description: t('portal.generate_documents'),
+      onClick: () => navigate('/portal/certificates'),
+    },
+    {
+      icon: Calendar,
+      label: t('portal.sacramental_calendar'),
+      description: t('portal.restriction_dates'),
+      onClick: () => navigate('/portal/sacramental-restrictions'),
+    },
+    {
+      icon: ClipboardList,
+      label: t('portal.interactive_reports'),
+      description: t('portal.delegate_record_collection'),
+      onClick: () => navigate('/apps/records/interactive-reports'),
+    },
+    {
+      icon: Settings,
+      label: t('portal.parish_settings'),
+      description: t('portal.church_configuration'),
+      onClick: () => navigate('/account/church-details'),
+    },
+  ];
+
+  const showPipeline = (dashboardState === 'pipeline' || (dashboardState === 'dashboard' && hasUnpublishedBatches))
+    && !pipelineLoading;
+
+  const activityFilterAction = (
+    <div className="flex items-center rounded-lg border border-border bg-muted/50 p-0.5">
+      {(['all', 'baptism', 'marriage', 'funeral'] as const).map((f) => (
+        <button
+          key={f}
+          type="button"
+          onClick={() => setActivityFilter(f)}
+          className={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
+            activityFilter === f
+              ? 'bg-card text-foreground shadow-sm'
+              : 'text-muted-foreground hover:text-foreground'
+          }`}
+        >
+          {f === 'all' ? t('portal.all') : f === 'baptism' ? t('portal.baptisms') : f === 'marriage' ? t('portal.marriages') : t('portal.funerals')}
+        </button>
+      ))}
+    </div>
+  );
+
   /* ══════════════════════════════════════════════════════════
      Render
      ══════════════════════════════════════════════════════════ */
   return (
-    <div className="mx-auto min-h-[60vh] max-w-[1200px]">
-
-      {/* ═══ Section 1: Welcome Bar ═══ */}
-      <section className="mb-8">
-        <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
-          <div>
-            <h1 className="mb-0.5 text-sm font-medium text-foreground">{greeting}</h1>
-            {churchName && (
-              <p className="mb-0.5 text-sm font-medium text-foreground">
-                {rectorYears != null
-                  ? `Rector at ${churchName} for ${rectorYears} ${rectorYears === 1 ? 'year' : 'years'}`
-                  : churchName}
-              </p>
-            )}
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <span>{todayFormatted}</span>
-              <span>&middot;</span>
-              <span>{roleLabel}</span>
-            </div>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2">
+    <div className="space-y-6">
+      <PortalPageHeader
+        title={greeting}
+        description={pageSubtitle || undefined}
+        actions={(
+          <>
             <Button variant="outline" size="sm" onClick={() => navigate('/portal/upload')}>
               <Upload size={15} /> {t('portal.upload_records')}
             </Button>
@@ -588,257 +558,195 @@ const ChurchPortalHub: React.FC = () => {
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-          </div>
-        </div>
-      </section>
+          </>
+        )}
+      />
 
-      {/* ═══ Section 2: Search ═══ */}
-      <section className="mb-8">
-        <div className="relative">
-          <div className="relative">
-            <Search className="pointer-events-none absolute left-4 top-1/2 size-[18px] -translate-y-1/2 text-muted-foreground" />
-            <Input
-              ref={searchInputRef}
-              type="text"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder={t('portal.search_placeholder')}
-              className="h-11 rounded-xl pl-11 pr-10"
+      {dashboardState === 'onboarding' ? (
+        <Card className="py-16 text-center">
+          <CardContent className="mx-auto flex max-w-lg flex-col items-center">
+            <div className="mb-5 flex size-16 items-center justify-center rounded-2xl bg-muted">
+              <Upload className="text-muted-foreground" size={32} />
+            </div>
+            <h2 className="mb-2 text-xl font-semibold text-foreground">{t('portal.upload_historical')}</h2>
+            <p className="mb-6 text-sm text-muted-foreground">{t('portal.upload_historical_desc')}</p>
+            <Button onClick={() => navigate('/portal/upload')}>
+              <Upload size={18} /> {t('portal.upload_records')}
+            </Button>
+          </CardContent>
+        </Card>
+      ) : (
+        <>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            <PortalStatTile
+              label={t('portal.baptisms')}
+              value={counts.baptism}
+              icon={Droplets}
+              accentClass="bg-blue-100 text-blue-700 dark:bg-blue-950/50 dark:text-blue-300"
+              loading={recordsLoading}
+              onClick={() => navigate('/portal/records?type=baptism')}
             />
-            {searchTerm && (
-              <button
-                type="button"
-                onClick={() => { setSearchTerm(''); searchInputRef.current?.focus(); }}
-                className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-muted-foreground transition-colors hover:text-foreground"
-              >
-                <X size={16} />
-              </button>
-            )}
+            <PortalStatTile
+              label={t('portal.marriages')}
+              value={counts.marriage}
+              icon={Heart}
+              accentClass="bg-rose-100 text-rose-700 dark:bg-rose-950/50 dark:text-rose-300"
+              loading={recordsLoading}
+              onClick={() => navigate('/portal/records?type=marriage')}
+            />
+            <PortalStatTile
+              label={t('portal.funerals')}
+              value={counts.funeral}
+              icon={Cross}
+              accentClass="bg-violet-100 text-violet-700 dark:bg-violet-950/50 dark:text-violet-300"
+              loading={recordsLoading}
+              onClick={() => navigate('/portal/records?type=funeral')}
+            />
+            <PortalStatTile
+              label="Total records"
+              value={totalRecords}
+              icon={Users}
+              accentClass="bg-accent text-accent-foreground"
+              loading={recordsLoading}
+              onClick={() => navigate('/portal/records')}
+            />
           </div>
 
-          {debouncedSearch.trim() && (
-            <Card className="mt-2 gap-0 overflow-hidden py-0 shadow-lg">
-              {searchLoading ? (
-                <CardContent className="space-y-3 py-5">
-                  {[0, 1, 2].map((i) => <Skeleton key={i} className="h-9 w-full" />)}
-                </CardContent>
-              ) : searchResults.length === 0 ? (
-                <CardContent className="py-8 text-center">
-                  <p className="text-[13px] text-muted-foreground">
-                    No records found for &ldquo;{debouncedSearch}&rdquo;
-                  </p>
-                </CardContent>
-              ) : (
-                <>
-                  <div className="border-b border-border px-4 py-2.5">
-                    <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                      {searchResults.length} result{searchResults.length !== 1 ? 's' : ''} found
-                    </p>
+          <div className="grid grid-cols-1 gap-6 xl:grid-cols-12">
+            <div className="space-y-6 xl:col-span-8">
+              <PortalSection
+                title={t('portal.recent_activity')}
+                description="Latest sacrament entries across your parish"
+                action={activityFilterAction}
+                className="overflow-hidden"
+              >
+                <div className="relative mb-4">
+                  <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    ref={searchInputRef}
+                    type="text"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    placeholder={t('portal.search_placeholder')}
+                    className="h-10 pl-9 pr-9"
+                  />
+                  {searchTerm && (
+                    <button
+                      type="button"
+                      onClick={() => { setSearchTerm(''); searchInputRef.current?.focus(); }}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-muted-foreground hover:text-foreground"
+                    >
+                      <X size={14} />
+                    </button>
+                  )}
+                </div>
+
+                {debouncedSearch.trim() ? (
+                  <div className="-mx-5 -mb-5 border-t border-border">
+                    {searchLoading ? (
+                      <div className="space-y-3 p-5">
+                        {[0, 1, 2].map((i) => <Skeleton key={i} className="h-10 w-full" />)}
+                      </div>
+                    ) : searchResults.length === 0 ? (
+                      <p className="px-5 py-8 text-center text-sm text-muted-foreground">
+                        No records found for &ldquo;{debouncedSearch}&rdquo;
+                      </p>
+                    ) : (
+                      <div className="divide-y divide-border">
+                        {searchResults.map((result) => {
+                          const Icon = typeIcons[result.type];
+                          return (
+                            <button
+                              key={`${result.type}-${result.id}`}
+                              type="button"
+                              onClick={() => handleResultClick(result)}
+                              className="flex w-full items-center gap-3 px-5 py-3 text-left transition-colors hover:bg-accent/50"
+                            >
+                              <div className={`flex size-8 shrink-0 items-center justify-center rounded-lg ${typeColors[result.type]}`}>
+                                <Icon size={15} />
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <p className="truncate text-sm font-medium text-foreground">
+                                  {highlightMatch(result.label, debouncedSearch)}
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                  {typeLabels[result.type]} {result.sub && `· ${result.sub}`}
+                                </p>
+                              </div>
+                              <span className="text-xs text-muted-foreground">{formatDate(result.date)}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
-                  <div className="max-h-[360px] divide-y divide-border overflow-y-auto">
-                    {searchResults.map((result) => {
-                      const Icon = typeIcons[result.type];
+                ) : recordsLoading ? (
+                  <div className="space-y-3">
+                    {[0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-12 w-full" />)}
+                  </div>
+                ) : allActivity.length === 0 ? (
+                  <p className="py-8 text-center text-sm text-muted-foreground">{t('portal.no_recent_activity')}</p>
+                ) : (
+                  <div className="-mx-5 -mb-5 divide-y divide-border border-t border-border">
+                    {allActivity.map((rec) => {
+                      const Icon = typeIcons[rec.type];
                       return (
                         <button
-                          key={`${result.type}-${result.id}`}
+                          key={`${rec.type}-${rec.id}`}
                           type="button"
-                          onClick={() => handleResultClick(result)}
-                          className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-accent"
+                          onClick={() => navigate(`/portal/records?type=${rec.type}`)}
+                          className="flex w-full items-center gap-3 px-5 py-3.5 text-left transition-colors hover:bg-accent/50"
                         >
-                          <div className={`flex size-8 shrink-0 items-center justify-center rounded-lg ${typeColors[result.type]}`}>
+                          <div className={`flex size-8 shrink-0 items-center justify-center rounded-lg ${typeColors[rec.type]}`}>
                             <Icon size={15} />
                           </div>
                           <div className="min-w-0 flex-1">
-                            <p className="truncate text-[13px] font-medium text-foreground">
-                              {highlightMatch(result.label, debouncedSearch)}
-                            </p>
-                            <p className="text-[12px] text-muted-foreground">
-                              {typeLabels[result.type]} {result.sub && `\u00b7 ${result.sub}`}
+                            <p className="truncate text-sm font-medium text-foreground">{rec.label}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {typeLabels[rec.type]} {rec.sub && `· ${rec.sub}`}
                             </p>
                           </div>
-                          <span className="whitespace-nowrap text-[12px] text-muted-foreground">
-                            {formatDate(result.date)}
-                          </span>
+                          <span className="text-xs text-muted-foreground">{formatRelativeTime(rec.date)}</span>
                         </button>
                       );
                     })}
                   </div>
-                </>
-              )}
-            </Card>
-          )}
-        </div>
-      </section>
-
-      {/* ═══ CASE 1: Onboarding ═══ */}
-      {dashboardState === 'onboarding' && (
-        <section className="mb-8">
-          <Card className="py-10 text-center">
-            <CardContent className="flex flex-col items-center">
-              <div className="mx-auto mb-5 flex size-14 items-center justify-center rounded-2xl bg-muted">
-                <Upload className="text-muted-foreground" size={28} />
-              </div>
-              <h2 className="mb-2 text-xl font-semibold text-foreground">
-                {t('portal.upload_historical')}
-              </h2>
-              <p className="mx-auto mb-6 max-w-md text-sm text-muted-foreground">
-                {t('portal.upload_historical_desc')}
-              </p>
-              <Button onClick={() => navigate('/portal/upload')}>
-                <Upload size={18} /> {t('portal.upload_records')}
-              </Button>
-            </CardContent>
-          </Card>
-        </section>
-      )}
-
-      {/* ═══ CASE 2: Pipeline (records uploaded but not published) ═══ */}
-      {dashboardState === 'pipeline' && !pipelineLoading && (
-        <section className="mb-8">
-          <RecordPipelineStatus counts={pipelineCounts} isAdmin={isAdmin} />
-        </section>
-      )}
-
-      {/* ═══ Pipeline shown on full dashboard too if there are pending batches ═══ */}
-      {dashboardState === 'dashboard' && hasUnpublishedBatches && !pipelineLoading && (
-        <section className="mb-8">
-          <RecordPipelineStatus counts={pipelineCounts} isAdmin={isAdmin} />
-        </section>
-      )}
-
-      {/* ═══ CASE 3: Full Parish Dashboard ═══ */}
-      {(dashboardState === 'dashboard' || dashboardState === 'pipeline') && (
-        <>
-          {/* ── Section 3: Parish Records ── */}
-          {totalRecords > 0 && (
-            <section className="mb-8">
-              <h2 className="mb-4 text-[17px] font-semibold text-foreground">
-                {t('portal.parish_records')}
-              </h2>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <RecordCard
-                  title={t('portal.baptisms')}
-                  count={counts.baptism}
-                  icon={Droplets}
-                  iconColor="bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400"
-                  records={recentBaptism.slice(0, 3)}
-                  loading={recordsLoading}
-                  onViewAll={() => navigate('/portal/records?type=baptism')}
-                  onAddNew={() => navigate('/portal/records/baptism/new')}
-                />
-                <RecordCard
-                  title={t('portal.marriages')}
-                  count={counts.marriage}
-                  icon={Heart}
-                  iconColor="bg-rose-50 dark:bg-rose-900/20 text-rose-600 dark:text-rose-400"
-                  records={recentMarriage.slice(0, 3)}
-                  loading={recordsLoading}
-                  onViewAll={() => navigate('/portal/records?type=marriage')}
-                  onAddNew={() => navigate('/portal/records/marriage/new')}
-                />
-                <RecordCard
-                  title={t('portal.funerals')}
-                  count={counts.funeral}
-                  icon={Cross}
-                  iconColor="bg-violet-50 dark:bg-violet-900/20 text-violet-600 dark:text-violet-400"
-                  records={recentFuneral.slice(0, 3)}
-                  loading={recordsLoading}
-                  onViewAll={() => navigate('/portal/records?type=funeral')}
-                  onAddNew={() => navigate('/portal/records/funeral/new')}
-                />
-              </div>
-            </section>
-          )}
-
-          {/* ── Section 4: Recent Activity ── */}
-          <section className="mb-8">
-            <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-[17px] font-semibold text-foreground">
-                {t('portal.recent_activity')}
-              </h2>
-              <div className="flex items-center gap-1">
-                {(['all', 'baptism', 'marriage', 'funeral'] as const).map((f) => (
-                  <Button
-                    key={f}
-                    variant={activityFilter === f ? 'default' : 'ghost'}
-                    size="sm"
-                    className="h-7 px-2.5 text-xs"
-                    onClick={() => setActivityFilter(f)}
-                  >
-                    {f === 'all' ? t('portal.all') : f === 'baptism' ? t('portal.baptisms') : f === 'marriage' ? t('portal.marriages') : t('portal.funerals')}
-                  </Button>
-                ))}
-              </div>
+                )}
+              </PortalSection>
             </div>
-            <Card className="gap-0 overflow-hidden py-0">
-              {recordsLoading ? (
-                <CardContent className="space-y-3 py-5">
-                  {[0, 1, 2].map((i) => <Skeleton key={i} className="h-10 w-full" />)}
-                </CardContent>
-              ) : allActivity.length === 0 ? (
-                <CardContent className="py-10 text-center">
-                  <p className="text-[13px] text-muted-foreground">
-                    {t('portal.no_recent_activity')}
-                  </p>
-                </CardContent>
-              ) : (
-                <div className="divide-y divide-border">
-                  {allActivity.map((rec) => {
-                    const Icon = typeIcons[rec.type];
-                    return (
-                      <div key={`${rec.type}-${rec.id}`} className="flex items-center gap-4 px-5 py-3.5">
-                        <div className={`flex size-8 shrink-0 items-center justify-center rounded-lg ${typeColors[rec.type]}`}>
-                          <Icon size={15} />
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate text-[13px] font-medium text-foreground">{rec.label}</p>
-                          <p className="text-[12px] text-muted-foreground">
-                            {typeLabels[rec.type]} {rec.sub && `\u00b7 ${rec.sub}`}
-                          </p>
-                        </div>
-                        <span className="whitespace-nowrap text-[12px] text-muted-foreground">
-                          {formatRelativeTime(rec.date)}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </Card>
-          </section>
 
-          {/* ── Section 5: Tools ── */}
-          <section className="mb-8">
-            <h2 className="mb-4 text-[17px] font-semibold text-foreground">
-              {t('portal.tools')}
-            </h2>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-              <ToolItem
-                icon={BookOpen}
-                label={t('portal.certificates')}
-                description={t('portal.generate_documents')}
-                onClick={() => navigate('/portal/certificates')}
-              />
-              <ToolItem
-                icon={Calendar}
-                label={t('portal.sacramental_calendar')}
-                description={t('portal.restriction_dates')}
-                onClick={() => navigate('/portal/sacramental-restrictions')}
-              />
-              <ToolItem
-                icon={ClipboardList}
-                label={t('portal.interactive_reports')}
-                description={t('portal.delegate_record_collection')}
-                onClick={() => navigate('/apps/records/interactive-reports')}
-              />
-              <ToolItem
-                icon={Settings}
-                label={t('portal.parish_settings')}
-                description={t('portal.church_configuration')}
-                onClick={() => navigate('/account/church-details')}
-              />
+            <div className="space-y-6 xl:col-span-4">
+              {showPipeline && (
+                <RecordPipelineStatus counts={pipelineCounts} isAdmin={isAdmin} />
+              )}
+
+              <PortalSection title="Quick actions" description="Common parish workflows">
+                <PortalQuickActionList actions={quickActions} />
+              </PortalSection>
+
+              {totalRecords > 0 && (
+                <PortalSection title={t('portal.parish_records')} description="Jump directly into a sacrament book">
+                  <div className="grid grid-cols-1 gap-2">
+                    <Button variant="outline" className="justify-start" onClick={() => navigate('/portal/records?type=baptism')}>
+                      <Droplets size={16} className="text-blue-600" /> {t('portal.baptisms')}
+                      <span className="ml-auto text-muted-foreground">{counts.baptism.toLocaleString()}</span>
+                    </Button>
+                    <Button variant="outline" className="justify-start" onClick={() => navigate('/portal/records?type=marriage')}>
+                      <Heart size={16} className="text-rose-600" /> {t('portal.marriages')}
+                      <span className="ml-auto text-muted-foreground">{counts.marriage.toLocaleString()}</span>
+                    </Button>
+                    <Button variant="outline" className="justify-start" onClick={() => navigate('/portal/records?type=funeral')}>
+                      <Cross size={16} className="text-violet-600" /> {t('portal.funerals')}
+                      <span className="ml-auto text-muted-foreground">{counts.funeral.toLocaleString()}</span>
+                    </Button>
+                    <Button variant="ghost" className="justify-start" onClick={() => navigate('/portal/records')}>
+                      <Eye size={16} /> {t('common.view_all')}
+                    </Button>
+                  </div>
+                </PortalSection>
+              )}
             </div>
-          </section>
+          </div>
         </>
       )}
     </div>

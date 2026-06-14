@@ -241,11 +241,9 @@ const ModernPortalLayout: React.FC = () => {
     <div className="portal-modern flex min-h-screen flex-col">
       <PortalHeader />
       <main
-        className="mx-auto w-full flex-1 px-4 sm:px-6"
+        className="mx-auto w-full flex-1 px-4 py-6 sm:px-6 lg:px-8"
         style={{
           maxWidth,
-          paddingTop: 'var(--portal-content-pt)',
-          paddingBottom: 'var(--portal-content-pb)',
           minHeight: 'calc(100vh - 8rem)',
         }}
       >
