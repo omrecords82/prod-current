@@ -2,7 +2,7 @@
 import { createContext, useState, ReactNode, useEffect } from 'react';
 import config from './config'
 import React from "react";
-import { resolvePortalLayoutTheme } from '@/features/portal/themes/registry';
+import { resolvePortalLayoutTheme } from '@/features/portal/themes/themeMeta';
 import { slotToThemeId, themeIdToSlot } from '@/features/portal/themes/portalLayoutSlots';
 import type { PortalLayoutThemeId } from '@/features/portal/themes/types';
 

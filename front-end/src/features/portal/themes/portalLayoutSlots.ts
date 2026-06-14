@@ -1,5 +1,5 @@
 import type { PortalLayoutThemeId } from './types';
-import { PORTAL_THEME_META } from './registry';
+import { PORTAL_THEME_META } from './themeMeta';
 
 export interface PortalLayoutSlot {
   slot: number;
