@@ -15,6 +15,7 @@ import { detectAndCorrectOrientation } from '../ocr/preprocessing/orientation';
 import {
   cropRecordRegions,
   detectSeparateRecordRegions,
+  validateRegionsForCrop,
   type PixelBBox,
 } from '../ocr/preprocessing/multiRecordSplit';
 import { getOcrUploadDir, UPLOADS_ROOT } from '../utils/ocrPaths';
@@ -308,6 +309,7 @@ async function classifyOptimizedImage(
   let regions: PixelBBox[] = [];
   try {
     regions = await detectSeparateRecordRegions(optimizedPath);
+    regions = await validateRegionsForCrop(optimizedPath, regions);
   } catch (e: any) {
     warnings.push(`Region detection skipped: ${e.message}`);
   }
@@ -601,22 +603,40 @@ export async function commitAnalyzeSession(
       userOverridden: item.recordType !== fileResult.suggestedRecordType,
     };
 
-    const doSplit = !!item.splitRegions && fileResult.shouldSplit && fileResult.regions.length > 1;
+    const doSplitRequested = !!item.splitRegions && fileResult.shouldSplit && fileResult.regions.length > 1;
+    let doSplit = false;
     let paths: string[] = [optimizedPath];
     let filenames: string[] = [`${baseName}_analyzed_${timestamp}${ext}`];
     let batchId: string | null = null;
 
-    if (doSplit) {
-      batchId = `asplit_${timestamp}_${crypto.randomBytes(3).toString('hex')}`;
-      const regions = fileResult.regions.map((r) => ({
+    if (doSplitRequested) {
+      let regions = fileResult.regions.map((r) => ({
         x: r.x,
         y: r.y,
         width: r.width,
         height: r.height,
       }));
-      paths = await cropRecordRegions(optimizedPath, regions, uploadDir, `${baseName}_${timestamp}`, ext);
-      filenames = paths.map((p) => path.basename(p));
-    } else {
+      try {
+        const freshRegions = await detectSeparateRecordRegions(optimizedPath);
+        const validatedFresh = await validateRegionsForCrop(optimizedPath, freshRegions);
+        if (validatedFresh.length >= 2) {
+          regions = validatedFresh;
+        } else {
+          regions = await validateRegionsForCrop(optimizedPath, regions);
+        }
+      } catch {
+        regions = await validateRegionsForCrop(optimizedPath, regions);
+      }
+
+      if (regions.length >= 2) {
+        doSplit = true;
+        batchId = `asplit_${timestamp}_${crypto.randomBytes(3).toString('hex')}`;
+        paths = await cropRecordRegions(optimizedPath, regions, uploadDir, `${baseName}_${timestamp}`, ext);
+        filenames = paths.map((p) => path.basename(p));
+      }
+    }
+
+    if (!doSplit) {
       const dest = path.join(uploadDir, filenames[0]);
       fs.copyFileSync(optimizedPath, dest);
       paths = [dest];

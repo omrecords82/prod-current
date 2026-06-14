@@ -24,6 +24,10 @@ interface ComponentBox {
 
 const BRIGHTNESS_THRESHOLD = 38;
 const MIN_AREA_FRACTION = 0.04;
+const MIN_CROP_AREA_FRACTION = 0.06;
+const MIN_CROP_WIDTH_FRACTION = 0.14;
+const MIN_CROP_HEIGHT_FRACTION = 0.12;
+const MIN_BRIGHT_PIXEL_FRACTION = 0.08;
 const MAX_COMPONENTS = 12;
 const ANALYSIS_MAX_DIM = 900;
 const PADDING_FRACTION = 0.01;
@@ -322,6 +326,9 @@ export async function detectSeparateRecordRegions(
     return gutterRegions;
   }
 
+  const fixedGrid = tryFixedGridSplit(mask, sw, sh, imgW, imgH, 2, 2);
+  if (fixedGrid && fixedGrid.length >= 2) return fixedGrid;
+
   const minPixels = Math.floor(sw * sh * MIN_AREA_FRACTION);
   const components = findConnectedComponents(mask, sw, sh)
     .filter((c) => c.count >= minPixels)
@@ -342,6 +349,80 @@ export async function detectSeparateRecordRegions(
   });
 
   return components;
+}
+
+async function regionBrightPixelFraction(
+  imagePath: string,
+  region: PixelBBox,
+): Promise<number> {
+  const { data, info } = await sharp(imagePath)
+    .extract({
+      left: Math.max(0, region.x),
+      top: Math.max(0, region.y),
+      width: Math.max(1, region.width),
+      height: Math.max(1, region.height),
+    })
+    .resize(96, 96, { fit: 'fill' })
+    .removeAlpha()
+    .raw()
+    .toBuffer({ resolveWithObject: true });
+
+  const pixels = info.width * info.height;
+  if (!pixels) return 0;
+  let bright = 0;
+  for (let i = 0; i < pixels; i += 1) {
+    const lum = 0.299 * data[i * 3] + 0.587 * data[i * 3 + 1] + 0.114 * data[i * 3 + 2];
+    if (lum > BRIGHTNESS_THRESHOLD) bright += 1;
+  }
+  return bright / pixels;
+}
+
+/**
+ * Drop gutter slivers and mostly-black crops before split/commit.
+ */
+export async function validateRegionsForCrop(
+  imagePath: string,
+  regions: PixelBBox[],
+): Promise<PixelBBox[]> {
+  if (!regions.length || !fs.existsSync(imagePath)) return [];
+
+  const meta = await sharp(imagePath).metadata();
+  const imgW = meta.width || 0;
+  const imgH = meta.height || 0;
+  if (imgW < 80 || imgH < 80) return [];
+
+  const imgArea = imgW * imgH;
+  const validated: PixelBBox[] = [];
+
+  for (const region of regions) {
+    const clamped: PixelBBox = {
+      x: Math.max(0, Math.min(region.x, imgW - 1)),
+      y: Math.max(0, Math.min(region.y, imgH - 1)),
+      width: Math.max(1, Math.min(region.width, imgW - region.x)),
+      height: Math.max(1, Math.min(region.height, imgH - region.y)),
+    };
+    const area = clamped.width * clamped.height;
+    if (area < imgArea * MIN_CROP_AREA_FRACTION) continue;
+    if (clamped.width < imgW * MIN_CROP_WIDTH_FRACTION) continue;
+    if (clamped.height < imgH * MIN_CROP_HEIGHT_FRACTION) continue;
+
+    try {
+      const brightFrac = await regionBrightPixelFraction(imagePath, clamped);
+      if (brightFrac < MIN_BRIGHT_PIXEL_FRACTION) continue;
+      validated.push(clamped);
+    } catch {
+      /* skip invalid extract */
+    }
+  }
+
+  validated.sort((a, b) => {
+    const rowA = Math.floor(a.y / (imgH * 0.5));
+    const rowB = Math.floor(b.y / (imgH * 0.5));
+    if (rowA !== rowB) return rowA - rowB;
+    return a.x - b.x;
+  });
+
+  return validated.slice(0, MAX_COMPONENTS);
 }
 
 export async function cropRecordRegions(
@@ -366,6 +447,8 @@ export async function cropRecordRegions(
         width: region.width,
         height: region.height,
       })
+      .flatten({ background: { r: 255, g: 255, b: 255 } })
+      .jpeg({ quality: 92 })
       .toFile(outPath);
     outputs.push(outPath);
   }

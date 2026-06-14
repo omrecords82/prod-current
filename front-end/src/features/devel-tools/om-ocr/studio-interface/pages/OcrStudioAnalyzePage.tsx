@@ -430,6 +430,16 @@ export default function OcrStudioAnalyzePage() {
                       {item.shouldSplit && (
                         <Chip size="small" label={`${item.regionsDetected} regions`} color="info" variant="outlined" sx={{ mt: 0.5 }} />
                       )}
+                      {item.shouldSplit && (
+                        <Button
+                          size="small"
+                          variant={item.splitRegions ? 'contained' : 'outlined'}
+                          onClick={() => updateItem(item.id, { splitRegions: !item.splitRegions })}
+                          sx={{ textTransform: 'none', fontSize: '0.7rem', mt: 0.5, display: 'block' }}
+                        >
+                          {item.splitRegions ? 'Will split into separate jobs' : 'Split into separate jobs'}
+                        </Button>
+                      )}
                     </TableCell>
                     <TableCell>
                       <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap>
@@ -451,16 +461,6 @@ export default function OcrStudioAnalyzePage() {
                           ))}
                         </Select>
                       </FormControl>
-                      {item.shouldSplit && (
-                        <Button
-                          size="small"
-                          variant={item.splitRegions ? 'contained' : 'outlined'}
-                          onClick={() => updateItem(item.id, { splitRegions: !item.splitRegions })}
-                          sx={{ textTransform: 'none', fontSize: '0.7rem' }}
-                        >
-                          {item.splitRegions ? 'Will split' : 'Split regions'}
-                        </Button>
-                      )}
                     </TableCell>
                     <TableCell>
                       <IconButton size="small" onClick={() => { void removeItem(item.id); }} aria-label="Remove">

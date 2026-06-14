@@ -10,6 +10,7 @@ import {
   detectSeparateRecordRegions,
   shouldDisableRecordSnippets,
   shouldSplitIntoMultipleJobs,
+  validateRegionsForCrop,
 } from '../ocr/preprocessing/multiRecordSplit';
 
 export type RecordLayoutMode = 'auto' | 'single' | 'ledger' | 'multi_record_split' | 'multi_form_page';
@@ -92,7 +93,7 @@ export async function planMultiRecordUpload(
   const baseName = path.basename(originalFilename, ext);
   const timestamp = Date.now();
 
-  const regions = await detectSeparateRecordRegions(imagePath, {
+  let regions = await detectSeparateRecordRegions(imagePath, {
     gridRows: recordLayoutMode === 'multi_record_split'
       ? (gridOpts?.gridRows || 2)
       : gridOpts?.gridRows,
@@ -100,6 +101,7 @@ export async function planMultiRecordUpload(
       ? (gridOpts?.gridCols || 2)
       : gridOpts?.gridCols,
   });
+  regions = await validateRegionsForCrop(imagePath, regions);
   const split = shouldSplitIntoMultipleJobs(recordLayoutMode, regions.length);
 
   if (!split) {

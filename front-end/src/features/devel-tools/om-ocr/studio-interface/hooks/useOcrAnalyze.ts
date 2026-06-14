@@ -123,7 +123,7 @@ export function useOcrAnalyze(churchId: number | null) {
     ...r,
     recordType: (r.suggestedRecordType === 'unknown' ? 'custom' : r.suggestedRecordType) as AnalyzeRecordType,
     recordLayoutMode: r.shouldSplit ? 'multi_record_split' : 'auto',
-    splitRegions: r.shouldSplit,
+    splitRegions: false,
   });
 
   const completedItems = useMemo(
