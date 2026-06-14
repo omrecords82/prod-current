@@ -19,31 +19,23 @@ import {
     Button,
     Chip,
     CircularProgress,
-    FormControl,
     FormControlLabel,
-    InputLabel,
-    MenuItem,
     Paper,
     Radio,
-    Select,
     Slider,
     Snackbar,
-    Stack,
     Switch,
     TextField,
     Typography,
     useTheme,
 } from '@mui/material';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import apiClient from '@/api/utils/axiosInstance';
-import { useAuth } from '@/context/AuthContext';
 import { useChurch } from '@/context/ChurchContext';
-import churchService from '@/shared/lib/churchService';
 import { useParishSettings } from './useParishSettings';
 
 const BASE = '/account/parish-management/database-mapping';
-const DEFAULT_OPERATIONAL_CHURCH_ID = 46;
 
 // ── Step definitions ────────────────────────────────────────────
 
@@ -145,13 +137,6 @@ interface ColumnInfo {
   type?: string;
 }
 
-function parseColumnsResponse(res: unknown): ColumnInfo[] {
-  const payload = res as { columns?: ColumnInfo[]; data?: { columns?: ColumnInfo[] } };
-  if (Array.isArray(payload?.columns)) return payload.columns;
-  if (Array.isArray(payload?.data?.columns)) return payload.data.columns;
-  return [];
-}
-
 /** snake_case → Title Case fallback label (e.g. burial_location → Burial Location). */
 function humanize(col: string): string {
   return col
@@ -177,21 +162,6 @@ function buildFieldsFromColumns(recordType: string, columns: ColumnInfo[]): Fiel
         searchWeight: m.searchWeight ?? 5,
       };
     });
-}
-
-/** Fallback columns from FIELD_META when live schema introspection is unavailable. */
-function metaFallbackColumns(recordType: string): ColumnInfo[] {
-  const meta = FIELD_META[recordType] || {};
-  return Object.keys(meta).map((name) => ({ name }));
-}
-
-function buildFieldList(
-  recordType: string,
-  columns: ColumnInfo[],
-  saved?: FieldDef[],
-): FieldDef[] {
-  const effective = columns.length > 0 ? columns : metaFallbackColumns(recordType);
-  return mergeSavedFields(buildFieldsFromColumns(recordType, effective), saved);
 }
 
 /**
@@ -294,10 +264,8 @@ function savedMappingForType(s: MappingSettings | undefined, type: string): Type
 const DatabaseMappingPage: React.FC = () => {
   const { step } = useParams<{ step?: string }>();
   const navigate = useNavigate();
-  const [searchParams, setSearchParams] = useSearchParams();
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
-  const { isSuperAdmin } = useAuth();
 
   // ── Persistence via parish settings API ─────────────────────
   const { data: savedSettings, loading: settingsLoading, saving, error: settingsError, patch: patchSettings } = useParishSettings<MappingSettings>('mapping');
@@ -308,43 +276,8 @@ const DatabaseMappingPage: React.FC = () => {
     return idx >= 0 ? idx : 0;
   }, [step]);
 
-  const { activeChurchId, churchMetadata, setActiveChurchId } = useChurch();
-  const churchParam = searchParams.get('church') || searchParams.get('church_id');
-  const churchId = activeChurchId
-    ?? churchMetadata?.church_id
-    ?? (churchParam ? Number(churchParam) : null)
-    ?? DEFAULT_OPERATIONAL_CHURCH_ID;
-
-  const [churches, setChurches] = useState<Array<{ id: number; name: string; church_name?: string }>>([]);
-
-  // Keep ChurchContext aligned with the operational parish (defaults to church 46).
-  useEffect(() => {
-    const paramId = churchParam ? Number(churchParam) : null;
-    const resolved = (paramId && Number.isFinite(paramId) && paramId > 0)
-      ? paramId
-      : DEFAULT_OPERATIONAL_CHURCH_ID;
-
-    if (!activeChurchId || activeChurchId !== resolved) {
-      setActiveChurchId(resolved);
-    }
-    if (!churchParam || Number(churchParam) !== resolved) {
-      setSearchParams({ church: String(resolved) }, { replace: true });
-    }
-  }, [activeChurchId, churchParam, setActiveChurchId, setSearchParams]);
-
-  useEffect(() => {
-    if (!isSuperAdmin()) return;
-    (async () => {
-      try {
-        const list = await churchService.fetchChurches();
-        setChurches((Array.isArray(list) ? list : []).sort((a, b) =>
-          (a.church_name || a.name || '').localeCompare(b.church_name || b.name || ''),
-        ));
-      } catch {
-        /* optional picker */
-      }
-    })();
-  }, [isSuperAdmin]);
+  const { activeChurchId } = useChurch();
+  const churchId = activeChurchId;
 
   const [selectedRecord, setSelectedRecord] = useState('baptism');
   const [fields, setFields] = useState<FieldDef[]>([]);
@@ -352,7 +285,6 @@ const DatabaseMappingPage: React.FC = () => {
   const [dirty, setDirty] = useState(false);
   const [columnsLoading, setColumnsLoading] = useState(true);
   const [columnsError, setColumnsError] = useState<string | null>(null);
-  const [columnsWarning, setColumnsWarning] = useState<string | null>(null);
   const { snackbar, showSnackbar, closeSnackbar } = useSnackbar();
 
   // Cache live columns per record type, plus a one-shot guard so the saved
@@ -363,48 +295,19 @@ const DatabaseMappingPage: React.FC = () => {
   // Clear column cache when churchId changes
   useEffect(() => {
     columnsCache.current = {};
-    lastInitializedChurchIdRef.current = null;
   }, [churchId]);
 
   // Fetch the real column list for a record type (cached after first fetch).
   const fetchColumns = useCallback(async (type: string): Promise<ColumnInfo[]> => {
     if (columnsCache.current[type]) return columnsCache.current[type];
-    if (!churchId) {
-      throw new Error('Parish not selected — cannot load database columns.');
-    }
-    const res = await apiClient.get(
+    if (!churchId) return [];
+    const res = await apiClient.get<{ columns: ColumnInfo[] }>(
       `/api/parish-settings/${churchId}/record-columns/${type}`,
     );
-    const cols = parseColumnsResponse(res);
-    if (!cols.length) {
-      throw new Error(`No columns returned for church ${churchId} ${type} records.`);
-    }
+    const cols = ((res as any)?.columns ?? []) as ColumnInfo[];
     columnsCache.current[type] = cols;
     return cols;
   }, [churchId]);
-
-  const loadFieldsForType = useCallback(async (type: string) => {
-    const saved = savedMappingForType(savedSettings, type);
-    let warning: string | null = null;
-    let cols: ColumnInfo[] = [];
-
-    try {
-      cols = await fetchColumns(type);
-    } catch (err: any) {
-      cols = metaFallbackColumns(type);
-      warning = err?.message || 'Could not load live database columns. Showing default field list.';
-    }
-
-    const merged = buildFieldList(type, cols, saved?.fields);
-    const validCols = new Set(merged.map((f) => f.column));
-    return {
-      merged,
-      warning,
-      defaultSort: saved?.defaultSort && validCols.has(saved.defaultSort)
-        ? saved.defaultSort
-        : firstSortableColumn(merged),
-    };
-  }, [fetchColumns, savedSettings]);
 
   // First load: discover the live columns for the saved (or default) record
   // type, build the field list from the real schema, and overlay any saved
@@ -416,18 +319,21 @@ const DatabaseMappingPage: React.FC = () => {
     (async () => {
       setColumnsLoading(true);
       setColumnsError(null);
-      setColumnsWarning(null);
       try {
-        const type = savedSettings?.baptism?.fields?.length
-          ? 'baptism'
-          : savedSettings?.config?.selectedRecord || 'baptism';
-        const { merged, warning, defaultSort: nextSort } = await loadFieldsForType(type);
+        const type = savedSettings?.config?.selectedRecord || 'baptism';
+        const saved = savedMappingForType(savedSettings, type);
+        const cols = await fetchColumns(type);
         if (cancelled) return;
+        const merged = mergeSavedFields(buildFieldsFromColumns(type, cols), saved?.fields);
+        const validCols = new Set(merged.map((f) => f.column));
         lastInitializedChurchIdRef.current = churchId;
         setSelectedRecord(type);
         setFields(merged);
-        setDefaultSort(nextSort);
-        if (warning) setColumnsWarning(warning);
+        setDefaultSort(
+          saved?.defaultSort && validCols.has(saved.defaultSort)
+            ? saved.defaultSort
+            : firstSortableColumn(merged),
+        );
       } catch (err: any) {
         if (!cancelled) setColumnsError(err?.message || 'Failed to load database columns');
       } finally {
@@ -435,17 +341,7 @@ const DatabaseMappingPage: React.FC = () => {
       }
     })();
     return () => { cancelled = true; };
-  }, [settingsLoading, savedSettings, churchId, loadFieldsForType]);
-
-  const handleChurchChange = useCallback((nextId: number) => {
-    setActiveChurchId(nextId);
-    setSearchParams({ church: String(nextId) }, { replace: true });
-    lastInitializedChurchIdRef.current = null;
-    columnsCache.current = {};
-    setFields([]);
-    setColumnsWarning(null);
-    setColumnsError(null);
-  }, [setActiveChurchId, setSearchParams]);
+  }, [settingsLoading, savedSettings, churchId, fetchColumns]);
 
   const goTo = (idx: number) => {
     if (idx === 0) navigate(BASE);
@@ -458,36 +354,37 @@ const DatabaseMappingPage: React.FC = () => {
   // field list. If the saved config is for the newly selected type, its
   // customizations are reapplied; otherwise the schema defaults are used.
   const handleSelectRecord = useCallback(async (newType: string) => {
-    if (newType === selectedRecord && fields.length > 0) return;
+    if (newType === selectedRecord) return;
     setSelectedRecord(newType);
     setColumnsLoading(true);
     setColumnsError(null);
-    setColumnsWarning(null);
     try {
-      const { merged, warning, defaultSort: nextSort } = await loadFieldsForType(newType);
+      const cols = await fetchColumns(newType);
+      const saved = savedMappingForType(savedSettings, newType);
+      const base = buildFieldsFromColumns(newType, cols);
+      const merged = mergeSavedFields(base, saved?.fields);
+      const validCols = new Set(merged.map((f) => f.column));
       setFields(merged);
-      setDefaultSort(nextSort);
-      if (warning) setColumnsWarning(warning);
+      setDefaultSort(saved?.defaultSort && validCols.has(saved.defaultSort) ? saved.defaultSort : firstSortableColumn(merged));
       markDirty();
     } catch (err: any) {
       setColumnsError(err?.message || 'Failed to load database columns');
     } finally {
       setColumnsLoading(false);
     }
-  }, [selectedRecord, fields.length, loadFieldsForType, markDirty]);
+  }, [selectedRecord, savedSettings, fetchColumns, markDirty]);
 
   const updateField = (column: string, key: keyof FieldDef, value: any) => {
     setFields((prev) => prev.map((f) => (f.column === column ? { ...f, [key]: value } : f)));
     markDirty();
   };
 
-  const handleSaveAndApply = async () => {
+  const handleSave = async () => {
     // Persist under this record type's key so other types keep their layouts.
     const ok = await patchSettings({ [selectedRecord]: { fields, defaultSort } } as Partial<MappingSettings>);
     if (ok) {
       setDirty(false);
-      showSnackbar('Configuration saved and applied', 'success');
-      navigate(`/portal/records?type=${selectedRecord}`);
+      showSnackbar('Configuration saved successfully', 'success');
     } else {
       showSnackbar(settingsError || 'Failed to save configuration', 'error');
     }
@@ -1061,7 +958,7 @@ const DatabaseMappingPage: React.FC = () => {
           <Paper
             key={action.title}
             variant="outlined"
-            onClick={action.primary ? handleSaveAndApply : undefined}
+            onClick={action.primary ? handleSave : undefined}
             sx={{
               p: 2.5,
               borderRadius: 2,
@@ -1112,7 +1009,7 @@ const DatabaseMappingPage: React.FC = () => {
         sx={{ borderRadius: 1.5, fontFamily: "'Inter'", fontSize: '0.8125rem' }}
       >
         {dirty
-          ? 'You have unsaved changes. Click "Save and Apply" below to persist your settings and return to your records.'
+          ? 'You have unsaved changes. Click "Save Configuration" below to persist your settings.'
           : 'Your configuration is saved and up to date.'}
       </Alert>
     </Box>
@@ -1132,31 +1029,6 @@ const DatabaseMappingPage: React.FC = () => {
         <Typography sx={{ fontFamily: "'Inter'", fontSize: '0.8125rem', color: isDark ? '#9ca3af' : '#6b7280' }}>
           Configure how your church database fields are displayed and searched
         </Typography>
-        <Stack direction="row" spacing={1} alignItems="center" sx={{ mt: 1, flexWrap: 'wrap' }}>
-          <Chip
-            size="small"
-            label={`Parish #${churchId}`}
-            variant="outlined"
-            sx={{ fontFamily: "'Inter'", fontSize: '0.7rem' }}
-          />
-          {isSuperAdmin() && churches.length > 0 && (
-            <FormControl size="small" sx={{ minWidth: 220 }}>
-              <InputLabel id="db-map-church-label">Parish</InputLabel>
-              <Select
-                labelId="db-map-church-label"
-                label="Parish"
-                value={churchId}
-                onChange={(e) => handleChurchChange(Number(e.target.value))}
-              >
-                {churches.map((c) => (
-                  <MenuItem key={c.id} value={c.id}>
-                    {(c.church_name || c.name || `Church ${c.id}`)} (#{c.id})
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          )}
-        </Stack>
       </Box>
 
       {settingsLoading && (
@@ -1175,11 +1047,6 @@ const DatabaseMappingPage: React.FC = () => {
       {columnsError && (
         <Alert severity="error" sx={{ mb: 2, borderRadius: 1.5, fontFamily: "'Inter'", fontSize: '0.75rem' }}>
           {columnsError}
-        </Alert>
-      )}
-      {columnsWarning && !columnsError && (
-        <Alert severity="warning" sx={{ mb: 2, borderRadius: 1.5, fontFamily: "'Inter'", fontSize: '0.75rem' }}>
-          {columnsWarning}
         </Alert>
       )}
 
@@ -1235,7 +1102,7 @@ const DatabaseMappingPage: React.FC = () => {
             variant="contained"
             startIcon={saving ? <CircularProgress size={16} color="inherit" /> : <SaveOutlinedIcon />}
             disabled={saving}
-            onClick={handleSaveAndApply}
+            onClick={handleSave}
             sx={{
               fontFamily: "'Inter'",
               fontSize: '0.8125rem',
@@ -1244,7 +1111,7 @@ const DatabaseMappingPage: React.FC = () => {
               '&:hover': { bgcolor: '#15803d' },
             }}
           >
-            {saving ? 'Saving...' : 'Save and Apply'}
+            {saving ? 'Saving...' : 'Save Configuration'}
           </Button>
         )}
       </Box>

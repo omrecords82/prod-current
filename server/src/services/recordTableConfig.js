@@ -5,20 +5,6 @@
 
 const { getAppPool } = require('../config/db-compat');
 
-const RECORD_TYPE_TABLES = {
-  baptism: ['baptism_records', 'baptism'],
-  marriage: ['marriage_records', 'marriage'],
-  funeral: ['funeral_records', 'funeral', 'death_records'],
-};
-
-async function schemaExists(schemaName) {
-  const [rows] = await getAppPool().query(
-    'SELECT SCHEMA_NAME FROM information_schema.SCHEMATA WHERE SCHEMA_NAME = ?',
-    [schemaName],
-  );
-  return rows.length > 0;
-}
-
 /**
  * Get church database schema name
  * @param {number} churchId
@@ -27,44 +13,16 @@ async function schemaExists(schemaName) {
 async function getChurchSchemaName(churchId) {
   const [churches] = await getAppPool().query(
     'SELECT database_name FROM churches WHERE id = ? AND is_active = 1',
-    [churchId],
+    [churchId]
   );
 
   if (churches.length === 0) {
     return null;
   }
 
-  const configured = churches[0].database_name;
-  const candidates = [...new Set([
-    configured,
-    `om_church_${churchId}`,
-    `orthodoxmetrics_ch_${churchId}`,
-  ].filter(Boolean))];
-
-  for (const name of candidates) {
-    if (await schemaExists(name)) {
-      return name;
-    }
-  }
-
-  return configured || `om_church_${churchId}`;
-}
-
-/**
- * Resolve the physical table for a record type in a church schema.
- * @param {number} churchId
- * @param {string} recordType baptism|marriage|funeral
- * @returns {Promise<string|null>}
- */
-async function resolveRecordTableName(churchId, recordType) {
-  const aliases = RECORD_TYPE_TABLES[recordType];
-  if (!aliases) return null;
-
-  const tables = await listChurchTables(churchId);
-  for (const tableName of aliases) {
-    if (tables.includes(tableName)) return tableName;
-  }
-  return null;
+  // Use om_church_${churchId} format (matches interactiveReports pattern)
+  const databaseName = churches[0].database_name || `om_church_${churchId}`;
+  return databaseName;
 }
 
 /**
@@ -335,7 +293,6 @@ module.exports = {
   getChurchSchemaName,
   listChurchTables,
   getTableColumns,
-  resolveRecordTableName,
   inferDefaultsFromColumns,
   validateTableName,
   getRecordTableConfig,
