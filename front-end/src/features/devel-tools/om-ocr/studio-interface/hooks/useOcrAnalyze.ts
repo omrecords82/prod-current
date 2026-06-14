@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { apiClient } from '@/shared/lib/axiosInstance';
 
 export type AnalyzeRecordType = 'baptism' | 'marriage' | 'funeral' | 'custom';
@@ -21,6 +21,7 @@ export interface AnalyzeFileResult {
   ocrTextPreview: string;
   ocrConfidence: number;
   needsReview: boolean;
+  manualRotationDegrees?: number;
 }
 
 export interface AnalyzeQueueItem extends AnalyzeFileResult {
@@ -43,6 +44,10 @@ export const ANALYZE_ACCEPTED_TYPES = '.jpg,.jpeg,.png,.tif,.tiff';
 let _uid = 0;
 const uid = () => `anq_${++_uid}_${Date.now()}`;
 
+function analyzeSessionStorageKey(churchId: number): string {
+  return `om_ocr_analyze_session_${churchId}`;
+}
+
 export function analyzePreviewUrl(
   churchId: number,
   sessionId: string,
@@ -50,6 +55,18 @@ export function analyzePreviewUrl(
   variant: 'optimized' | 'original' = 'optimized',
 ): string {
   return `/api/church/${churchId}/ocr/analyze/${sessionId}/${fileId}/preview?variant=${variant}`;
+}
+
+export function getAnalyzeFileDisplayName(file: File): string {
+  const relative = (file as File & { webkitRelativePath?: string }).webkitRelativePath;
+  return relative?.trim() || file.name;
+}
+
+export function collectAnalyzeImageFiles(fileList: FileList | null): File[] {
+  if (!fileList?.length) return [];
+  return Array.from(fileList)
+    .filter((f) => ACCEPTED_RE.test(f.name))
+    .sort((a, b) => getAnalyzeFileDisplayName(a).localeCompare(getAnalyzeFileDisplayName(b)));
 }
 
 function makePlaceholder(filename: string): AnalyzeQueueItem {
@@ -77,7 +94,7 @@ function makePlaceholder(filename: string): AnalyzeQueueItem {
   };
 }
 
-type PendingAnalyzeJob = { file: File; placeholderId: string };
+type PendingAnalyzeJob = { file: File; placeholderId: string; displayName: string };
 
 export function useOcrAnalyze(churchId: number | null) {
   const [sessionId, setSessionId] = useState<string | null>(null);
@@ -87,11 +104,20 @@ export function useOcrAnalyze(churchId: number | null) {
   const [dragActive, setDragActive] = useState(false);
   const [analyzeProgress, setAnalyzeProgress] = useState<AnalyzeProgress | null>(null);
   const [pendingQueueCount, setPendingQueueCount] = useState(0);
+  const [previewVersion, setPreviewVersion] = useState(0);
+  const [restoringSession, setRestoringSession] = useState(false);
 
   const sessionRef = useRef<string | null>(null);
   const pendingQueueRef = useRef<PendingAnalyzeJob[]>([]);
   const pumpingRef = useRef(false);
   const progressTotalsRef = useRef({ total: 0, completed: 0 });
+  const restoredRef = useRef(false);
+
+  const persistSessionId = useCallback((id: string | null) => {
+    if (!churchId) return;
+    if (id) localStorage.setItem(analyzeSessionStorageKey(churchId), id);
+    else localStorage.removeItem(analyzeSessionStorageKey(churchId));
+  }, [churchId]);
 
   const mapResult = (r: AnalyzeFileResult): AnalyzeQueueItem => ({
     ...r,
@@ -140,6 +166,34 @@ export function useOcrAnalyze(churchId: number | null) {
     }
   }, []);
 
+  useEffect(() => {
+    if (!churchId || restoredRef.current) return;
+    restoredRef.current = true;
+
+    let cancelled = false;
+    (async () => {
+      setRestoringSession(true);
+      try {
+        const stored = localStorage.getItem(analyzeSessionStorageKey(churchId));
+        const query = stored ? `?sessionId=${encodeURIComponent(stored)}` : '';
+        const data: any = await apiClient.get(`/api/church/${churchId}/ocr/analyze/active${query}`);
+        if (cancelled || !data?.sessionId || !Array.isArray(data.files) || data.files.length === 0) return;
+
+        sessionRef.current = data.sessionId;
+        setSessionId(data.sessionId);
+        persistSessionId(data.sessionId);
+        setItems(data.files.map(mapResult));
+        setSelectedIds(new Set(data.files.map((f: AnalyzeFileResult) => f.id)));
+      } catch {
+        /* no saved session */
+      } finally {
+        if (!cancelled) setRestoringSession(false);
+      }
+    })();
+
+    return () => { cancelled = true; };
+  }, [churchId, persistSessionId]);
+
   const toggleSelection = useCallback((id: string) => {
     setSelectedIds((prev) => {
       const next = new Set(prev);
@@ -164,10 +218,12 @@ export function useOcrAnalyze(churchId: number | null) {
 
   const analyzeSingleFile = useCallback(async (
     file: File,
+    displayName: string,
     activeSessionId: string | null,
   ): Promise<{ sessionId: string; result: AnalyzeFileResult }> => {
     const formData = new FormData();
     formData.append('files', file);
+    formData.append('originalName', displayName);
     if (activeSessionId) formData.append('sessionId', activeSessionId);
 
     const data: any = await apiClient.post(
@@ -186,15 +242,17 @@ export function useOcrAnalyze(churchId: number | null) {
 
     while (pendingQueueRef.current.length > 0) {
       const job = pendingQueueRef.current[0];
-      syncProgress(job.file.name);
+      syncProgress(job.displayName);
 
       try {
         const { sessionId: newSessionId, result } = await analyzeSingleFile(
           job.file,
+          job.displayName,
           sessionRef.current,
         );
         sessionRef.current = newSessionId;
         setSessionId(newSessionId);
+        persistSessionId(newSessionId);
 
         const mapped = mapResult(result);
         setItems((prev) => prev.map((it) => (it.id === job.placeholderId ? mapped : it)));
@@ -216,28 +274,29 @@ export function useOcrAnalyze(churchId: number | null) {
       pendingQueueRef.current.shift();
       setPendingQueueCount(pendingQueueRef.current.length);
       progressTotalsRef.current.completed += 1;
-      syncProgress(pendingQueueRef.current[0]?.file.name ?? null);
+      syncProgress(pendingQueueRef.current[0]?.displayName ?? null);
     }
 
     pumpingRef.current = false;
     clearProgressIfIdle();
-  }, [churchId, analyzeSingleFile, syncProgress, clearProgressIfIdle]);
+  }, [churchId, analyzeSingleFile, syncProgress, clearProgressIfIdle, persistSessionId]);
 
   const analyzeFiles = useCallback((fileList: FileList | null) => {
     if (!churchId || !fileList?.length) return;
-    const files = Array.from(fileList).filter((f) => ACCEPTED_RE.test(f.name));
+    const files = collectAnalyzeImageFiles(fileList);
     if (!files.length) return;
 
-    const placeholders = files.map((f) => makePlaceholder(f.name));
+    const placeholders = files.map((f) => makePlaceholder(getAnalyzeFileDisplayName(f)));
     const jobs: PendingAnalyzeJob[] = files.map((f, i) => ({
       file: f,
       placeholderId: placeholders[i].id,
+      displayName: getAnalyzeFileDisplayName(f),
     }));
 
     pendingQueueRef.current.push(...jobs);
     setPendingQueueCount(pendingQueueRef.current.length);
     progressTotalsRef.current.total += files.length;
-    syncProgress(jobs[0].file.name);
+    syncProgress(jobs[0].displayName);
 
     setItems((prev) => [...prev, ...placeholders]);
     setSelectedIds((prev) => {
@@ -253,14 +312,39 @@ export function useOcrAnalyze(churchId: number | null) {
     setItems((prev) => prev.map((it) => (it.id === id ? { ...it, ...patch } : it)));
   }, []);
 
-  const removeItem = useCallback((id: string) => {
+  const removeItem = useCallback(async (id: string) => {
+    if (churchId && sessionId) {
+      try {
+        const data: any = await apiClient.delete(`/api/church/${churchId}/ocr/analyze/${sessionId}/${id}`);
+        if (data?.sessionDeleted) {
+          sessionRef.current = null;
+          setSessionId(null);
+          persistSessionId(null);
+        }
+      } catch {
+        /* still remove from UI */
+      }
+    }
     setItems((prev) => prev.filter((it) => it.id !== id));
     setSelectedIds((prev) => {
       const next = new Set(prev);
       next.delete(id);
       return next;
     });
-  }, []);
+  }, [churchId, sessionId, persistSessionId]);
+
+  const rotateItem = useCallback(async (id: string, degrees: number) => {
+    if (!churchId || !sessionId) return;
+    const data: any = await apiClient.post(
+      `/api/church/${churchId}/ocr/analyze/${sessionId}/${id}/rotate`,
+      { degrees },
+      { timeout: 120000 },
+    );
+    const mapped = mapResult(data.file as AnalyzeFileResult);
+    setItems((prev) => prev.map((it) => (it.id === id ? mapped : it)));
+    setPreviewVersion((v) => v + 1);
+    return mapped;
+  }, [churchId, sessionId]);
 
   const clearAll = useCallback(async () => {
     pendingQueueRef.current = [];
@@ -277,9 +361,10 @@ export function useOcrAnalyze(churchId: number | null) {
     }
     sessionRef.current = null;
     setSessionId(null);
+    persistSessionId(null);
     setItems([]);
     setSelectedIds(new Set());
-  }, [churchId, sessionId]);
+  }, [churchId, sessionId, persistSessionId]);
 
   const commitToUpload = useCallback(async (): Promise<{ jobIds: number[]; remainingCount: number }> => {
     if (!churchId || !sessionId) return { jobIds: [], remainingCount: 0 };
@@ -319,6 +404,7 @@ export function useOcrAnalyze(churchId: number | null) {
       if (data.sessionDeleted) {
         sessionRef.current = null;
         setSessionId(null);
+        persistSessionId(null);
       }
 
       return {
@@ -328,7 +414,7 @@ export function useOcrAnalyze(churchId: number | null) {
     } finally {
       setIsCommitting(false);
     }
-  }, [churchId, sessionId, items, selectedIds]);
+  }, [churchId, sessionId, items, selectedIds, persistSessionId]);
 
   return {
     sessionId,
@@ -342,12 +428,15 @@ export function useOcrAnalyze(churchId: number | null) {
     someSelected,
     isAnalyzing,
     isCommitting,
+    restoringSession,
     analyzeProgress,
+    previewVersion,
     dragActive,
     setDragActive,
     analyzeFiles,
     updateItem,
     removeItem,
+    rotateItem,
     clearAll,
     commitToUpload,
     toggleSelection,

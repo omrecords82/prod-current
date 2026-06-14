@@ -12,6 +12,7 @@ interface AnalyzePreviewThumbProps {
   alt?: string;
   size?: number | 'fill';
   variant?: AnalyzePreviewVariant;
+  cacheBust?: number;
   onClick?: () => void;
 }
 
@@ -22,6 +23,7 @@ export function AnalyzePreviewThumb({
   alt = '',
   size = 56,
   variant = 'optimized',
+  cacheBust = 0,
   onClick,
 }: AnalyzePreviewThumbProps) {
   const [src, setSrc] = useState<string | null>(null);
@@ -38,7 +40,7 @@ export function AnalyzePreviewThumb({
       setSrc(null);
       try {
         const blob = await apiClient.get<Blob>(
-          `/api/church/${churchId}/ocr/analyze/${sessionId}/${fileId}/preview?variant=${variant}`,
+          `/api/church/${churchId}/ocr/analyze/${sessionId}/${fileId}/preview?variant=${variant}&_=${cacheBust}`,
           { responseType: 'blob', timeout: 60000 },
         );
         if (cancelled) return;
@@ -59,7 +61,7 @@ export function AnalyzePreviewThumb({
       cancelled = true;
       if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
-  }, [churchId, sessionId, fileId, variant]);
+  }, [churchId, sessionId, fileId, variant, cacheBust]);
 
   const dimensionSx = size === 'fill'
     ? { width: '100%', maxHeight: '70vh' }

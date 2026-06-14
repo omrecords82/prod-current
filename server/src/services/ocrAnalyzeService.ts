@@ -62,6 +62,7 @@ export interface AnalyzeFileResult {
   imageWidth: number;
   imageHeight: number;
   needsReview: boolean;
+  manualRotationDegrees?: number;
 }
 
 export interface AnalyzeSessionManifest {
@@ -218,6 +219,12 @@ async function optimizeImage(
     if (orient.applied && orient.correctedBuffer) {
       buffer = Buffer.from(orient.correctedBuffer);
       applied.push('auto_rotate');
+    } else {
+      const osd = await tryTesseractOrientation(buffer);
+      if (osd) {
+        buffer = Buffer.from(osd.buffer);
+        applied.push(`auto_rotate_osd_${osd.degrees}`);
+      }
     }
   } catch (e: any) {
     warnings.push(`Orientation check skipped: ${e.message}`);
@@ -257,31 +264,46 @@ async function optimizeImage(
   return { applied, warnings, width, height };
 }
 
-function regionsToAnalyzeRegions(regions: PixelBBox[]): AnalyzeRegion[] {
-  return regions.map((r, index) => ({
-    index,
-    x: r.x,
-    y: r.y,
-    width: r.width,
-    height: r.height,
-  }));
+async function tryTesseractOrientation(
+  buffer: Buffer,
+): Promise<{ buffer: Buffer; degrees: number } | null> {
+  const os = require('os');
+  const tmpPath = path.join(os.tmpdir(), `om-orient-${Date.now()}_${crypto.randomBytes(4).toString('hex')}.jpg`);
+  try {
+    await sharp(buffer).jpeg().toFile(tmpPath);
+    const { createWorker } = require('tesseract.js');
+    const worker = await createWorker('osd', 1, { logger: () => {} });
+    try {
+      const { data } = await worker.detect(tmpPath);
+      const deg = Number(data?.orientation_degrees || 0);
+      if (!deg || deg % 90 !== 0) return null;
+      const rotated = await sharp(buffer).rotate(deg).toBuffer();
+      return { buffer: rotated, degrees: deg };
+    } finally {
+      await worker.terminate();
+    }
+  } catch {
+    return null;
+  } finally {
+    try {
+      if (fs.existsSync(tmpPath)) fs.unlinkSync(tmpPath);
+    } catch {
+      /* ignore */
+    }
+  }
 }
 
-export async function analyzeImageFile(
-  churchId: number,
-  sessionId: string,
+async function classifyOptimizedImage(
+  optimizedPath: string,
   fileId: string,
-  sourcePath: string,
   originalFilename: string,
+  optimizationsApplied: string[],
+  warnings: string[],
+  manualRotationDegrees = 0,
 ): Promise<AnalyzeFileResult> {
-  const fileDir = path.join(getAnalyzeSessionDir(churchId, sessionId), fileId);
-  fs.mkdirSync(fileDir, { recursive: true });
-
-  const originalCopy = path.join(fileDir, 'original' + path.extname(originalFilename).toLowerCase() || '.jpg');
-  fs.copyFileSync(sourcePath, originalCopy);
-
-  const optimizedPath = path.join(fileDir, 'optimized.jpg');
-  const { applied, warnings, width, height } = await optimizeImage(originalCopy, optimizedPath);
+  const meta = await sharp(optimizedPath).metadata();
+  const width = meta.width || 0;
+  const height = meta.height || 0;
 
   let regions: PixelBBox[] = [];
   try {
@@ -320,9 +342,10 @@ export async function analyzeImageFile(
   const needsReview = classResult.confidence < 0.45
     || layoutConfidence < 0.45
     || ocr.confidence < 0.35
-    || (shouldSplit && classResult.suggested_type === 'unknown');
+    || (shouldSplit && classResult.suggested_type === 'unknown')
+    || manualRotationDegrees > 0;
 
-  const result: AnalyzeFileResult = {
+  return {
     id: fileId,
     originalFilename,
     suggestedRecordType: suggestedType,
@@ -337,14 +360,53 @@ export async function analyzeImageFile(
     regionsDetected: regions.length,
     regions: regionsToAnalyzeRegions(regions),
     shouldSplit,
-    optimizationsApplied: applied,
+    optimizationsApplied,
     warnings,
     ocrTextPreview: ocr.text.slice(0, 400),
     ocrConfidence: Math.round(ocr.confidence * 1000) / 1000,
     imageWidth: width,
     imageHeight: height,
     needsReview,
+    manualRotationDegrees,
   };
+}
+
+function regionsToAnalyzeRegions(regions: PixelBBox[]): AnalyzeRegion[] {
+  return regions.map((r, index) => ({
+    index,
+    x: r.x,
+    y: r.y,
+    width: r.width,
+    height: r.height,
+  }));
+}
+
+export async function analyzeImageFile(
+  churchId: number,
+  sessionId: string,
+  fileId: string,
+  sourcePath: string,
+  originalFilename: string,
+): Promise<AnalyzeFileResult> {
+  const fileDir = path.join(getAnalyzeSessionDir(churchId, sessionId), fileId);
+  fs.mkdirSync(fileDir, { recursive: true });
+
+  const originalCopy = path.join(fileDir, 'original' + path.extname(originalFilename).toLowerCase() || '.jpg');
+  fs.copyFileSync(sourcePath, originalCopy);
+
+  const optimizedPath = path.join(fileDir, 'optimized.jpg');
+  const { applied, warnings, width, height } = await optimizeImage(originalCopy, optimizedPath);
+
+  const result = await classifyOptimizedImage(
+    optimizedPath,
+    fileId,
+    originalFilename,
+    applied,
+    warnings,
+    0,
+  );
+  result.imageWidth = width;
+  result.imageHeight = height;
 
   fs.writeFileSync(path.join(fileDir, 'result.json'), JSON.stringify(result, null, 2));
   return result;
@@ -367,6 +429,80 @@ export function loadAnalyzeSession(churchId: number, sessionId: string): Analyze
   const manifestPath = path.join(getAnalyzeSessionDir(churchId, sessionId), 'manifest.json');
   if (!fs.existsSync(manifestPath)) return null;
   return JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+}
+
+export function getActiveAnalyzeSession(
+  churchId: number,
+  preferredSessionId?: string | null,
+): AnalyzeSessionManifest | null {
+  if (preferredSessionId) {
+    const preferred = loadAnalyzeSession(churchId, preferredSessionId);
+    if (preferred?.files?.length) return preferred;
+  }
+
+  const root = getAnalyzeRoot(churchId);
+  if (!fs.existsSync(root)) return null;
+
+  const manifests = fs.readdirSync(root)
+    .map((sessionId) => loadAnalyzeSession(churchId, sessionId))
+    .filter((m): m is AnalyzeSessionManifest => !!m && m.files.length > 0)
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+  return manifests[0] || null;
+}
+
+export async function rotateAnalyzeFile(
+  churchId: number,
+  sessionId: string,
+  fileId: string,
+  degrees: number,
+): Promise<AnalyzeFileResult> {
+  const manifest = loadAnalyzeSession(churchId, sessionId);
+  if (!manifest) throw new Error('Analyze session not found');
+
+  const existing = manifest.files.find((f) => f.id === fileId);
+  if (!existing) throw new Error('Analyze file not found');
+
+  const normalizedDegrees = ((degrees % 360) + 360) % 360;
+  if (![90, 180, 270].includes(normalizedDegrees) && normalizedDegrees !== 0) {
+    throw new Error('Rotation must be 90, 180, or 270 degrees');
+  }
+  if (normalizedDegrees === 0) return existing;
+
+  const optimizedPath = getAnalyzePreviewPath(churchId, sessionId, fileId, 'optimized');
+  if (!optimizedPath) throw new Error('Optimized preview not found');
+
+  const rotated = await sharp(optimizedPath).rotate(normalizedDegrees).jpeg({ quality: 92 }).toBuffer();
+  fs.writeFileSync(optimizedPath, rotated);
+
+  const manualRotationDegrees = ((existing.manualRotationDegrees || 0) + normalizedDegrees) % 360;
+  const applied = [...(existing.optimizationsApplied || [])];
+  if (!applied.includes('manual_rotate')) applied.push('manual_rotate');
+
+  const warnings = [...(existing.warnings || [])].filter((w) => !w.startsWith('Manually rotated'));
+  warnings.unshift(`Manually rotated ${normalizedDegrees}°`);
+
+  const result = await classifyOptimizedImage(
+    optimizedPath,
+    fileId,
+    existing.originalFilename,
+    applied,
+    warnings,
+    manualRotationDegrees,
+  );
+
+  manifest.files = manifest.files.map((f) => (f.id === fileId ? result : f));
+  saveAnalyzeSession(manifest);
+  fs.writeFileSync(path.join(getAnalyzeSessionDir(churchId, sessionId), fileId, 'result.json'), JSON.stringify(result, null, 2));
+  return result;
+}
+
+export function removeAnalyzeFile(
+  churchId: number,
+  sessionId: string,
+  fileId: string,
+): { remainingCount: number; sessionDeleted: boolean } {
+  return removeFilesFromAnalyzeSession(churchId, sessionId, [fileId]);
 }
 
 export function saveAnalyzeSession(manifest: AnalyzeSessionManifest): void {

@@ -31,14 +31,16 @@ function createAnalyzeRouter(upload) {
       }
 
       const results = [];
-      for (const file of files) {
+      for (let i = 0; i < files.length; i += 1) {
+        const file = files[i];
+        const displayName = String(req.body.originalName || file.originalname || '').trim() || file.originalname;
         const fileId = `af_${nodeCrypto.randomBytes(6).toString('hex')}`;
         const result = await analyzeImageFile(
           churchId,
           sessionId,
           fileId,
           file.path,
-          file.originalname,
+          displayName,
         );
         manifest.files.push(result);
         results.push(result);
@@ -62,6 +64,21 @@ function createAnalyzeRouter(upload) {
     } catch (err) {
       console.error('[OCR Analyze] POST failed:', err);
       res.status(500).json({ error: 'Analyze failed', message: err.message });
+    }
+  });
+
+  router.get('/analyze/active', async (req, res) => {
+    try {
+      const churchId = parseInt(req.params.churchId, 10);
+      const preferred = String(req.query.sessionId || '').trim() || null;
+      const { getActiveAnalyzeSession } = require('../../services/ocrAnalyzeService');
+      const manifest = getActiveAnalyzeSession(churchId, preferred);
+      if (!manifest) {
+        return res.json({ success: true, sessionId: null, churchId, files: [], createdAt: null });
+      }
+      res.json({ success: true, ...manifest });
+    } catch (err) {
+      res.status(500).json({ error: err.message });
     }
   });
 
@@ -90,6 +107,39 @@ function createAnalyzeRouter(upload) {
       );
       if (!previewPath) return res.status(404).json({ error: 'Preview not found' });
       res.sendFile(path.resolve(previewPath));
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  router.post('/analyze/:sessionId/:fileId/rotate', async (req, res) => {
+    try {
+      const churchId = parseInt(req.params.churchId, 10);
+      const degrees = parseInt(req.body?.degrees, 10);
+      const { rotateAnalyzeFile } = require('../../services/ocrAnalyzeService');
+      const result = await rotateAnalyzeFile(
+        churchId,
+        req.params.sessionId,
+        req.params.fileId,
+        degrees,
+      );
+      res.json({ success: true, file: result });
+    } catch (err) {
+      console.error('[OCR Analyze] rotate failed:', err);
+      res.status(500).json({ error: 'Rotate failed', message: err.message });
+    }
+  });
+
+  router.delete('/analyze/:sessionId/:fileId', async (req, res) => {
+    try {
+      const churchId = parseInt(req.params.churchId, 10);
+      const { removeAnalyzeFile } = require('../../services/ocrAnalyzeService');
+      const { remainingCount, sessionDeleted } = removeAnalyzeFile(
+        churchId,
+        req.params.sessionId,
+        req.params.fileId,
+      );
+      res.json({ success: true, remainingCount, sessionDeleted });
     } catch (err) {
       res.status(500).json({ error: err.message });
     }

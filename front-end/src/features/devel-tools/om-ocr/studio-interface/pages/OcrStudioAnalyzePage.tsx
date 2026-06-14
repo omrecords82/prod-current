@@ -28,7 +28,7 @@ import {
   Tooltip,
   Typography,
 } from '@mui/material';
-import { IconCloudUpload, IconScan, IconTrash, IconUpload, IconX } from '@tabler/icons-react';
+import { IconCloudUpload, IconFolder, IconRotate, IconRotateClockwise, IconScan, IconTrash, IconUpload, IconX } from '@tabler/icons-react';
 import { toast } from 'react-toastify';
 import OcrSetupGate from '@/features/devel-tools/om-ocr/components/OcrSetupGate';
 import { ocrStudioPathWithChurch } from '@/features/devel-tools/om-ocr/utils/ocrStudioChurch';
@@ -77,8 +77,10 @@ export default function OcrStudioAnalyzePage() {
   const { toScreen } = useOcrStudioPaths();
   const { churchId, churchLabel } = useOcrStudioChurch();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const folderInputRef = useRef<HTMLInputElement>(null);
   const [previewItem, setPreviewItem] = useState<AnalyzeQueueItem | null>(null);
   const [previewVariant, setPreviewVariant] = useState<AnalyzePreviewVariant>('optimized');
+  const [rotatingPreview, setRotatingPreview] = useState(false);
   const {
     sessionId,
     items,
@@ -91,12 +93,15 @@ export default function OcrStudioAnalyzePage() {
     someSelected,
     isAnalyzing,
     isCommitting,
+    restoringSession,
     analyzeProgress,
+    previewVersion,
     dragActive,
     setDragActive,
     analyzeFiles,
     updateItem,
     removeItem,
+    rotateItem,
     clearAll,
     commitToUpload,
     toggleSelection,
@@ -128,13 +133,27 @@ export default function OcrStudioAnalyzePage() {
           ? `Submitted ${jobIds.length} image(s) to OCR — ${remainingCount} still in analyze queue`
           : `Submitted ${jobIds.length} image(s) to OCR processing`,
       );
-      if (jobIds.length > 0) {
+      if (jobIds.length > 0 && remainingCount === 0) {
         goToMyUploads();
       }
     } catch (err: any) {
       toast.error(err?.response?.data?.message || err?.message || 'Upload failed');
     }
   }, [churchId, commitToUpload, goToMyUploads, selectedCount]);
+
+  const handleRotatePreview = useCallback(async (degrees: number) => {
+    if (!previewItem) return;
+    setRotatingPreview(true);
+    try {
+      const updated = await rotateItem(previewItem.id, degrees);
+      setPreviewItem(updated);
+      toast.success(`Rotated ${degrees}°`);
+    } catch (err: any) {
+      toast.error(err?.message || 'Rotate failed');
+    } finally {
+      setRotatingPreview(false);
+    }
+  }, [previewItem, rotateItem]);
 
   const needsReviewCount = items.filter((i) => i.needsReview && !i.analyzing && !i.error).length;
   const progressPct = analyzeProgress && analyzeProgress.total > 0
@@ -146,8 +165,12 @@ export default function OcrStudioAnalyzePage() {
       <OcrStudioHubPanel churchLabel={churchId ? churchLabel : undefined}>
         <PageHeader
           title="Analyze Records"
-          subtitle="Upload a mixed batch of scans. OM will optimize each image, detect record type and layout, and split composite photos before sending to OCR."
+          subtitle="Your analyze queue is the entry point for new records. Images stay here until you upload them to OCR or delete them."
         />
+
+        <Alert severity="info" sx={{ mb: 2 }}>
+          Records persist across visits for this parish. Drop images or choose a folder — subfolders are scanned automatically.
+        </Alert>
 
         <Paper
           variant="outlined"
@@ -155,12 +178,10 @@ export default function OcrStudioAnalyzePage() {
           onDragLeave={(e) => { e.preventDefault(); setDragActive(false); }}
           onDragOver={(e) => e.preventDefault()}
           onDrop={handleDrop}
-          onClick={() => fileInputRef.current?.click()}
           sx={{
             p: 4,
-            mb: 3,
+            mb: 1.5,
             textAlign: 'center',
-            cursor: 'pointer',
             borderStyle: 'dashed',
             borderWidth: 2,
             borderColor: dragActive ? 'primary.main' : 'divider',
@@ -178,6 +199,18 @@ export default function OcrStudioAnalyzePage() {
               e.target.value = '';
             }}
           />
+          <input
+            ref={folderInputRef}
+            type="file"
+            accept={ANALYZE_ACCEPTED_TYPES}
+            multiple
+            hidden
+            {...({ webkitdirectory: '', directory: '' } as React.InputHTMLAttributes<HTMLInputElement>)}
+            onChange={(e) => {
+              analyzeFiles(e.target.files);
+              e.target.value = '';
+            }}
+          />
           <IconCloudUpload size={40} style={{ opacity: 0.45 }} />
           <Typography variant="body1" fontWeight={600} sx={{ mt: 1 }}>
             Drop mixed register images here
@@ -188,6 +221,32 @@ export default function OcrStudioAnalyzePage() {
               : 'Baptism, marriage, and funeral pages together · results appear as each file finishes'}
           </Typography>
         </Paper>
+
+        <Stack direction="row" spacing={1} justifyContent="center" sx={{ mb: 3 }}>
+          <Button
+            variant="outlined"
+            startIcon={<IconCloudUpload size={16} />}
+            onClick={() => fileInputRef.current?.click()}
+            sx={{ textTransform: 'none' }}
+          >
+            Choose images
+          </Button>
+          <Button
+            variant="outlined"
+            startIcon={<IconFolder size={16} />}
+            onClick={() => folderInputRef.current?.click()}
+            sx={{ textTransform: 'none' }}
+          >
+            Choose folder
+          </Button>
+        </Stack>
+
+        {restoringSession && (
+          <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+            <CircularProgress size={18} />
+            <Typography variant="body2" color="text.secondary">Restoring saved analyze queue…</Typography>
+          </Box>
+        )}
 
         {isAnalyzing && analyzeProgress && (
           <Box sx={{ mb: 3 }}>
@@ -285,6 +344,7 @@ export default function OcrStudioAnalyzePage() {
                           fileId={item.id}
                           alt={item.originalFilename}
                           size={56}
+                          cacheBust={previewVersion}
                           onClick={() => {
                             setPreviewVariant('optimized');
                             setPreviewItem(item);
@@ -403,7 +463,7 @@ export default function OcrStudioAnalyzePage() {
                       )}
                     </TableCell>
                     <TableCell>
-                      <IconButton size="small" onClick={() => removeItem(item.id)} aria-label="Remove">
+                      <IconButton size="small" onClick={() => { void removeItem(item.id); }} aria-label="Remove">
                         <IconTrash size={16} />
                       </IconButton>
                     </TableCell>
@@ -454,36 +514,64 @@ export default function OcrStudioAnalyzePage() {
             <Typography variant="subtitle1" fontWeight={600} noWrap sx={{ flex: 1 }}>
               {previewItem?.originalFilename}
             </Typography>
-            <ToggleButtonGroup
-              size="small"
-              exclusive
-              value={previewVariant}
-              onChange={(_, value: AnalyzePreviewVariant | null) => {
-                if (value) setPreviewVariant(value);
-              }}
-            >
-              <ToggleButton value="optimized" sx={{ textTransform: 'none', px: 1.5 }}>
-                Optimized
-              </ToggleButton>
-              <ToggleButton value="original" sx={{ textTransform: 'none', px: 1.5 }}>
-                Original
-              </ToggleButton>
-            </ToggleButtonGroup>
-            <IconButton size="small" onClick={() => setPreviewItem(null)} aria-label="Close preview">
-              <IconX size={18} />
-            </IconButton>
+            <Stack direction="row" spacing={0.5} alignItems="center">
+              <ToggleButtonGroup
+                size="small"
+                exclusive
+                value={previewVariant}
+                onChange={(_, value: AnalyzePreviewVariant | null) => {
+                  if (value) setPreviewVariant(value);
+                }}
+              >
+                <ToggleButton value="optimized" sx={{ textTransform: 'none', px: 1.5 }}>
+                  Optimized
+                </ToggleButton>
+                <ToggleButton value="original" sx={{ textTransform: 'none', px: 1.5 }}>
+                  Original
+                </ToggleButton>
+              </ToggleButtonGroup>
+              <Tooltip title="Rotate left 90°">
+                <span>
+                  <IconButton
+                    size="small"
+                    disabled={rotatingPreview || previewVariant === 'original'}
+                    onClick={() => { void handleRotatePreview(270); }}
+                  >
+                    <IconRotate size={18} />
+                  </IconButton>
+                </span>
+              </Tooltip>
+              <Tooltip title="Rotate right 90°">
+                <span>
+                  <IconButton
+                    size="small"
+                    disabled={rotatingPreview || previewVariant === 'original'}
+                    onClick={() => { void handleRotatePreview(90); }}
+                  >
+                    <IconRotateClockwise size={18} />
+                  </IconButton>
+                </span>
+              </Tooltip>
+              <IconButton size="small" onClick={() => setPreviewItem(null)} aria-label="Close preview">
+                <IconX size={18} />
+              </IconButton>
+            </Stack>
           </DialogTitle>
           <DialogContent sx={{ display: 'flex', justifyContent: 'center', pb: 3, minHeight: 320 }}>
             {previewItem && churchId && sessionId && (
               <AnalyzePreviewThumb
-                key={`${previewItem.id}-${previewVariant}`}
+                key={`${previewItem.id}-${previewVariant}-${previewVersion}`}
                 churchId={churchId}
                 sessionId={sessionId}
                 fileId={previewItem.id}
                 alt={previewItem.originalFilename}
                 variant={previewVariant}
+                cacheBust={previewVersion}
                 size="fill"
               />
+            )}
+            {rotatingPreview && (
+              <CircularProgress sx={{ position: 'absolute' }} />
             )}
           </DialogContent>
         </Dialog>
